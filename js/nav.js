@@ -19,8 +19,10 @@ function setMapView(tab) {
 function switchView(v) {
     document.getElementById("viewReport").style.display = v === "report" ? "" : "none";
     const pr = document.getElementById("viewPriamoy"); if (pr) pr.style.display = v === "priamoy" ? "" : "none";
+    const vz = document.getElementById("viewVozvrat"); if (vz) vz.style.display = v === "vozvrat" ? "" : "none";
     document.querySelectorAll(".navb").forEach(b => b.classList.toggle("act", b.dataset.view === v));
     const title = document.getElementById("mainTitle");
     if (v === "priamoy") title.innerHTML = "Прямой закуп&nbsp;2026 года";
+    else if (v === "vozvrat") { title.innerHTML = "Возврат зерна (форвард&nbsp;2025/2026)"; ensureVozvrat(); }
     else title.innerHTML = "Форвардный закуп урожая&nbsp;2026 года";
 }

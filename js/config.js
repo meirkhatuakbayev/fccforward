@@ -8,7 +8,10 @@ const CONFIG = {
     GEO_URL: "geo/kaz-adm1-simple.geojson",
     GEO_URL_FALLBACK: "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/KAZ/ADM1/geoBoundaries-KAZ-ADM1_simplified.geojson",
     AUTO_REFRESH_MIN: 5,
-    CRM_BASE: "https://crm.fcc.kz"
+    CRM_BASE: "https://crm.fcc.kz",
+    API_URL_RETURN: "",           // <<< ВСТАВИТЬ URL Apps Script для раздела «Возврат»
+    RETURN_SVOD_CSV: "",          // фолбэк: gviz CSV листа СВОД возврата
+    RETURN_DETAIL_CSV: ""         // фолбэк: gviz CSV листа РАЗВЁРНУТАЯ возврата
 };
 
 const gvizURL = sheet => `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(sheet)}`;

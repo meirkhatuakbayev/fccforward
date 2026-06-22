@@ -47,6 +47,7 @@
         <div class="sidettl">Отчёты</div>
         <button class="navb act" data-view="report"><span class="nd" style="background:#E8A82E"></span>Форвардный закуп</button>
         <button class="navb" data-view="priamoy"><span class="nd" style="background:#3C6B4A"></span>Прямой закуп</button>
+        <button class="navb" data-view="vozvrat"><span class="nd" style="background:#9E4A40"></span>Возврат</button>
         <div class="sidefoot">АО «НК «Продкорпорация»</div>
     </nav>
 
@@ -143,6 +144,55 @@
             </div>
         </div>
 
+        <!-- Возврат зерна -->
+        <div id="viewVozvrat" style="display:none">
+            <div class="wrap">
+                <!-- KPI -->
+                <div class="kpis" id="vzKpis"></div>
+
+                <!-- Должники -->
+                <div class="card" style="margin-top:18px">
+                    <div class="cardhead">
+                        <h2>Должники по возврату</h2>
+                        <span class="hint" style="margin:0">СХТП с остатком долга > 0 · нажмите строку для карточки</span>
+                    </div>
+                    <div id="vzDebtors"></div>
+                </div>
+
+                <!-- Таблица по областям -->
+                <div class="card" style="margin-top:18px">
+                    <h2>Исполнение по областям</h2>
+                    <div class="hint">Нажмите область — список договоров.</div>
+                    <div id="vzRegTable"></div>
+                </div>
+
+                <!-- Панель области (список договоров) -->
+                <div class="card region" id="vzRegPanel" style="display:none;margin-top:18px">
+                    <div class="rhead">
+                        <h2 id="vzRegName"></h2>
+                        <button class="close" onclick="document.getElementById('vzRegPanel').style.display='none'">Закрыть ✕</button>
+                    </div>
+                    <div class="tablescroll">
+                        <table>
+                            <thead><tr>
+                                <th>Контрагент</th>
+                                <th>Культура</th>
+                                <th class="r">Объём по договору, т</th>
+                                <th class="r">Сумма предоплаты, ₸</th>
+                                <th class="r">Поставлено, т</th>
+                                <th class="r">Остаток долга, ₸</th>
+                            </tr></thead>
+                            <tbody id="vzRegRows"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <p id="vzErrBox" style="color:#E05A4A;font-weight:600;padding:8px 0"></p>
+                <p class="foot">Обновлено: <b id="vzAsof">—</b></p>
+                <p class="footer-contact">При обнаружении ошибок обращаться к Уакбаев М.М. (Гл. менеджер Департамента закупа СХП)</p>
+            </div>
+        </div>
+
         <!-- Прямой закуп -->
         <div id="viewPriamoy" style="display:none">
             <div class="wrap">
@@ -174,6 +224,9 @@
 <script src="js/nav.js"></script>
 <script src="js/wheat.js"></script>
 <script src="js/pdf.js"></script>
+<script src="js/penalty.js"></script>
+<script src="js/data-return.js"></script>
+<script src="js/render-return.js"></script>
 <script src="js/main.js"></script>
 
 </body>
