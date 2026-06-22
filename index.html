@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Форвардный закуп урожая 2026 — АО «НК «Продкорпорация»</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+
+
+<!-- Экран загрузки -->
+<div class="loader" id="loader">
+    <div class="seal-big">ПКК</div>
+    <div class="ltitle">Формируется отчёт</div>
+    <div class="lsub">АО «НК «Продкорпорация»</div>
+    <div class="lbar"><i></i></div>
+    <svg class="field" id="wheat" viewBox="0 0 600 150" preserveAspectRatio="xMidYMax meet"></svg>
+</div>
+
+<!-- Шапка -->
+<header class="top">
+    <div class="row">
+        <button id="sidebarToggle" style="background:none;border:none;color:#EDEADD;font-size:20px;cursor:pointer;padding:0 8px;">☰</button>
+        <div class="brand">
+            <div class="seal">ПКК</div>
+            <div>
+                <h1 style="color:#ffffff" id="mainTitle">Форвардный закуп урожая&nbsp;2026 года</h1>
+                <p>АО «НК «Продкорпорация» · «Азық-түлік келісімшарт корпорациясы»</p>
+            </div>
+        </div>
+        <div class="spacer"></div>
+        <div class="live"><span class="dot" id="dot"></span><span id="liveTxt">Департамент закупа СХП</span></div>
+        <button class="refresh" id="btnRefresh">Обновить</button>
+        <button class="refresh printbtn" id="btnPrint">📄 PDF</button>
+        <div class="updated">обновлено <b id="asof">—</b></div>
+    </div>
+</header>
+
+<div class="shell">
+    <!-- Боковая панель -->
+    <nav class="side" id="side">
+        <div class="sidettl">Отчёты</div>
+        <button class="navb act" data-view="report"><span class="nd" style="background:#E8A82E"></span>Форвардный закуп</button>
+        <button class="navb" data-view="priamoy"><span class="nd" style="background:#3C6B4A"></span>Прямой закуп</button>
+        <div class="sidefoot">АО «НК «Продкорпорация»</div>
+    </nav>
+
+    <main class="main">
+        <!-- Форвардный закуп -->
+        <div id="viewReport">
+            <div class="wrap">
+                <div class="banner" id="banner"></div>
+                <div class="kpis" id="kpis"></div>
+                <div class="grid">
+                    <!-- Карта / таблица / погода -->
+                    <div class="card">
+                        <div class="cardhead">
+                            <h2>География программы</h2>
+                            <div class="seg">
+                                <button class="segb act" id="vMap">Карта</button>
+                                <button class="segb" id="vTab">Таблица</button>
+                                <button class="segb" id="vWx">Погода</button>
+                                <button class="segb" id="vAi">🤖 AI</button>
+                            </div>
+                        </div>
+                        <div class="hint" id="mapHint">Цвет — освоение лимита, подпись — область и число СХТП. Нажмите область — список контрагентов.</div>
+                        <div class="mapwrap" id="mapWrap">
+                            <div class="maptip" id="maptip"></div>
+                            <div class="mapzoom">
+                                <button id="zIn" title="Приблизить">+</button>
+                                <button id="zOut" title="Отдалить">−</button>
+                                <button id="zReset" title="Сбросить">⟲</button>
+                            </div>
+                            <svg class="kz" viewBox="0 0 920 480" id="map"></svg>
+                        </div>
+                        <div class="maplegend" id="mapLegend">
+                            <div class="lg-scale">
+                                <span>Освоение лимита:</span>
+                                <i style="background:#D6CFBC"></i><span>0%</span>
+                                <i style="background:linear-gradient(90deg,#F2C357,#B97F18)"></i><span>≈100%</span>
+                                <i style="background:#3C6B4A"></i><span>>100%</span>
+                            </div>
+                        </div>
+                        <div id="regTableWrap" style="display:none"></div>
+                        <div id="wxWrap" style="display:none">
+                            <div class="wx" id="wxGrid"></div>
+                            <div class="an-note">Живой прогноз для весенне-полевых работ по профинансированным областям. Источник: Open-Meteo (open-meteo.com).</div>
+                        </div>
+                        <div id="aiWrap" style="display:none">
+                            <div class="ai-wrap">🤖 AI-ассистент<br><span style="color:var(--muted);">На разработке</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Воронка и статусы -->
+                    <div class="card">
+                        <h2>Воронка освоения</h2>
+                        <div class="hint">Путь заявки по стадиям, объём в тоннах.</div>
+                        <div class="funnel" id="funnel"></div>
+                        <h2 style="padding-top:4px">Статусы заявок</h2>
+                        <div class="stat" id="statuses"></div>
+                    </div>
+                </div>
+
+                <!-- Панель области / культуры / статуса -->
+                <div class="card region" id="regionPanel" style="display:none">
+                    <div class="rhead">
+                        <h2 id="rName"></h2>
+                        <span class="pill" id="rPill"></span>
+                        <button class="close" id="rClose">Закрыть ✕</button>
+                    </div>
+                    <div class="rkpis" id="rKpis"></div>
+                    <div class="tablescroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-s="name">Контрагент</th>
+                                    <th data-s="cult">Культуры</th>
+                                    <th class="r" data-s="vol">Объём, тонн</th>
+                                    <th class="r" data-s="sum">Сумма, ₸</th>
+                                    <th data-s="status">Статус</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rRows"></tbody>
+                            <tfoot id="rFoot"></tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Культуры -->
+                <div class="card" style="margin-top:18px">
+                    <h2>Освоение лимита по культурам</h2>
+                    <div class="hint">Золотой — заявлено, зелёный — профинансировано, относительно лимита закупа (т).</div>
+                    <div class="crops" id="crops"></div>
+                </div>
+
+                <p class="foot" id="footnote"></p>
+                <p class="footer-contact">При обнаружении ошибок обращаться к Уакбаев М.М. (Гл. менеджер Департамента закупа СХП)</p>
+            </div>
+        </div>
+
+        <!-- Прямой закуп -->
+        <div id="viewPriamoy" style="display:none">
+            <div class="wrap">
+                <div class="card" style="margin-top:18px;text-align:center;padding:60px 24px">
+                    <div class="seal-big" style="margin:0 auto 18px;width:64px;height:64px;border-radius:16px;background:linear-gradient(150deg,#F6C45E,#D69A1E);display:grid;place-items:center;color:#3a2a06;font-weight:800;font-size:20px">ПКК</div>
+                    <h2 style="font-size:22px;margin:0 0 8px">Прямой закуп</h2>
+                    <p style="color:var(--muted);font-weight:600;max-width:460px;margin:0 auto;line-height:1.6">Раздел в разработке. Здесь появится аналогичный отчёт по прямому закупу — данные будут подгружаться из внутренней системы, как и форвардный.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Модалка контрагента -->
+<div class="ov" id="ov">
+    <div class="modal" id="modal"></div>
+</div>
+
+<!-- JS: порядок подключения важен (зависимости сверху) -->
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/data.js"></script>
+<script src="js/map.js"></script>
+<script src="js/table.js"></script>
+<script src="js/render.js"></script>
+<script src="js/regions.js"></script>
+<script src="js/modal.js"></script>
+<script src="js/weather.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/wheat.js"></script>
+<script src="js/pdf.js"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>
