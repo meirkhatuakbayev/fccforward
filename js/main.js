@@ -19,14 +19,27 @@ $("#ov").addEventListener("click", e => { if (e.target.id === "ov") closeOv(); }
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeOv(); });
 
 // Переключение вкладок навигации (Форвардный / Прямой)
-document.querySelectorAll(".navb").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
-
-// Боковая панель
 const sidebar = document.getElementById("side");
 const toggleBtn = document.getElementById("sidebarToggle");
-toggleBtn.addEventListener("click", () => {
+
+document.querySelectorAll(".navb").forEach(b => b.addEventListener("click", () => {
+    switchView(b.dataset.view);
+    if (window.innerWidth <= 760) sidebar.classList.remove("visible");
+}));
+
+// Боковая панель — открыть/закрыть кнопкой
+toggleBtn.addEventListener("click", e => {
+    e.stopPropagation();
     if (window.innerWidth <= 760) { sidebar.classList.toggle("visible"); }
     else { sidebar.style.display = sidebar.style.display === "none" ? "flex" : "none"; }
+});
+
+// Закрыть боковую панель кликом вне неё (мобильные)
+document.addEventListener("click", e => {
+    if (window.innerWidth <= 760 && sidebar.classList.contains("visible") &&
+        !sidebar.contains(e.target)) {
+        sidebar.classList.remove("visible");
+    }
 });
 
 // Карта: зум и переключение видов

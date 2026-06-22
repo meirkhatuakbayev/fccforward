@@ -5,8 +5,8 @@ const CONFIG = {
     DETAIL_SHEET: "РАЗВЕРНУТАЯ_ИНФОРМАЦИЯ",
     SVOD_CSV: "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4HRkzvFG_Oxyv9KuAxT_BFyr7o8f6Yz139OzElMShmFL0m9BL-fC1pr0OcBcJbclzhsv66B3I91Wj/pub?gid=519350981&single=true&output=csv",
     DETAIL_CSV: "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4HRkzvFG_Oxyv9KuAxT_BFyr7o8f6Yz139OzElMShmFL0m9BL-fC1pr0OcBcJbclzhsv66B3I91Wj/pub?gid=103443627&single=true&output=csv",
-    GEO_URL: "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/KAZ/ADM1/geoBoundaries-KAZ-ADM1_simplified.geojson",
-    GEO_URL_FALLBACK: "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/KAZ/ADM1/geoBoundaries-KAZ-ADM1.geojson",
+    GEO_URL: "geo/kaz-adm1-simple.geojson",
+    GEO_URL_FALLBACK: "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/KAZ/ADM1/geoBoundaries-KAZ-ADM1_simplified.geojson",
     AUTO_REFRESH_MIN: 5,
     CRM_BASE: "https://crm.fcc.kz"
 };

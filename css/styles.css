@@ -254,7 +254,7 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ===== МОБИЛЬНАЯ ВЕРСИЯ ===== */
 @media (max-width: 760px) {
-    .side { display: none; position: fixed; z-index: 50; top: 0; left: 0; height: 100vh; padding-top: 70px; }
+    .side { display: none; position: fixed; z-index: 40; top: 52px; left: 0; height: calc(100vh - 52px); width: 230px; flex-direction: column; padding: 16px 12px; box-shadow: 4px 0 24px #22402e28; }
     .side.visible { display: flex; }
     .top .row { flex-wrap: nowrap; gap: 6px; padding: 8px 10px; align-items: center; }
     .brand { flex: 1; min-width: 0; overflow: hidden; }

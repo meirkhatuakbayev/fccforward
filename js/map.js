@@ -40,7 +40,8 @@ function regShort(name) {
 }
 
 function renderMap() {
-    if (window.d3 && GEO && GEO.features) renderGeo(); else renderBubbles();
+    if (window.d3 && GEO && GEO.features && GEO.features.length > 0) renderGeo();
+    else renderBubbles();
 }
 
 function renderGeo() {
