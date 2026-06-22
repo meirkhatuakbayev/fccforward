@@ -310,42 +310,59 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
     #sidebarToggle { font-size: 16px; padding: 0 2px; }
 }
 
-/* ===== ПЕЧАТЬ / PDF ===== */
+/* ===== ПЕЧАТЬ / PDF — альбомный A4 ===== */
 @media print {
+    @page { size: A4 landscape; margin: 10mm 14mm; }
+
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     body { background: #fff !important; }
-    .loader { display: none !important; }
-    header.top .refresh, header.top .printbtn, header.top .live, header.top .updated, #sidebarToggle { display: none !important; }
-    header.top .row { padding: 8px 16px; }
+
+    /* Скрываем лишнее */
+    .loader, .banner { display: none !important; }
     .side { display: none !important; }
+    #regionPanel { display: none !important; }
+    .card:has(#crops) { display: none !important; }
+    .foot, .footer-contact { display: none !important; }
+
+    /* Шапка — минимальная */
+    header.top .refresh, header.top .printbtn, header.top .live,
+    header.top .updated, #sidebarToggle { display: none !important; }
+    header.top .row { padding: 6px 14px; }
+    .seal { width: 30px; height: 30px; font-size: 11px; }
+    .brand h1 { font-size: 13px; }
+
+    /* Общий layout */
     .shell { display: block !important; }
     .main { width: 100% !important; }
-    .wrap { padding: 0 12px !important; max-width: 100% !important; }
-    .kpis { grid-template-columns: repeat(5, 1fr) !important; break-inside: avoid; }
-    .kpi { box-shadow: none !important; border: 1px solid #ddd !important; }
-    .kpi .big { font-size: 20px !important; }
-    .grid { grid-template-columns: 1fr !important; }
-    .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; margin-bottom: 12px; }
-    .cardhead .seg { display: none !important; }
-    #mapWrap { display: none !important; }
-    #mapLegend { display: none !important; }
-    #wxWrap { display: none !important; }
-    #aiWrap { display: none !important; }
-    .mapwrap { display: none !important; }
+    .wrap { padding: 0 !important; max-width: 100% !important; }
+
+    /* KPI — 5 карточек в ряд */
+    .kpis { grid-template-columns: repeat(5, 1fr) !important; gap: 6px !important; margin: 8px 0 !important; break-inside: avoid; }
+    .kpi { box-shadow: none !important; border: 1px solid #ddd !important; padding: 8px 10px !important; }
+    .kpi .tag { display: none !important; }
+    .kpi .lab { font-size: 8px !important; }
+    .kpi .big { font-size: 16px !important; margin-top: 4px !important; }
+    .kpi .big small { font-size: 11px !important; }
+    .kpi .sub { font-size: 8px !important; }
+    .kpi .bar { height: 4px !important; margin-top: 5px !important; }
+
+    /* Карточка с картой — оставляем только таблицу */
+    .grid { display: block !important; }
+    .grid > .card:has(#funnel) { display: none !important; }
+    .grid > .card:first-child { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
+    .cardhead { display: none !important; }
     .card .hint { display: none !important; }
-    #regTableWrap { display: block !important; max-height: none !important; overflow: visible !important; margin: 8px 0 !important; border: none !important; }
-    .rtab { font-size: 9px !important; }
-    .rtab thead th { font-size: 8px !important; padding: 4px 5px !important; }
-    .rtab td { padding: 4px 5px !important; }
+    #mapWrap, #mapLegend, .mapwrap { display: none !important; }
+    #wxWrap, #aiWrap { display: none !important; }
+
+    /* Таблица областей и культур */
+    #regTableWrap { display: block !important; max-height: none !important; overflow: visible !important; margin: 0 !important; border: none !important; }
     .tablescroll { max-height: none !important; overflow: visible !important; }
-    .funnel { padding: 10px 14px !important; }
-    .ftrack { height: 24px !important; }
-    .ftrack .v { font-size: 10px !important; }
-    .crops { padding: 6px 14px !important; }
-    .crow { gap: 10px !important; }
-    #regionPanel { break-before: page; }
-    .rhead .close { display: none !important; }
+    .rtab { font-size: 8px !important; width: 100% !important; }
+    .rtab thead th { font-size: 7px !important; padding: 3px 5px !important; }
+    .rtab thead tr.grp th { font-size: 7px !important; }
+    .rtab td { padding: 3px 5px !important; font-size: 7.5px !important; }
+    .rtab tfoot td { padding: 3px 5px !important; font-size: 8px !important; }
+    .ctabttl { font-size: 10px !important; padding: 8px 6px 4px !important; border-top: 6px solid #F1ECDD !important; }
     tfoot td { break-inside: avoid; }
-    .foot, .footer-contact { font-size: 10px !important; }
-    .banner { display: none !important; }
 }
