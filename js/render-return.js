@@ -772,7 +772,29 @@ function openCpReturn(c) {
     }
 }
 
-// ── 10. Реестр должников (PDF) ───────────────────────────────────────────────
+// ── 10. Печать раздела возврата (кнопка «PDF» в шапке) ───────────────────────
+function printReturnSection() {
+    if (!DR) { alert("Данные ещё загружаются."); return; }
+    // Рендерим обе таблицы и показываем их
+    renderVzTabArea();
+    renderVzCropTable();
+    const tabArea  = document.getElementById("vzTabArea");
+    const cropArea = document.getElementById("vzCropArea");
+    const prevTab  = tabArea  ? tabArea.style.display  : "";
+    const prevCrop = cropArea ? cropArea.style.display : "";
+    if (tabArea)  tabArea.style.display  = "";
+    if (cropArea) cropArea.style.display = "";
+
+    document.body.classList.add("print-return");
+    window.print();
+    setTimeout(() => {
+        document.body.classList.remove("print-return");
+        if (tabArea)  tabArea.style.display  = prevTab;
+        if (cropArea) cropArea.style.display = prevCrop;
+    }, 400);
+}
+
+// ── 11. Реестр должников (PDF) ───────────────────────────────────────────────
 function printDebtors() {
     const list = DR.cps.filter(c => c.penalty > 0)
         .sort((a, b) => a.reg.localeCompare(b.reg, "ru") || b.debt - a.debt);

@@ -463,6 +463,45 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
 .b-bad  { background: #F7EAE7; color: #9E4A40; }
 .b-fin  { background: #F7EDD7; color: #9A5410; }
 
+/* Печать: раздел «Возврат зерна» (кнопка PDF в шапке) */
+@media print {
+    body.print-return #viewReport,
+    body.print-return #viewPriamoy,
+    body.print-return #fwdSubtabs { display: none !important; }
+    body.print-return #viewVozvrat { display: block !important; }
+
+    /* Скрываем карту, воронку, должников, рейтинг — оставляем KPI + таблицы */
+    body.print-return .card:has(#vzMapSvg),
+    body.print-return .card:has(#vzFunnel),
+    body.print-return .card:has(#vzRanking),
+    body.print-return #vzRegPanel { display: none !important; }
+    body.print-return #vzMapArea,
+    body.print-return .maplegend,
+    body.print-return .cardhead,
+    body.print-return .hint { display: none !important; }
+
+    /* Обе таблицы — видны */
+    body.print-return #vzTabArea,
+    body.print-return #vzCropArea { display: block !important; }
+
+    /* KPI — 6 в ряд, компактно */
+    body.print-return .vz-kpis6 { grid-template-columns: repeat(6, 1fr) !important; gap: 6px !important; margin: 8px 0 !important; }
+    body.print-return .kpi { box-shadow: none !important; border: 1px solid #ddd !important; padding: 8px 10px !important; }
+    body.print-return .kpi .tag { display: none !important; }
+    body.print-return .kpi .lab { font-size: 8px !important; }
+    body.print-return .kpi .big { font-size: 16px !important; margin-top: 4px !important; }
+    body.print-return .kpi .big small { font-size: 11px !important; }
+    body.print-return .kpi .sub { font-size: 8px !important; }
+    body.print-return .kpi .bar { height: 4px !important; margin-top: 5px !important; }
+
+    /* Таблицы */
+    body.print-return .rtab { font-size: 8px !important; width: 100% !important; }
+    body.print-return .rtab thead th { font-size: 7px !important; padding: 3px 5px !important; }
+    body.print-return .rtab td { padding: 3px 5px !important; font-size: 7.5px !important; }
+    body.print-return .rtab tfoot td { padding: 3px 5px !important; font-size: 8px !important; }
+    body.print-return .tablescroll { max-height: none !important; overflow: visible !important; }
+}
+
 /* Печать: реестр должников */
 @media print {
     body:not(.print-debtors) .card:has(#vzRanking) { display: none !important; }

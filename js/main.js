@@ -53,7 +53,10 @@ $("#vAi").addEventListener("click", () => setMapView("ai"));
 
 // Обновить данные / Скачать PDF
 document.getElementById("btnRefresh").addEventListener("click", loadData);
-document.getElementById("btnPrint").addEventListener("click", printPDF);
+document.getElementById("btnPrint").addEventListener("click", () => {
+    if (_fwdSub === "vozvrat") printReturnSection();
+    else printPDF();
+});
 
 // Загрузка данных
 loadGeoData().then(() => { loadData(); });
