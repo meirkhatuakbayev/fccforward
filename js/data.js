@@ -126,14 +126,12 @@ async function loadData(yearOverride) {
         live.textContent = "Загрузка отчёта…"; dot.classList.remove("err");
         let svodRows, detRows;
 
-        if (year !== "2026" && CONFIG.API_URL_RETURN) {
-            // Исторические данные через admin-script
-            const url = CONFIG.API_URL_RETURN + "?action=getFinancing&year=" + year + "&_=" + Date.now();
-            const r = await fetch(url, {cache: "no-store"});
-            if (!r.ok) throw new Error("HTTP " + r.status);
-            const j = await r.json();
-            if (!j.ok) throw new Error(j.error || "Ошибка API");
-            svodRows = j.svod; detRows = j.detail;
+        if (year !== "2026") {
+            // Исторические данные — напрямую из листов через GViz CSV
+            [svodRows, detRows] = await Promise.all([
+                fetchCSV(gvizURL("СВОД_" + year)),
+                fetchCSV(gvizURL("РАЗВЕРНУТАЯ_" + year))
+            ]);
         } else if (CONFIG.API_URL) {
             const r = await fetch(CONFIG.API_URL, {cache: "no-store"});
             if (!r.ok) throw new Error("API " + r.status);

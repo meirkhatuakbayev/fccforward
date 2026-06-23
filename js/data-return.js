@@ -136,8 +136,18 @@ async function loadReturn(yearOverride) {
             renderReturn();
             return;
         }
+        if (year !== "2026") {
+            // Исторические данные — напрямую из листов через GViz CSV
+            const [sv, dt] = await Promise.all([
+                fetchCSV(gvizURL("ВОЗВРАТ_" + year)),
+                fetchCSV(gvizURL("ВОЗВРАТ_РАЗВЕРНУТАЯ_" + year))
+            ]);
+            combineReturn(sv, dt);
+            renderReturn();
+            return;
+        }
         const url  = CONFIG.API_URL_RETURN;
-        const resp = await fetch(url + "?action=getReturn&year=" + year + "&_=" + Date.now(),
+        const resp = await fetch(url + "?action=getReturn&year=2026&_=" + Date.now(),
             { cache: "no-store" });
         if (!resp.ok) throw new Error("HTTP " + resp.status);
         const json = await resp.json();
