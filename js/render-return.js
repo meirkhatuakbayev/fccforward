@@ -859,9 +859,37 @@ tr.tot td{background:#22402E;color:#F4ECD8;font-weight:800;font-size:11px}
 tr.tot td:first-child{text-align:left}
 tr.tot .terr{color:#FFBBAA}
 tr:nth-child(even):not(.rh):not(.sub):not(.tot) td{background:#FAFAF8}
+.doc-header{background:linear-gradient(135deg,#1a3020 0%,#22402E 60%,#2F5D40 100%);
+  color:#F4ECD8;padding:14px 20px;margin-bottom:10px;border-radius:6px;
+  display:flex;align-items:center;gap:18px}
+.doc-header .seal{width:52px;height:52px;border-radius:12px;flex-shrink:0;
+  background:linear-gradient(150deg,#F6C45E,#D69A1E);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:16px;color:#3a2a06;letter-spacing:.5px;
+  box-shadow:inset 0 0 0 2px #ffffff44}
+.doc-header .info{flex:1}
+.doc-header h1{font-size:14px;font-weight:800;color:#fff;margin:0 0 4px;line-height:1.3}
+.doc-header .org{font-size:10px;color:#B8D4C0;font-weight:600;margin-bottom:6px}
+.doc-header .badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{background:#ffffff18;border:1px solid #ffffff30;border-radius:4px;
+  padding:2px 8px;font-size:9px;font-weight:700;color:#F4ECD8}
+.badge.warn{background:#9E4A4044;border-color:#C06A5C66;color:#FFCCC0}
+.doc-header .dt{font-size:9px;color:#8EB89E;margin-left:auto;text-align:right;flex-shrink:0;align-self:flex-end}
 </style></head><body>
-<h1>Реестр СХТП с начисленной пеней — Возврат зерна (ФЗ 2025/2026)</h1>
-<div class="meta">АО «НК «Продкорпорация» · Департамент закупа СХП · Сформировано: ${today}</div>
+<div class="doc-header">
+  <div class="seal">ПКК</div>
+  <div class="info">
+    <h1>Реестр СХТП с начисленной пеней — Возврат зерна (ФЗ 2025/2026)</h1>
+    <div class="org">АО «НК «Продкорпорация» · Департамент закупа СХП</div>
+    <div class="badges">
+      <span class="badge">Форвардный закуп 2025/2026</span>
+      <span class="badge warn">Просрочка · Пеня начислена</span>
+      <span class="badge">${list.length} СХТП-должников</span>
+      <span class="badge">${Object.keys(byReg).length} областей</span>
+    </div>
+  </div>
+  <div class="dt">Сформировано:<br><b>${today}</b></div>
+</div>
 <table>
 <thead><tr>
   <th style="width:22px">№</th>
