@@ -808,6 +808,7 @@ function printDebtors() {
                 <td>${f(c.vol_total)}</td>
                 <td>${f(c.sum_total)}</td>
                 <td>${f(c.sum_zachet)}</td>
+                <td>${c.sum_fin > 0 ? (c.sum_zachet / c.sum_fin * 100).toFixed(1) + "%" : "—"}</td>
                 <td class="err">${f(c.debt)}</td>
                 <td class="err">${f(c.penalty)}</td>
             </tr>`;
@@ -818,6 +819,7 @@ function printDebtors() {
             <td>${f(tVT)}</td>
             <td>${fm(tST)}</td>
             <td>${fm(tSZ)}</td>
+            <td>${tSF > 0 ? (tSZ / tSF * 100).toFixed(1) + "%" : "—"}</td>
             <td class="err">${fm(tDB)}</td>
             <td class="err">${fm(tPN)}</td>
         </tr>`;
@@ -832,6 +834,7 @@ function printDebtors() {
         <td>${f(gt.vt)}</td>
         <td>${fm(gt.st)}</td>
         <td>${fm(gt.sz)}</td>
+        <td>${gt.sf > 0 ? (gt.sz / gt.sf * 100).toFixed(1) + "%" : "—"}</td>
         <td class="terr">${fm(gt.db)}</td>
         <td class="terr">${fm(gt.pn)}</td>
     </tr>`;
@@ -898,6 +901,7 @@ tr:nth-child(even):not(.rh):not(.sub):not(.tot) td{background:#FAFAF8}
   <th style="width:68px">Поставлено, т</th>
   <th style="width:90px">В т.ч. на сумму финансирования, ₸</th>
   <th style="width:90px">В т.ч. зачтено в предоплату, ₸</th>
+  <th style="width:52px">% исп.</th>
   <th style="width:90px">Остаток долга, ₸</th>
   <th style="width:80px">Пеня, ₸</th>
 </tr></thead>
