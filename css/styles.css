@@ -306,21 +306,33 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
     .ftrack .v { font-size: 11px; }
     .kpi { padding: 12px 13px; }
     .kpi .lab { font-size: 10px; }
-    /* Возврат: мобильные правки */
-    .kpis { grid-template-columns: repeat(2, 1fr); }
-    .vz-summary { padding: 10px 14px; }
-    .vz-chain { font-size: 12px; gap: 7px; padding: 10px 12px; }
-    .vz-chain .num { font-size: 13px; }
-    .vz-rank-row { grid-template-columns: 18px 1fr 60px 34px; }
-    .vz-rank-debt { display: none; }
-    #vzMapSvg { min-height: 220px; }
+    /* Подвкладки */
     .fwd-subtabs { padding: 6px 10px; gap: 3px; }
     .fwd-subtab { font-size: 12px; padding: 7px 13px; }
     #fwdSubtabs { top: 52px; }
-    /* Cardhead с кнопками — не выходить за границы */
+    /* Cardhead */
     .cardhead { flex-wrap: wrap; gap: 8px; }
     .cardhead .seg { overflow-x: auto; max-width: 100%; flex-shrink: 0; }
+
+    /* ── Возврат зерна: мобильная адаптация ── */
+    /* KPI: 2 в ряд */
     .vz-kpis6 { grid-template-columns: repeat(2, 1fr) !important; }
+    /* Карта */
+    #vzMapSvg { min-height: 220px; }
+    /* Рейтинг: убираем долг, сжимаем */
+    .vz-rank-row { grid-template-columns: 18px 1fr 56px 34px; gap: 6px; }
+    .vz-rank-debt { display: none; }
+    .vz-rank-name { font-size: 11.5px; }
+    /* Должники */
+    #vzDebtorsList { padding: 0 12px 8px !important; }
+    .vz-debtor-name { font-size: 12px; }
+    .vz-debtor-sub  { font-size: 10px; }
+    /* Панель области (список СХТП после клика на карту) */
+    #vzRegPanel { overflow-x: auto; }
+    #vzRegPanel .tablescroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    /* Таблицы Исп. по областям и По культурам */
+    #vzTabArea .tablescroll,
+    #vzCropArea .tablescroll { overflow-x: auto; -webkit-overflow-scrolling: touch; max-height: none; }
 }
 
 @media (max-width: 420px) {
