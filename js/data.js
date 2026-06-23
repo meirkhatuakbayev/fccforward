@@ -146,6 +146,7 @@ async function loadData(yearOverride) {
         D = combine(parseSvod(svodRows), parseDetail(detRows));
         try { render(); } catch (err) { console.error("render:", err); }
         hideLoader();
+        if (typeof hideYearLoader === "function") hideYearLoader();
         live.textContent = "Департамент закупа СХП";
         document.getElementById("banner").classList.remove("show");
     } catch (e) {
@@ -153,6 +154,7 @@ async function loadData(yearOverride) {
             CONFIG._csvTried = true; CONFIG.API_URL = ""; return loadData(yearOverride);
         }
         dot.classList.add("err"); live.textContent = "Ошибка загрузки"; hideLoader();
+        if (typeof hideYearLoader === "function") hideYearLoader();
         showBanner("Не удалось загрузить данные (" + e.message + "). Проверьте доступ к таблице/скрипту.");
     }
 }

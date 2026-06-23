@@ -16,6 +16,20 @@ function setMapView(tab) {
 
 let _fwdSub = "report";
 
+function showYearLoader() {
+    const yl = document.getElementById("yearLoader");
+    const vr = document.getElementById("viewReport");
+    if (yl) yl.style.display = "flex";
+    if (vr) vr.style.visibility = "hidden";
+}
+
+function hideYearLoader() {
+    const yl = document.getElementById("yearLoader");
+    const vr = document.getElementById("viewReport");
+    if (yl) yl.style.display = "none";
+    if (vr) vr.style.visibility = "";
+}
+
 function onYearChange(yr) {
     const title = document.getElementById("mainTitle");
     if (title) title.innerHTML = _fwdSub === "vozvrat"
@@ -23,6 +37,7 @@ function onYearChange(yr) {
         : `Форвардный закуп урожая&nbsp;${yr} года`;
     D  = null;
     DR = null;
+    showYearLoader();
     loadData(yr);
     if (_fwdSub === "vozvrat") loadReturn(yr);
 }
