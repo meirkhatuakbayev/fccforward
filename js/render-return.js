@@ -815,7 +815,7 @@ function printDebtors() {
         rows += `<tr class="sub">
             <td colspan="2">Итого: ${cps.length} СХТП</td>
             <td class="r">${fm(tSF)}</td>
-            <td class="r">${f(tVT)} т</td>
+            <td class="r">${f(tVT)}</td>
             <td class="r">${fm(tST)}</td>
             <td class="r">${fm(tSZ)}</td>
             <td class="r err">${fm(tDB)}</td>
