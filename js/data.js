@@ -127,10 +127,11 @@ async function loadData(yearOverride) {
         let svodRows, detRows;
 
         if (year !== "2026") {
-            // Исторические данные — напрямую из листов через GViz CSV
+            const yCfg = CONFIG.YEARS && CONFIG.YEARS[year];
+            if (!yCfg) throw new Error("Нет настроек для года " + year);
             [svodRows, detRows] = await Promise.all([
-                fetchCSV(gvizURL("СВОД_" + year)),
-                fetchCSV(gvizURL("РАЗВЕРНУТАЯ_" + year))
+                fetchCSV(yCfg.svod),
+                fetchCSV(yCfg.detail)
             ]);
         } else if (CONFIG.API_URL) {
             const r = await fetch(CONFIG.API_URL, {cache: "no-store"});
