@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Админ-панель — ПКК Форвард 2026</title>
+<style>
+:root {
+  --ink:   #33402F;
+  --bg:    #F7F3E8;
+  --green: #3C6B4A;
+  --amber: #D69A1E;
+  --red:   #C0392B;
+  --blue:  #2980B9;
+  --muted: #8A8070;
+  --line:  #E8E2D0;
+  --card:  #FFFEF9;
+  --head:  #2A4A35;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; min-height: 100vh; }
+input, select, textarea, button { font-family: inherit; font-size: 14px; }
+a { color: var(--green); text-decoration: none; }
+
+/* ── Экран входа ── */
+#screenLogin {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(150deg, #2A4A35 0%, #3C6B4A 60%, #4A7C56 100%);
+}
+.login-box {
+  background: var(--card); border-radius: 16px; padding: 40px 36px;
+  width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+.login-logo {
+  width: 56px; height: 56px; border-radius: 14px; margin: 0 auto 18px;
+  background: linear-gradient(135deg, #F6C45E, #D69A1E);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 800; color: #3a2a06;
+}
+.login-box h1 { font-size: 18px; font-weight: 800; text-align: center; margin-bottom: 4px; }
+.login-box p  { font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 28px; }
+.login-err { background: #fdecea; color: var(--red); border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; display: none; }
+.login-err.show { display: block; }
+
+/* ── Основной экран ── */
+#screenApp { display: none; }
+
+/* Header */
+.ah {
+  background: var(--head); color: #EDEADD; padding: 0 20px;
+  display: flex; align-items: center; gap: 12px; height: 54px;
+  position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+.ah-logo {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  background: linear-gradient(135deg, #F6C45E, #D69A1E);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; color: #3a2a06;
+}
+.ah-title { font-size: 15px; font-weight: 700; flex: 1; }
+.ah-user  { font-size: 13px; color: #C8C0A8; font-weight: 600; }
+.ah-btn {
+  background: rgba(255,255,255,.12); border: none; color: #EDEADD;
+  padding: 6px 14px; border-radius: 7px; cursor: pointer; font-size: 13px;
+  transition: background .15s;
+}
+.ah-btn:hover { background: rgba(255,255,255,.22); }
+
+/* Nav tabs */
+.anav { display: flex; gap: 2px; background: #233D2B; padding: 0 20px; }
+.anav-btn {
+  padding: 11px 18px; border: none; background: none; color: #A8C0A0;
+  font-size: 13px; font-weight: 700; cursor: pointer; border-bottom: 3px solid transparent;
+  transition: all .15s; white-space: nowrap;
+}
+.anav-btn:hover  { color: #EDEADD; }
+.anav-btn.act    { color: #F6C45E; border-bottom-color: #F6C45E; }
+
+/* Content */
+.acontent { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
+
+/* Section heading */
+.sec-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px; flex-wrap: wrap; gap: 10px;
+}
+.sec-head h2 { font-size: 17px; font-weight: 800; }
+
+/* Search bar */
+.search-wrap { position: relative; }
+.search-wrap input {
+  width: 280px; padding: 9px 12px 9px 36px; border: 1.5px solid var(--line);
+  border-radius: 9px; background: var(--card); outline: none;
+  transition: border-color .15s;
+}
+.search-wrap input:focus { border-color: var(--green); }
+.search-wrap::before {
+  content: '🔍'; position: absolute; left: 11px; top: 50%;
+  transform: translateY(-50%); font-size: 14px; pointer-events: none;
+}
+
+/* Buttons */
+.btn {
+  padding: 9px 18px; border-radius: 9px; border: none; cursor: pointer;
+  font-size: 13px; font-weight: 700; transition: all .15s;
+}
+.btn-primary { background: var(--green); color: #fff; }
+.btn-primary:hover { background: #2A5038; }
+.btn-amber  { background: var(--amber); color: #fff; }
+.btn-amber:hover  { background: #B88214; }
+.btn-red    { background: var(--red); color: #fff; }
+.btn-red:hover    { background: #922B21; }
+.btn-ghost  { background: transparent; border: 1.5px solid var(--line); color: var(--ink); }
+.btn-ghost:hover  { border-color: var(--green); color: var(--green); }
+.btn-sm { padding: 5px 12px; font-size: 12px; border-radius: 7px; }
+
+/* Contractor list table */
+.atable { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+.atable thead tr { background: var(--green); color: #fff; }
+.atable th { padding: 11px 14px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
+.atable td { padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
+.atable tbody tr:last-child td { border-bottom: none; }
+.atable tbody tr { cursor: pointer; transition: background .1s; }
+.atable tbody tr:hover { background: #F0EBD8; }
+.atable .muted { color: var(--muted); font-size: 12px; }
+.badge-fin { display: inline-block; background: #E8F0E8; color: var(--green); padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; }
+.badge-no  { display: inline-block; background: #FBF0D8; color: #9A6716; padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; }
+
+/* Form */
+.aform { background: var(--card); border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+.aform-title { font-size: 16px; font-weight: 800; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--line); display: flex; align-items: center; gap: 10px; }
+.aform-section { margin-bottom: 20px; }
+.aform-section-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.aform-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.aform-grid.cols2 { grid-template-columns: 1fr 1fr; }
+.aform-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 12px; font-weight: 700; color: var(--muted); }
+.field input, .field select, .field textarea {
+  padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 8px;
+  background: #fff; outline: none; transition: border-color .15s; color: var(--ink);
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--green); }
+.field input[readonly], .field input:disabled { background: #F5F0E4; color: var(--muted); cursor: default; }
+.field .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.field .err  { font-size: 11px; color: var(--red); margin-top: 2px; display: none; }
+.field.invalid .err { display: block; }
+.field.invalid input, .field.invalid select { border-color: var(--red); }
+
+.aform-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+/* Auto-fill highlight */
+.autofilled { background: #F0FAF0 !important; border-color: #A8D0A8 !important; }
+
+/* Payment history table in form */
+.hist-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.hist-table th { background: #E8E2D0; padding: 7px 10px; text-align: left; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; }
+.hist-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.hist-table input, .hist-table select { padding: 5px 8px; border: 1.5px solid var(--line); border-radius: 6px; width: 100%; font-size: 12px; }
+.hist-table .del-btn { background: none; border: none; color: var(--red); cursor: pointer; font-size: 16px; padding: 0 4px; }
+.add-hist-btn { margin-top: 8px; font-size: 12px; }
+
+/* Toast */
+#toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.toast-item {
+  padding: 12px 18px; border-radius: 10px; color: #fff; font-weight: 600;
+  font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  animation: slideIn .2s ease; max-width: 320px;
+}
+.toast-ok  { background: var(--green); }
+.toast-err { background: var(--red); }
+.toast-info{ background: var(--blue); }
+@keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Breadcrumb */
+.breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 18px; color: var(--muted); }
+.breadcrumb a { color: var(--green); cursor: pointer; }
+.breadcrumb span { color: var(--ink); font-weight: 700; }
+
+/* User cards */
+.user-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.user-card { background: var(--card); border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,.07); display: flex; flex-direction: column; gap: 8px; }
+.user-card-name { font-size: 15px; font-weight: 800; }
+.user-card-meta { font-size: 12px; color: var(--muted); }
+.user-card-actions { display: flex; gap: 8px; margin-top: 4px; }
+.role-admin  { color: var(--amber); font-weight: 700; }
+.role-editor { color: var(--green); font-weight: 700; }
+
+/* Modal overlay */
+.modal-ov {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  z-index: 500; align-items: center; justify-content: center;
+}
+.modal-ov.show { display: flex; }
+.modal-box {
+  background: var(--card); border-radius: 14px; padding: 28px;
+  width: 440px; max-width: calc(100vw - 32px); box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+.modal-box h3 { font-size: 16px; font-weight: 800; margin-bottom: 18px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+/* Loading spinner */
+.loading { display: flex; align-items: center; gap: 10px; color: var(--muted); padding: 40px 0; }
+.spinner { width: 20px; height: 20px; border: 2.5px solid var(--line); border-top-color: var(--green); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; }
+
+@media (max-width: 640px) {
+  .acontent { padding: 16px 12px 40px; }
+  .aform-grid.cols2, .aform-grid.cols3 { grid-template-columns: 1fr; }
+  .search-wrap input { width: 100%; }
+  .sec-head { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ Экран входа ══════════════════════════════════════════════════════════ -->
+<div id="screenLogin">
+  <div class="login-box">
+    <div class="login-logo">ПКК</div>
+    <h1>Форвардный закуп 2026</h1>
+    <p>Административная панель</p>
+    <div class="login-err" id="loginErr"></div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Логин</label>
+      <input type="text" id="inLogin" placeholder="sotrudnik1" autocomplete="username">
+    </div>
+    <div class="field" style="margin-bottom:20px">
+      <label>Пароль</label>
+      <input type="password" id="inPass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary" style="width:100%;padding:12px" onclick="doLogin()">Войти</button>
+  </div>
+</div>
+
+<!-- ══ Основной экран ═══════════════════════════════════════════════════════ -->
+<div id="screenApp">
+  <header class="ah">
+    <div class="ah-logo">ПКК</div>
+    <div class="ah-title">Форвардный закуп 2026 — Админ</div>
+    <span class="ah-user" id="ahUser"></span>
+    <button class="ah-btn" onclick="showPassModal()">Сменить пароль</button>
+    <button class="ah-btn" onclick="doLogout()">Выход</button>
+  </header>
+  <nav class="anav">
+    <button class="anav-btn act" data-tab="financing" onclick="switchTab('financing')">Финансирование</button>
+    <button class="anav-btn"     data-tab="return"    onclick="switchTab('return')">Возврат зерна</button>
+    <button class="anav-btn"     data-tab="users"     onclick="switchTab('users')" id="tabUsers" style="display:none">Пользователи</button>
+  </nav>
+
+  <div class="acontent">
+
+    <!-- ── Финансирование ── -->
+    <div id="tabFinancing">
+      <div id="pfList">
+        <div class="sec-head">
+          <h2>Контрагенты</h2>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div class="search-wrap"><input id="searchInput" type="text" placeholder="Поиск по названию или БИН..." oninput="filterContractors()" style="width:300px"></div>
+            <button class="btn btn-primary" onclick="showAddContractorForm()">+ Новый контрагент</button>
+          </div>
+        </div>
+        <div id="contractorList"></div>
+      </div>
+      <div id="pfForm" style="display:none"></div>
+    </div>
+
+    <!-- ── Возврат зерна ── -->
+    <div id="tabReturn" style="display:none">
+      <div class="sec-head">
+        <h2>Возврат зерна</h2>
+        <button class="btn btn-primary" onclick="showAddReturnForm()">+ Добавить запись</button>
+      </div>
+      <div id="returnList"></div>
+      <div id="returnForm" style="display:none"></div>
+    </div>
+
+    <!-- ── Пользователи ── -->
+    <div id="tabUsersContent" style="display:none">
+      <div class="sec-head">
+        <h2>Пользователи системы</h2>
+        <button class="btn btn-primary" onclick="showAddUserModal()">+ Добавить</button>
+      </div>
+      <div id="userList"></div>
+    </div>
+
+  </div><!-- /acontent -->
+</div><!-- /screenApp -->
+
+<!-- ── Смена пароля ── -->
+<div class="modal-ov" id="passModal">
+  <div class="modal-box">
+    <h3>Смена пароля</h3>
+    <div class="field" style="margin-bottom:12px">
+      <label>Текущий пароль</label>
+      <input type="password" id="pmOld" placeholder="••••••••">
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Новый пароль</label>
+      <input type="password" id="pmNew" placeholder="••••••••">
+      <span class="hint">Минимум 6 символов</span>
+    </div>
+    <div class="field" style="margin-bottom:4px">
+      <label>Повторите новый пароль</label>
+      <input type="password" id="pmNew2" placeholder="••••••••">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closePassModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="doChangePass()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Добавить/редактировать пользователя ── -->
+<div class="modal-ov" id="userModal">
+  <div class="modal-box">
+    <h3 id="userModalTitle">Новый пользователь</h3>
+    <input type="hidden" id="umExistingLogin">
+    <div class="field" style="margin-bottom:12px">
+      <label>Логин</label>
+      <input type="text" id="umLogin" placeholder="sotrudnik1">
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Имя / ФИО</label>
+      <input type="text" id="umName" placeholder="Иванов Иван">
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Пароль <span id="umPassHint" style="color:var(--muted);font-weight:400">(обязательно для нового)</span></label>
+      <input type="password" id="umPass" placeholder="••••••••">
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Роль</label>
+      <select id="umRole">
+        <option value="editor">Редактор</option>
+        <option value="admin">Администратор</option>
+      </select>
+    </div>
+    <div class="field" style="margin-bottom:4px">
+      <label><input type="checkbox" id="umActive" checked> Активен</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeUserModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="doSaveUser()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// НАСТРОЙКА: вставьте URL задеплоенного Apps Script
+// ══════════════════════════════════════════════════════════════════════════════
+const ADMIN_API = '';   // ← сюда URL вида https://script.google.com/macros/s/.../exec
+
+// ══════════════════════════════════════════════════════════════════════════════
+
+let session       = null;
+let allContractors = [];
+let allReturn     = [];
+
+// ── API ────────────────────────────────────────────────────────────────────
+
+async function api(action, data = {}) {
+  if (!ADMIN_API) { toast('Укажите ADMIN_API в коде admin.html', 'err'); throw new Error('no api'); }
+  const body = { action, ...data, token: session?.token };
+  const r = await fetch(ADMIN_API, {
+    method: 'POST', redirect: 'follow',
+    body: JSON.stringify(body)
+  });
+  const json = await r.json();
+  if (!json.ok) throw new Error(json.error || 'Ошибка сервера');
+  return json;
+}
+
+// ── Авторизация ────────────────────────────────────────────────────────────
+
+async function doLogin() {
+  const lgn  = q('#inLogin').value.trim();
+  const pass = q('#inPass').value;
+  if (!lgn || !pass) { loginErr('Введите логин и пароль'); return; }
+  try {
+    const r = await api('login', { login: lgn, password: pass });
+    session = { token: r.token, role: r.role, name: r.name };
+    localStorage.setItem('pkk_admin', JSON.stringify(session));
+    showApp();
+  } catch(e) { loginErr(e.message); }
+}
+
+function loginErr(msg) {
+  const el = q('#loginErr');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+async function doLogout() {
+  if (session) { try { await api('logout'); } catch(_){} }
+  session = null;
+  localStorage.removeItem('pkk_admin');
+  location.reload();
+}
+
+function showApp() {
+  q('#screenLogin').style.display = 'none';
+  q('#screenApp').style.display   = '';
+  q('#ahUser').textContent = session.name + (session.role === 'admin' ? ' · Администратор' : '');
+  if (session.role === 'admin') q('#tabUsers').style.display = '';
+  loadContractors();
+}
+
+// ── Навигация ──────────────────────────────────────────────────────────────
+
+function switchTab(tab) {
+  document.querySelectorAll('.anav-btn').forEach(b => b.classList.toggle('act', b.dataset.tab === tab));
+  q('#tabFinancing').style.display     = tab === 'financing' ? '' : 'none';
+  q('#tabReturn').style.display        = tab === 'return'    ? '' : 'none';
+  q('#tabUsersContent').style.display  = tab === 'users'     ? '' : 'none';
+  if (tab === 'return' && !allReturn.length) loadReturn();
+  if (tab === 'users') loadUsers();
+}
+
+// ── Финансирование: список ─────────────────────────────────────────────────
+
+async function loadContractors() {
+  const box = q('#contractorList');
+  box.innerHTML = spinner();
+  try {
+    const r = await api('listContractors');
+    allContractors = r.data;
+    renderContractorList(allContractors);
+  } catch(e) { box.innerHTML = `<p style="color:var(--red);padding:20px">${e.message}</p>`; }
+}
+
+function filterContractors() {
+  const q2 = q('#searchInput').value.trim().toLowerCase();
+  renderContractorList(q2
+    ? allContractors.filter(c => c.name.toLowerCase().includes(q2) || (c.bin||'').includes(q2) || (c.reg||'').toLowerCase().includes(q2))
+    : allContractors
+  );
+}
+
+function renderContractorList(list) {
+  const box = q('#contractorList');
+  if (!list.length) { box.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>Контрагенты не найдены</p></div>`; return; }
+  box.innerHTML = `<div style="overflow-x:auto"><table class="atable">
+    <thead><tr>
+      <th>Наименование</th><th>БИН/ИИН</th><th>Область</th><th>Культура</th>
+      <th>№ договора</th><th>Финансирование</th><th>Статус</th>
+    </tr></thead>
+    <tbody>${list.map(c => `<tr onclick="openContractor('${esc(c.bin)}','${esc(c.name)}')">
+      <td><b>${esc(c.name)}</b><br><span class="muted">${esc(c.form)}, ${esc(c.rayon)} р-н</span></td>
+      <td class="muted">${esc(c.bin)||'—'}</td>
+      <td>${esc(c.reg)}</td>
+      <td>${esc(c.cult)||'—'}</td>
+      <td class="muted">${esc(c.dog_num)||'—'}</td>
+      <td>${c.fin_sum > 0 ? `<span class="badge-fin">${fmt(c.fin_sum)} ₸</span>` : `<span class="badge-no">Нет</span>`}</td>
+      <td class="muted">${esc(c.status)||'—'}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+// ── Финансирование: форма редактирования ───────────────────────────────────
+
+async function openContractor(bin, name) {
+  const box = q('#pfForm');
+  q('#pfList').style.display = 'none';
+  box.style.display = '';
+  box.innerHTML = spinner();
+  try {
+    const r = await api('getContractor', { bin, name });
+    renderFinancingForm(r.data);
+  } catch(e) { box.innerHTML = `<p style="color:var(--red)">${e.message}</p>`; }
+}
+
+function renderFinancingForm(rows) {
+  const r = rows[0] || {};
+  const box = q('#pfForm');
+  box.innerHTML = `
+    <div class="breadcrumb">
+      <a onclick="backToList()">← Контрагенты</a> › <span>${esc(r.name || '')}</span>
+    </div>
+    <div class="aform">
+      <div class="aform-title">✏️ Редактирование данных контрагента</div>
+      <input type="hidden" id="fRowIdx" value="${r.rowIdx||''}">
+      <input type="hidden" id="fBin"    value="${esc(r.bin||'')}">
+
+      <div class="aform-section">
+        <div class="aform-section-label">Основные сведения</div>
+        <div class="aform-grid">
+          ${field('Область',        'fReg',    r.reg,      false, 2)}
+          ${field('Форма (ТОО/КХ)', 'fForm',   r.form,     false, 3)}
+          ${field('Наименование',   'fName',   r.name,     false, 4)}
+          ${field('Район',          'fRayon',  r.rayon,    false, 10)}
+          ${field('БИН / ИИН',      'fBin2',   r.bin,      false, 11)}
+          ${field('Культура',       'fCult',   r.cult,     false, 14)}
+          ${fieldSel('Статус',      'fStatus', r.status,   24,
+            ['','профин.','на кс','утверждено','заключено','отказ кусп','расторжение кусп'])}
+        </div>
+      </div>
+
+      <div class="aform-section">
+        <div class="aform-section-label">Заявка</div>
+        <div class="aform-grid cols3">
+          ${field('Сумма предоплаты, ₸',  'fAppSum',   r.app_sum,   false, 17, 'number')}
+          ${field('Цена, ₸/тонна',        'fAppPrice', r.app_price, false, 18, 'number')}
+          ${field('Объём, тонн',          'fAppVol',   r.app_vol,   false, 19, 'number')}
+          ${field('Наименование ХПП',     'fAppHpp',   r.app_hpp,   false, 20)}
+          ${field('Гарант',               'fAppGar',   r.app_gar,   false, 21)}
+        </div>
+      </div>
+
+      <div class="aform-section">
+        <div class="aform-section-label">Договор</div>
+        <div class="aform-grid cols3">
+          ${field('№ договора',    'fDogNum',  r.dog_num,  false, 49)}
+          ${field('Дата',         'fDogDate', r.dog_date, false, 50)}
+          ${field('Сумма, ₸',     'fDogSum',  r.dog_sum,  false, 53, 'number')}
+          ${field('Объём, тонн',  'fDogVol',  r.dog_vol,  false, 55, 'number')}
+        </div>
+      </div>
+
+      <div class="aform-section">
+        <div class="aform-section-label">Профинансировано</div>
+        <div class="aform-grid cols3">
+          ${field('Дата финансирования', 'fFinDate',  r.fin_date,  false, 63)}
+          ${field('Сумма, ₸',            'fFinSum',   r.fin_sum,   false, 66, 'number')}
+          ${field('Объём, тонн',         'fFinVol',   r.fin_vol,   false, 68, 'number')}
+        </div>
+      </div>
+
+      <div class="aform-actions">
+        <button class="btn btn-ghost" onclick="backToList()">Отмена</button>
+        <button class="btn btn-primary" onclick="saveFinancing()">💾 Сохранить</button>
+      </div>
+    </div>`;
+}
+
+function field(label, id, val, readonly, colIdx, type = 'text') {
+  const roAttr = readonly ? 'readonly' : '';
+  const v = val != null ? String(val) : '';
+  return `<div class="field">
+    <label>${label}</label>
+    <input type="${type}" id="${id}" value="${esc(v)}" ${roAttr} data-col="${colIdx}">
+  </div>`;
+}
+
+function fieldSel(label, id, val, colIdx, opts) {
+  const options = opts.map(o => `<option value="${o}" ${o===val?'selected':''}>${o||'— выберите —'}</option>`).join('');
+  return `<div class="field">
+    <label>${label}</label>
+    <select id="${id}" data-col="${colIdx}">${options}</select>
+  </div>`;
+}
+
+async function saveFinancing() {
+  const rowIdx = parseInt(q('#fRowIdx').value);
+  if (!rowIdx) { toast('Ошибка: не определена строка', 'err'); return; }
+
+  const fields = {};
+  document.querySelectorAll('#pfForm [data-col]').forEach(el => {
+    const col = el.dataset.col;
+    const val = el.value.trim();
+    if (val !== '' && !el.readOnly) fields[col] = isNaN(Number(val)) || val === '' ? val : Number(val);
+  });
+
+  try {
+    await api('saveFinancing', { rowIdx, fields });
+    toast('Данные сохранены ✓', 'ok');
+    loadContractors();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function showAddContractorForm() {
+  const box = q('#pfForm');
+  q('#pfList').style.display = 'none';
+  box.style.display = '';
+  box.innerHTML = `
+    <div class="breadcrumb">
+      <a onclick="backToList()">← Контрагенты</a> › <span>Новый контрагент</span>
+    </div>
+    <div class="aform">
+      <div class="aform-title">➕ Новый контрагент</div>
+      <div class="aform-section">
+        <div class="aform-section-label">Основные сведения</div>
+        <div class="aform-grid">
+          ${fieldReq('Область *',          'nReg',    2)}
+          ${fieldReq('Форма (ТОО/КХ/ФХ)', 'nForm',   3)}
+          ${fieldReq('Наименование *',     'nName',   4)}
+          ${fieldReq('Район',              'nRayon',  10)}
+          ${fieldReq('БИН / ИИН',          'nBin',    11)}
+          ${fieldReq('Культура *',         'nCult',   14)}
+        </div>
+      </div>
+      <div class="aform-section">
+        <div class="aform-section-label">Заявка</div>
+        <div class="aform-grid cols3">
+          ${fieldReq('Сумма предоплаты, ₸', 'nAppSum',   17, 'number')}
+          ${fieldReq('Цена, ₸/тонна',       'nAppPrice', 18, 'number')}
+          ${fieldReq('Объём, тонн',         'nAppVol',   19, 'number')}
+          ${fieldReq('Наименование ХПП',    'nAppHpp',   20)}
+          ${fieldReq('Гарант',              'nAppGar',   21)}
+        </div>
+      </div>
+      <div class="aform-actions">
+        <button class="btn btn-ghost" onclick="backToList()">Отмена</button>
+        <button class="btn btn-primary" onclick="addContractor()">💾 Добавить</button>
+      </div>
+    </div>`;
+}
+
+function fieldReq(label, id, colIdx, type = 'text') {
+  return `<div class="field">
+    <label>${label}</label>
+    <input type="${type}" id="${id}" data-col="${colIdx}" placeholder="${label.replace(' *','')}">
+    <span class="err">Обязательное поле</span>
+  </div>`;
+}
+
+async function addContractor() {
+  let valid = true;
+  const required = ['nReg','nName','nCult'];
+  required.forEach(id => {
+    const el = q('#' + id);
+    const wrap = el.closest('.field');
+    if (!el.value.trim()) { wrap.classList.add('invalid'); valid = false; }
+    else wrap.classList.remove('invalid');
+  });
+  if (!valid) { toast('Заполните обязательные поля', 'err'); return; }
+
+  const fields = {};
+  document.querySelectorAll('#pfForm [data-col]').forEach(el => {
+    const val = el.value.trim();
+    if (val) fields[el.dataset.col] = isNaN(Number(val)) || val === '' ? val : Number(val);
+  });
+
+  try {
+    await api('addContractor', { fields });
+    toast('Контрагент добавлен ✓', 'ok');
+    backToList();
+    loadContractors();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function backToList() {
+  q('#pfList').style.display = '';
+  q('#pfForm').style.display = 'none';
+}
+
+// ── Возврат зерна ──────────────────────────────────────────────────────────
+
+async function loadReturn() {
+  const box = q('#returnList');
+  box.innerHTML = spinner();
+  try {
+    const r = await api('listReturn');
+    allReturn = r.data;
+    renderReturnList(allReturn);
+  } catch(e) { box.innerHTML = `<p style="color:var(--red);padding:20px">${e.message}</p>`; }
+}
+
+function renderReturnList(list) {
+  const box = q('#returnList');
+  if (!list.length) {
+    box.innerHTML = `<div class="empty-state"><div class="icon">🌾</div><p>Записей по возврату пока нет. Нажмите «+ Добавить запись»</p></div>`;
+    return;
+  }
+  box.innerHTML = `<div style="overflow-x:auto"><table class="atable">
+    <thead><tr>
+      <th>Контрагент</th><th>Область</th><th>Культура</th>
+      <th>Финансирование, ₸</th><th>Поставлено, т</th><th>Зачтено, ₸</th>
+      <th>Остаток долга, ₸</th><th>Пеня, ₸</th><th></th>
+    </tr></thead>
+    <tbody>${list.map((r,i) => `<tr>
+      <td><b>${esc(r['Наименование поставщика'])}</b></td>
+      <td>${esc(r['Область'])}</td>
+      <td>${esc(r['Культура'])||'—'}</td>
+      <td>${fmtNum(r['Сумма финансирования, ₸'])}</td>
+      <td>${fmtNum(r['Всего поставлено, т'])}</td>
+      <td>${fmtNum(r['Зачтено в предоплату, ₸'])}</td>
+      <td style="color:${+r['Остаток долга, ₸']>0?'var(--red)':'var(--green)'};font-weight:700">${fmtNum(r['Остаток долга, ₸'])}</td>
+      <td style="color:${+r['Пеня, ₸']>0?'var(--red)':'var(--muted)'}">${fmtNum(r['Пеня, ₸'])}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="editReturn(${i})">✏️ Изменить</button></td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function showAddReturnForm() {
+  openReturnForm(null);
+}
+
+function editReturn(idx) {
+  openReturnForm(allReturn[idx]);
+}
+
+function openReturnForm(existing) {
+  const e = existing || {};
+  const box = q('#returnForm');
+  q('#returnList').style.display = 'none';
+  box.style.display = '';
+
+  // Build financed contractor dropdown
+  const financed = allContractors.filter(c => c.fin_sum > 0);
+  const ctOpts = financed.map(c =>
+    `<option value="${esc(c.bin||c.name)}" data-sum="${c.fin_sum}" data-reg="${esc(c.reg)}" data-cult="${esc(c.cult)}" data-dog="${esc(c.dog_num)}" ${(e['БИН/ИИН']===c.bin||e['Наименование поставщика']===c.name)?'selected':''}>${esc(c.name)}</option>`
+  ).join('');
+
+  box.innerHTML = `
+    <div class="breadcrumb">
+      <a onclick="backToReturnList()">← Возврат зерна</a> › <span>${existing ? esc(e['Наименование поставщика']) : 'Новая запись'}</span>
+    </div>
+    <div class="aform">
+      <div class="aform-title">🌾 ${existing ? 'Редактирование' : 'Новая запись'} — Возврат зерна</div>
+      <input type="hidden" id="rRowIdx" value="${e.rowIdx||''}">
+
+      <div class="aform-section">
+        <div class="aform-section-label">Контрагент</div>
+        <div class="aform-grid cols2">
+          <div class="field">
+            <label>Контрагент (профинансированные) *</label>
+            <select id="rContractor" onchange="onSelectReturnContractor()"${existing?' disabled':''}>
+              <option value="">— выберите контрагента —</option>
+              ${ctOpts}
+            </select>
+          </div>
+          <div class="field">
+            <label>Сумма финансирования, ₸ (авт.)</label>
+            <input type="number" id="rFinSum" readonly class="autofilled" value="${e['Сумма финансирования, ₸']||''}">
+          </div>
+          <div class="field">
+            <label>Область</label>
+            <input type="text" id="rReg" readonly class="autofilled" value="${esc(e['Область']||'')}">
+          </div>
+          <div class="field">
+            <label>Культура</label>
+            <input type="text" id="rCult" value="${esc(e['Культура']||'')}" placeholder="Пшеница 3 класс">
+          </div>
+          <div class="field">
+            <label>№ договора</label>
+            <input type="text" id="rDogNum" value="${esc(e['№ договора']||'')}">
+          </div>
+          <div class="field">
+            <label>Дата договора</label>
+            <input type="text" id="rDogDate" value="${esc(e['Дата договора']||'')}" placeholder="01.03.2026">
+          </div>
+        </div>
+      </div>
+
+      <div class="aform-section">
+        <div class="aform-section-label">Объём по договору</div>
+        <div class="aform-grid cols3">
+          <div class="field"><label>Объём по договору, т</label><input type="number" id="rVolFin" value="${e['Объём по договору, т']||''}"></div>
+          <div class="field"><label>Цена предоплаты, ₸/т</label><input type="number" id="rPriceFin" value="${e['Цена предоплаты, ₸/т']||''}"></div>
+        </div>
+      </div>
+
+      <div class="aform-section">
+        <div class="aform-section-label">Поставлено зерна (по классам)</div>
+        <div style="overflow-x:auto"><table class="atable" style="font-size:13px">
+          <thead><tr><th>Культура</th><th>Объём, т</th><th>Сумма, ₸</th></tr></thead>
+          <tbody>
+            <tr><td>Пшеница 3 класс</td>
+              <td><input type="number" id="rC3v" value="${e['Пш 3кл объём, т']||''}" placeholder="0"></td>
+              <td><input type="number" id="rC3s" value="${e['Пш 3кл сумма, ₸']||''}" placeholder="0"></td></tr>
+            <tr><td>Пшеница 4 класс</td>
+              <td><input type="number" id="rC4v" value="${e['Пш 4кл объём, т']||''}" placeholder="0"></td>
+              <td><input type="number" id="rC4s" value="${e['Пш 4кл сумма, ₸']||''}" placeholder="0"></td></tr>
+            <tr><td>Пшеница 5 класс</td>
+              <td><input type="number" id="rC5v" value="${e['Пш 5кл объём, т']||''}" placeholder="0"></td>
+              <td><input type="number" id="rC5s" value="${e['Пш 5кл сумма, ₸']||''}" placeholder="0"></td></tr>
+            <tr><td>Ячмень 2 класс</td>
+              <td><input type="number" id="rBv"  value="${e['Ячмень 2кл объём, т']||''}" placeholder="0"></td>
+              <td><input type="number" id="rBs"  value="${e['Ячмень 2кл сумма, ₸']||''}" placeholder="0"></td></tr>
+          </tbody>
+        </table></div>
+        <div class="aform-grid cols3" style="margin-top:12px">
+          <div class="field"><label>Всего поставлено, т (авт.)</label><input type="number" id="rVolTotal" readonly class="autofilled" value="${e['Всего поставлено, т']||''}"></div>
+          <div class="field"><label>Всего сумма, ₸ (авт.)</label><input type="number" id="rSumTotal" readonly class="autofilled" value="${e['Всего сумма за зерно, ₸']||''}"></div>
+        </div>
+      </div>
+
+      <div class="aform-section">
+        <div class="aform-section-label">Погашение и расчёты</div>
+        <div class="aform-grid cols3">
+          <div class="field"><label>Зачтено в предоплату, ₸</label><input type="number" id="rZachet"    value="${e['Зачтено в предоплату, ₸']||''}"></div>
+          <div class="field"><label>Остаток долга, ₸ (авт.)</label><input type="number" id="rDebt"      readonly class="autofilled" value="${e['Остаток долга, ₸']||''}"></div>
+          <div class="field"><label>Пеня, ₸</label>               <input type="number" id="rPenalty"   value="${e['Пеня, ₸']||''}"></div>
+          <div class="field"><label>Погашено деньгами, ₸</label>  <input type="number" id="rPaidMoney" value="${e['Погашено деньгами, ₸']||''}"></div>
+          <div class="field"><label>Погашено зерном, ₸</label>    <input type="number" id="rPaidGrain" value="${e['Погашено зерном, ₸']||''}"></div>
+          <div class="field"><label>Доплата план, ₸</label>       <input type="number" id="rDopPlan"   value="${e['Доплата план, ₸']||''}"></div>
+          <div class="field"><label>Доплата факт, ₸</label>       <input type="number" id="rDopFact"   value="${e['Доплата факт, ₸']||''}"></div>
+          <div class="field"><label>КСН, ₸</label>                <input type="number" id="rKsn"       value="${e['КСН, ₸']||''}"></div>
+        </div>
+      </div>
+
+      <div class="aform-section">
+        <div class="aform-section-label">История погашений</div>
+        <table class="hist-table" id="histTable">
+          <thead><tr>
+            <th style="width:110px">Тип</th>
+            <th style="width:110px">Дата</th>
+            <th>Сумма / объём, ₸</th>
+            <th style="width:130px">Остаток долга, ₸</th>
+            <th style="width:36px"></th>
+          </tr></thead>
+          <tbody id="histBody"></tbody>
+        </table>
+        <button class="btn btn-ghost add-hist-btn" onclick="addHistRow()">+ Добавить событие</button>
+      </div>
+
+      <div class="aform-actions">
+        <button class="btn btn-ghost" onclick="backToReturnList()">Отмена</button>
+        <button class="btn btn-primary" onclick="saveReturn()">💾 Сохранить</button>
+      </div>
+    </div>`;
+
+  // Подвешиваем автоматический пересчёт
+  ['rC3v','rC3s','rC4v','rC4s','rC5v','rC5s','rBv','rBs','rZachet','rFinSum'].forEach(id => {
+    const el = q('#'+id);
+    if (el && !el.readOnly) el.addEventListener('input', recalcReturn);
+  });
+
+  // Загружаем историю платежей
+  try {
+    const hist = JSON.parse(e['История платежей (JSON)'] || '[]');
+    hist.forEach(p => addHistRow(p));
+  } catch(_) {}
+
+  // Если редактируем существующего — уже заполнено, пересчитаем
+  recalcReturn();
+}
+
+function onSelectReturnContractor() {
+  const sel = q('#rContractor');
+  const opt = sel.options[sel.selectedIndex];
+  q('#rFinSum').value = opt.dataset.sum || '';
+  q('#rReg').value    = opt.dataset.reg  || '';
+  recalcReturn();
+}
+
+function recalcReturn() {
+  const num = id => parseFloat(q('#'+id)?.value || 0) || 0;
+  const volTotal = num('rC3v') + num('rC4v') + num('rC5v') + num('rBv');
+  const sumTotal = num('rC3s') + num('rC4s') + num('rC5s') + num('rBs');
+  const debt     = Math.max(0, num('rFinSum') - num('rZachet'));
+  if (q('#rVolTotal')) q('#rVolTotal').value = volTotal || '';
+  if (q('#rSumTotal')) q('#rSumTotal').value = sumTotal || '';
+  if (q('#rDebt'))     q('#rDebt').value     = debt     || '';
+}
+
+function addHistRow(p = {}) {
+  const tbody = q('#histBody');
+  if (!tbody) return;
+  const types = [
+    {v:'grain',   l:'Поставка зерна'},
+    {v:'money',   l:'Погашение деньгами'},
+    {v:'penalty', l:'Начисление пени'},
+  ];
+  const typeOpts = types.map(t => `<option value="${t.v}" ${p.type===t.v?'selected':''}>${t.l}</option>`).join('');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><select class="h-type">${typeOpts}</select></td>
+    <td><input class="h-date" type="text" value="${esc(p.date||p.date_from||'')}" placeholder="15.11.2026"></td>
+    <td><input class="h-amount" type="number" value="${p.amount||''}" placeholder="Сумма ₸"></td>
+    <td><input class="h-balance" type="number" value="${p.balance!=null?p.balance:''}" placeholder="Остаток ₸"></td>
+    <td><button class="del-btn" onclick="this.closest('tr').remove()">✕</button></td>`;
+  tbody.appendChild(tr);
+}
+
+async function saveReturn() {
+  const rowIdx = parseInt(q('#rRowIdx').value) || null;
+  const sel = q('#rContractor');
+  const ctName = sel ? sel.options[sel.selectedIndex]?.text : '';
+  const ctBin  = sel ? sel.value : '';
+
+  if (!ctBin && !q('#rFinSum').value) { toast('Выберите контрагента', 'err'); return; }
+
+  // Собираем историю платежей
+  const histRows = [];
+  q('#histBody').querySelectorAll('tr').forEach(tr => {
+    const type   = tr.querySelector('.h-type')?.value;
+    const date   = tr.querySelector('.h-date')?.value?.trim();
+    const amount = parseFloat(tr.querySelector('.h-amount')?.value) || 0;
+    const bal    = tr.querySelector('.h-balance')?.value;
+    if (date || amount) {
+      histRows.push({ type, date, amount, balance: bal !== '' ? parseFloat(bal) : null });
+    }
+  });
+
+  const num = id => parseFloat(q('#'+id)?.value || 0) || 0;
+
+  const data = {
+    'Область':                   q('#rReg')?.value     || '',
+    'Наименование поставщика':   ctName.replace(' — выберите контрагента —','') || '',
+    'БИН/ИИН':                   ctBin,
+    'Культура':                  q('#rCult')?.value    || '',
+    '№ договора':                q('#rDogNum')?.value  || '',
+    'Дата договора':             q('#rDogDate')?.value || '',
+    'Объём по договору, т':      num('rVolFin'),
+    'Цена предоплаты, ₸/т':      num('rPriceFin'),
+    'Сумма финансирования, ₸':   num('rFinSum'),
+    'Пш 3кл объём, т':           num('rC3v'),
+    'Пш 3кл сумма, ₸':           num('rC3s'),
+    'Пш 4кл объём, т':           num('rC4v'),
+    'Пш 4кл сумма, ₸':           num('rC4s'),
+    'Пш 5кл объём, т':           num('rC5v'),
+    'Пш 5кл сумма, ₸':           num('rC5s'),
+    'Ячмень 2кл объём, т':       num('rBv'),
+    'Ячмень 2кл сумма, ₸':       num('rBs'),
+    'Всего поставлено, т':        num('rVolTotal'),
+    'Всего сумма за зерно, ₸':   num('rSumTotal'),
+    'Зачтено в предоплату, ₸':   num('rZachet'),
+    'Остаток долга, ₸':          num('rDebt'),
+    'Пеня, ₸':                   num('rPenalty'),
+    'Погашено деньгами, ₸':      num('rPaidMoney'),
+    'Погашено зерном, ₸':        num('rPaidGrain'),
+    'Доплата план, ₸':           num('rDopPlan'),
+    'Доплата факт, ₸':           num('rDopFact'),
+    'КСН, ₸':                    num('rKsn'),
+    'История платежей (JSON)':   JSON.stringify(histRows),
+  };
+
+  try {
+    await api('saveReturn', { rowIdx, data });
+    toast('Сохранено ✓', 'ok');
+    allReturn = [];
+    backToReturnList();
+    loadReturn();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function backToReturnList() {
+  q('#returnList').style.display = '';
+  q('#returnForm').style.display = 'none';
+}
+
+// ── Пользователи ───────────────────────────────────────────────────────────
+
+async function loadUsers() {
+  const box = q('#userList');
+  box.innerHTML = spinner();
+  try {
+    const r = await api('listUsers');
+    box.innerHTML = `<div class="user-grid">${r.data.map(u => `
+      <div class="user-card">
+        <div class="user-card-name">${esc(u.name)}</div>
+        <div class="user-card-meta">Логин: <b>${esc(u.login)}</b></div>
+        <div class="user-card-meta">Роль: <span class="${u.role==='admin'?'role-admin':'role-editor'}">${u.role==='admin'?'Администратор':'Редактор'}</span></div>
+        <div class="user-card-meta">Статус: ${u.active ? '✅ Активен' : '🔴 Отключён'}</div>
+        <div class="user-card-actions">
+          <button class="btn btn-ghost btn-sm" onclick='showEditUserModal(${JSON.stringify(u)})'>✏️ Изменить</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleUser('${esc(u.login)}',${!u.active})">${u.active?'Отключить':'Включить'}</button>
+        </div>
+      </div>`).join('')}</div>`;
+  } catch(e) { box.innerHTML = `<p style="color:var(--red);padding:20px">${e.message}</p>`; }
+}
+
+function showAddUserModal() {
+  q('#userModalTitle').textContent = 'Новый пользователь';
+  q('#umExistingLogin').value = '';
+  q('#umLogin').value  = '';
+  q('#umName').value   = '';
+  q('#umPass').value   = '';
+  q('#umRole').value   = 'editor';
+  q('#umActive').checked = true;
+  q('#umLogin').readOnly = false;
+  q('#umPassHint').textContent = '(обязательно для нового)';
+  q('#userModal').classList.add('show');
+}
+
+function showEditUserModal(u) {
+  q('#userModalTitle').textContent = 'Редактировать пользователя';
+  q('#umExistingLogin').value = u.login;
+  q('#umLogin').value  = u.login;
+  q('#umName').value   = u.name;
+  q('#umPass').value   = '';
+  q('#umRole').value   = u.role;
+  q('#umActive').checked = u.active;
+  q('#umLogin').readOnly = true;
+  q('#umPassHint').textContent = '(оставьте пустым, чтобы не менять)';
+  q('#userModal').classList.add('show');
+}
+
+function closeUserModal() { q('#userModal').classList.remove('show'); }
+
+async function doSaveUser() {
+  const isEdit = !!q('#umExistingLogin').value;
+  const data = {
+    login:    q('#umLogin').value.trim(),
+    name:     q('#umName').value.trim(),
+    role:     q('#umRole').value,
+    active:   q('#umActive').checked,
+  };
+  if (q('#umPass').value) data.password = q('#umPass').value;
+  if (!data.login) { toast('Введите логин', 'err'); return; }
+  try {
+    await api('saveUser', data);
+    toast((isEdit ? 'Пользователь обновлён' : 'Пользователь добавлен') + ' ✓', 'ok');
+    closeUserModal();
+    loadUsers();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function toggleUser(login, active) {
+  try {
+    await api('saveUser', { login, active });
+    toast('Статус обновлён ✓', 'ok');
+    loadUsers();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ── Смена пароля ───────────────────────────────────────────────────────────
+
+function showPassModal() { q('#passModal').classList.add('show'); }
+function closePassModal() { q('#passModal').classList.remove('show'); }
+
+async function doChangePass() {
+  const oldP = q('#pmOld').value;
+  const newP = q('#pmNew').value;
+  const newP2 = q('#pmNew2').value;
+  if (!oldP || !newP) { toast('Заполните все поля', 'err'); return; }
+  if (newP !== newP2) { toast('Пароли не совпадают', 'err'); return; }
+  if (newP.length < 6) { toast('Пароль слишком короткий', 'err'); return; }
+  try {
+    await api('changePassword', { oldPassword: oldP, newPassword: newP });
+    toast('Пароль изменён ✓', 'ok');
+    closePassModal();
+    q('#pmOld').value = q('#pmNew').value = q('#pmNew2').value = '';
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ── Утилиты ────────────────────────────────────────────────────────────────
+
+function q(sel) { return document.querySelector(sel); }
+
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmt(v) {
+  if (!v) return '—';
+  const n = Number(v);
+  if (n >= 1e9) return (n/1e9).toLocaleString('ru-RU',{maximumFractionDigits:2}) + ' млрд';
+  if (n >= 1e6) return (n/1e6).toLocaleString('ru-RU',{maximumFractionDigits:1}) + ' млн';
+  return n.toLocaleString('ru-RU');
+}
+
+function fmtNum(v) { return v && +v ? (+v).toLocaleString('ru-RU') : '—'; }
+
+function toast(msg, type = 'ok') {
+  const el = document.createElement('div');
+  el.className = 'toast-item toast-' + type;
+  el.textContent = msg;
+  q('#toast').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function spinner() {
+  return `<div class="loading"><div class="spinner"></div>Загрузка...</div>`;
+}
+
+// ── Инициализация ──────────────────────────────────────────────────────────
+
+(function init() {
+  const stored = localStorage.getItem('pkk_admin');
+  if (stored) {
+    try {
+      session = JSON.parse(stored);
+      showApp();
+    } catch(_) { localStorage.removeItem('pkk_admin'); }
+  }
+
+  // Enter → логин
+  ['inLogin','inPass'].forEach(id => {
+    const el = q('#'+id);
+    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  });
+})();
+</script>
+</body>
+</html>
