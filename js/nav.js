@@ -16,13 +16,41 @@ function setMapView(tab) {
     if (wx) loadWeather();
 }
 
-function switchView(v) {
-    document.getElementById("viewReport").style.display = v === "report" ? "" : "none";
-    const pr = document.getElementById("viewPriamoy"); if (pr) pr.style.display = v === "priamoy" ? "" : "none";
-    const vz = document.getElementById("viewVozvrat"); if (vz) vz.style.display = v === "vozvrat" ? "" : "none";
-    document.querySelectorAll(".navb").forEach(b => b.classList.toggle("act", b.dataset.view === v));
+let _fwdSub = "report";
+
+function switchForwardSub(sub) {
+    _fwdSub = sub;
+    document.getElementById("viewReport").style.display = sub === "report" ? "" : "none";
+    const vz = document.getElementById("viewVozvrat");
+    if (vz) vz.style.display = sub === "vozvrat" ? "" : "none";
+    document.querySelectorAll(".fwd-subtab").forEach(b => b.classList.toggle("act", b.dataset.sub === sub));
     const title = document.getElementById("mainTitle");
-    if (v === "priamoy") title.innerHTML = "Прямой закуп&nbsp;2026 года";
-    else if (v === "vozvrat") { title.innerHTML = "Возврат зерна (форвард&nbsp;2025/2026)"; ensureVozvrat(); }
-    else title.innerHTML = "Форвардный закуп урожая&nbsp;2026 года";
+    if (title) title.innerHTML = sub === "vozvrat"
+        ? "Возврат зерна (форвард&nbsp;2025/2026)"
+        : "Форвардный закуп урожая&nbsp;2026 года";
+    if (sub === "vozvrat") ensureVozvrat();
+}
+
+function switchView(v) {
+    const isForward = v === "forward";
+    const isPriamoy = v === "priamoy";
+
+    const subtabs = document.getElementById("fwdSubtabs");
+    if (subtabs) subtabs.style.display = isForward ? "" : "none";
+
+    document.getElementById("viewReport").style.display = (isForward && _fwdSub === "report") ? "" : "none";
+    const vz = document.getElementById("viewVozvrat");
+    if (vz) vz.style.display = (isForward && _fwdSub === "vozvrat") ? "" : "none";
+    const pr = document.getElementById("viewPriamoy");
+    if (pr) pr.style.display = isPriamoy ? "" : "none";
+
+    document.querySelectorAll(".navb").forEach(b => b.classList.toggle("act", b.dataset.view === v));
+
+    const title = document.getElementById("mainTitle");
+    if (isPriamoy) title.innerHTML = "Прямой закуп&nbsp;2026 года";
+    else if (isForward) {
+        title.innerHTML = _fwdSub === "vozvrat"
+            ? "Возврат зерна (форвард&nbsp;2025/2026)"
+            : "Форвардный закуп урожая&nbsp;2026 года";
+    }
 }

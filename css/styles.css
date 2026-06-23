@@ -366,3 +366,82 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
     .ctabttl { font-size: 10px !important; padding: 8px 6px 4px !important; border-top: 6px solid #F1ECDD !important; }
     tfoot td { break-inside: avoid; }
 }
+
+/* ===== РАЗДЕЛ «ВОЗВРАТ ЗЕРНА» ===== */
+
+/* Под-вкладки форвардного закупа */
+#fwdSubtabs { background: var(--panel); border-bottom: 2px solid var(--line); }
+.fwd-subtabs { max-width: 1320px; margin: 0 auto; display: flex; gap: 4px; padding: 8px 20px; }
+.fwd-subtab { border: 0; background: transparent; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; transition: background .15s, color .15s; }
+.fwd-subtab:hover { background: #F0EADB; color: var(--ink); }
+.fwd-subtab[data-sub="report"].act { background: var(--ink); color: #F4ECD8; }
+.fwd-subtab[data-sub="vozvrat"].act { background: #9E4A40; color: #F8F3E6; }
+
+/* Авто-сводка */
+.vz-summary { padding: 12px 18px; background: var(--warnbg); border: 1px solid #E4CFA0; border-radius: 12px; }
+.vz-sum-line { font-size: 13px; font-weight: 600; color: #5a3e0e; line-height: 1.7; }
+.vz-sum-line b { font-weight: 800; color: var(--ink); }
+
+/* Строка-связка */
+.vz-chain { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; font-weight: 700; margin: 12px 0; padding: 12px 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.vz-arr { color: var(--muted); font-size: 18px; font-weight: 400; }
+.vz-chain .num { font-size: 16px; font-variant-numeric: tabular-nums; }
+
+/* 6-кол KPI-сетка */
+.vz-kpis6 { grid-template-columns: repeat(6, 1fr) !important; }
+@media (max-width: 1100px) { .vz-kpis6 { grid-template-columns: repeat(3, 1fr) !important; } }
+@media (max-width: 600px)  { .vz-kpis6 { grid-template-columns: repeat(2, 1fr) !important; } }
+
+/* Переключатель метрики на карте */
+.vz-metbtn { border: 0; background: #EEE9DB; border-radius: 8px; padding: 7px 13px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; transition: background .15s; white-space: nowrap; }
+.vz-metbtn:hover { background: #E0D9C8; color: var(--ink); }
+.vz-metbtn.act { background: #9E4A40; color: #F8F3E6; }
+
+/* Воронка: вариант остатка долга */
+.ftrack.sdebt i { background: linear-gradient(90deg, #9E4A40, #C06A5C); }
+
+/* Рейтинг */
+.vz-rank-title { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 10px; }
+.vz-rank-row { display: grid; grid-template-columns: 22px 1fr 80px 40px 90px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid #F0EBDC; }
+.vz-rank-row:last-of-type { border: 0; }
+.vz-rank-num { font-size: 11px; font-weight: 700; color: var(--muted); text-align: center; }
+.vz-rank-name { font-size: 12.5px; font-weight: 700; }
+.vz-rank-bar { height: 10px; border-radius: 5px; background: #EEE9DB; overflow: hidden; }
+.vz-rank-bar div { height: 100%; border-radius: 5px; transition: width .6s; }
+.vz-rank-pct { font-size: 12px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+.vz-rank-debt { font-size: 11.5px; font-weight: 700; text-align: right; color: #E05A4A; font-variant-numeric: tabular-nums; }
+.vz-rank-debt.ok { color: #3C6B4A; }
+.vz-rank-analysis { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.vz-ana-item { font-size: 12.5px; font-weight: 600; padding: 8px 12px; border-radius: 9px; line-height: 1.5; }
+.vz-ana-item.ok2 { background: #E9F0E8; color: #3C6B4A; }
+.vz-ana-item.bad { background: #F7EAE7; color: #9E4A40; }
+.vz-ana-item.warn { background: #FBF0D8; color: #9A6716; }
+
+/* Динамика погашения в карточке */
+.vz-dyn-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
+.vz-dyn-row b { font-weight: 800; }
+.dl.soon { background: #FBF0D8; border-color: #E6CF95; }
+.dl.soon .dlrow { color: #9A6716; }
+
+/* Badge цвета */
+.b-ok2 { background: #E9F0E8; color: #3C6B4A; }
+.b-warn { background: #FBF0D8; color: #9A6716; }
+.b-bad  { background: #F7EAE7; color: #9E4A40; }
+.b-fin  { background: #F7EDD7; color: #9A5410; }
+
+/* Печать: реестр должников */
+@media print {
+    body:not(.print-debtors) .card:has(#vzRanking) { display: none !important; }
+    body:not(.print-debtors) .card:has(#vzForecast) { display: none !important; }
+    .print-debtors #viewReport,
+    .print-debtors #viewPriamoy,
+    .print-debtors #fwdSubtabs { display: none !important; }
+    .print-debtors #viewVozvrat { display: block !important; }
+    .print-debtors .card:has(#vzFunnel) { display: none !important; }
+    .print-debtors .card:has(#vzMapSvg) { display: none !important; }
+    .print-debtors .card:has(#vzRanking) { display: none !important; }
+    .print-debtors .card:has(#vzForecast) { display: none !important; }
+    .print-debtors .vz-summary,
+    .print-debtors .vz-chain { display: none !important; }
+    .print-debtors .vz-kpis6 { grid-template-columns: repeat(6, 1fr) !important; }
+}

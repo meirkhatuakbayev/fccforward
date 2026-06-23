@@ -45,13 +45,20 @@
     <!-- Боковая панель -->
     <nav class="side" id="side">
         <div class="sidettl">Отчёты</div>
-        <button class="navb act" data-view="report"><span class="nd" style="background:#E8A82E"></span>Форвардный закуп</button>
+        <button class="navb act" data-view="forward"><span class="nd" style="background:#E8A82E"></span>Форвардный закуп</button>
         <button class="navb" data-view="priamoy"><span class="nd" style="background:#3C6B4A"></span>Прямой закуп</button>
-        <button class="navb" data-view="vozvrat"><span class="nd" style="background:#9E4A40"></span>Возврат</button>
         <div class="sidefoot">АО «НК «Продкорпорация»</div>
     </nav>
 
     <main class="main">
+        <!-- Под-вкладки Форвардного закупа -->
+        <div id="fwdSubtabs">
+            <div class="fwd-subtabs">
+                <button class="fwd-subtab act" data-sub="report" onclick="switchForwardSub('report')">Финансирование</button>
+                <button class="fwd-subtab" data-sub="vozvrat" onclick="switchForwardSub('vozvrat')">Возврат зерна</button>
+            </div>
+        </div>
+
         <!-- Форвардный закуп -->
         <div id="viewReport">
             <div class="wrap">
@@ -147,22 +154,54 @@
         <!-- Возврат зерна -->
         <div id="viewVozvrat" style="display:none">
             <div class="wrap">
-                <!-- KPI -->
-                <div class="kpis" id="vzKpis"></div>
+                <!-- Авто-сводка -->
+                <div class="vz-summary" id="vzSummary" style="margin-top:18px"></div>
+                <!-- Строка-связка -->
+                <div class="vz-chain" id="vzChain"></div>
+                <!-- 6 KPI плашек -->
+                <div class="kpis vz-kpis6" id="vzKpis"></div>
 
-                <!-- Должники -->
+                <!-- Воронка -->
                 <div class="card" style="margin-top:18px">
                     <div class="cardhead">
-                        <h2>Должники по возврату</h2>
-                        <span class="hint" style="margin:0">СХТП с остатком долга > 0 · нажмите строку для карточки</span>
+                        <h2>Воронка возврата</h2>
+                        <button class="refresh" style="font-size:11px;padding:6px 12px" onclick="printDebtors()">📄 Реестр должников</button>
                     </div>
-                    <div id="vzDebtors"></div>
+                    <div class="hint">Предоплата → зачтено зерном → остаток долга. Суммы в млн ₸.</div>
+                    <div id="vzFunnel"></div>
+                </div>
+
+                <!-- Карта -->
+                <div class="card" style="margin-top:18px">
+                    <div class="cardhead" style="align-items:flex-start;padding-bottom:6px">
+                        <h2>Карта возврата по областям</h2>
+                        <div style="display:flex;gap:6px;padding:10px 0">
+                            <button class="vz-metbtn act" data-m="pct" onclick="setVzMetric('pct')">% исполнения</button>
+                            <button class="vz-metbtn" data-m="debt" onclick="setVzMetric('debt')">Остаток долга</button>
+                            <button class="vz-metbtn" data-m="penalty" onclick="setVzMetric('penalty')">Пеня</button>
+                        </div>
+                    </div>
+                    <div class="hint">Нажмите область — список договоров.</div>
+                    <div class="mapwrap" id="vzMapWrap" style="position:relative">
+                        <div class="maptip" id="vzTip"></div>
+                        <svg class="kz" viewBox="0 0 920 480" id="vzMapSvg"></svg>
+                    </div>
+                    <div class="maplegend" id="vzMapLegend">
+                        <div class="lg-scale">
+                            <span>Исполнение:</span>
+                            <i style="background:#9E4A40"></i><span>0%</span>
+                            <i style="background:linear-gradient(90deg,#9E4A40,#3C6B4A)"></i>
+                            <i style="background:#3C6B4A"></i><span>100%</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Таблица по областям -->
                 <div class="card" style="margin-top:18px">
-                    <h2>Исполнение по областям</h2>
-                    <div class="hint">Нажмите область — список договоров.</div>
+                    <div class="cardhead">
+                        <h2>Исполнение по областям</h2>
+                        <span class="hint" style="margin:0">Нажмите строку — список договоров</span>
+                    </div>
                     <div id="vzRegTable"></div>
                 </div>
 
@@ -178,13 +217,25 @@
                                 <th>Контрагент</th>
                                 <th>Культура</th>
                                 <th class="r">Объём по договору, т</th>
-                                <th class="r">Сумма предоплаты, ₸</th>
+                                <th class="r">Предоплата, ₸</th>
                                 <th class="r">Поставлено, т</th>
                                 <th class="r">Остаток долга, ₸</th>
                             </tr></thead>
                             <tbody id="vzRegRows"></tbody>
                         </table>
                     </div>
+                </div>
+
+                <!-- Рейтинг по исполнению -->
+                <div class="card" style="margin-top:18px">
+                    <h2>Рейтинг по исполнению</h2>
+                    <div style="padding:14px 18px 18px" id="vzRanking"></div>
+                </div>
+
+                <!-- Прогноз пени -->
+                <div class="card" style="margin-top:18px">
+                    <h2>Прогноз пени</h2>
+                    <div style="padding:10px 18px 18px" id="vzForecast"></div>
                 </div>
 
                 <p id="vzErrBox" style="color:#E05A4A;font-weight:600;padding:8px 0"></p>
@@ -225,6 +276,7 @@
 <script src="js/wheat.js"></script>
 <script src="js/pdf.js"></script>
 <script src="js/penalty.js"></script>
+<script src="js/mock-return.js"></script>
 <script src="js/data-return.js"></script>
 <script src="js/render-return.js"></script>
 <script src="js/main.js"></script>
