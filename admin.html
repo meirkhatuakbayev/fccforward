@@ -1239,6 +1239,18 @@ async function saveReturn() {
 
   const num = id => parseFloat(q('#'+id)?.value || 0) || 0;
 
+  // Агрегируем строки поставок в старые фиксированные колонки (читаются GAS getReturnForDashboard)
+  const leg = { psh3v:0, psh3s:0, psh4v:0, psh4s:0, psh5v:0, psh5s:0, yachv:0, yachs:0 };
+  let legVolTotal = 0, legSumTotal = 0;
+  delivRows.forEach(r => {
+    legVolTotal += r.v; legSumTotal += r.s;
+    if      (r.cult === 'Пшеница 3 класс') { leg.psh3v += r.v; leg.psh3s += r.s; }
+    else if (r.cult === 'Пшеница 4 класс') { leg.psh4v += r.v; leg.psh4s += r.s; }
+    else if (r.cult === 'Пшеница 5 класс') { leg.psh5v += r.v; leg.psh5s += r.s; }
+    else if (r.cult === 'Ячмень 2 класс')  { leg.yachv += r.v; leg.yachs += r.s; }
+    // Пшеница твёрдая, Подсолнечник, Лён, Рапс — нет отдельных колонок, попадают только в итог
+  });
+
   const data = {
     'Область':                   q('#rReg')?.value     || '',
     'Наименование поставщика':   ctName.replace('— выберите контрагента —','').trim() || '',
@@ -1250,8 +1262,12 @@ async function saveReturn() {
     'Цена предоплаты, ₸/т':      num('rPriceFin'),
     'Сумма финансирования, ₸':   num('rFinSum'),
     'Поставлено JSON':           JSON.stringify(delivRows),
-    'Всего поставлено, т':       parseFloat(q('#dTotalVol')?.textContent) || 0,
-    'Всего сумма за зерно, ₸':   parseFloat(q('#dTotalSum')?.textContent) || 0,
+    'Пш 3кл объём, т':           leg.psh3v, 'Пш 3кл сумма, ₸':       leg.psh3s,
+    'Пш 4кл объём, т':           leg.psh4v, 'Пш 4кл сумма, ₸':       leg.psh4s,
+    'Пш 5кл объём, т':           leg.psh5v, 'Пш 5кл сумма, ₸':       leg.psh5s,
+    'Ячмень 2кл объём, т':       leg.yachv, 'Ячмень 2кл сумма, ₸':   leg.yachs,
+    'Всего поставлено, т':       legVolTotal,
+    'Всего сумма за зерно, ₸':   legSumTotal,
     'Зачтено в предоплату, ₸':   num('rZachet'),
     'Остаток долга, ₸':          num('rDebt'),
     '% исполнения':              q('#rPct')?.value || '',
@@ -1261,10 +1277,6 @@ async function saveReturn() {
     'Доплата план, ₸':           num('rDopPlan'),
     'Доплата факт, ₸':           num('rDopFact'),
     'КСН, ₸':                    num('rKsn'),
-    'Пш 3кл объём, т': 0, 'Пш 3кл сумма, ₸': 0,
-    'Пш 4кл объём, т': 0, 'Пш 4кл сумма, ₸': 0,
-    'Пш 5кл объём, т': 0, 'Пш 5кл сумма, ₸': 0,
-    'Ячмень 2кл объём, т': 0, 'Ячмень 2кл сумма, ₸': 0,
   };
 
   try {
