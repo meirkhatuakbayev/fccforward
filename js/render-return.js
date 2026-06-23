@@ -795,12 +795,13 @@ function printDebtors() {
     const sum6 = arr => arr.reduce((s, c) => s + c, 0);
 
     Object.entries(byReg).forEach(([reg, cps]) => {
-        rows += `<tr class="rh"><td colspan="9">${reg} область — ${cps.length} СХТП</td></tr>`;
+        rows += `<tr class="rh"><td colspan="10">${reg} область — ${cps.length} СХТП</td></tr>`;
 
-        let tSF = 0, tVT = 0, tST = 0, tSZ = 0, tDB = 0, tPN = 0;
+        let tSF = 0, tVT = 0, tST = 0, tSZ = 0, tDP = 0, tDB = 0, tPN = 0;
         cps.forEach(c => {
             tSF += c.sum_fin; tVT += c.vol_total; tST += c.sum_total;
-            tSZ += c.sum_zachet; tDB += c.debt; tPN += c.penalty;
+            tSZ += c.sum_zachet; tDP += (c.sum_dop_fact||0); tDB += c.debt; tPN += c.penalty;
+            const pct = c.sum_fin > 0 ? (c.sum_zachet / c.sum_fin * 100).toFixed(1) + "%" : "—";
             rows += `<tr>
                 <td class="c">${num++}</td>
                 <td class="l">${c.name}<div class="s">${c.form} · ${c.dog_num} · ${c.cult || ""}</div></td>
@@ -808,7 +809,8 @@ function printDebtors() {
                 <td>${f(c.vol_total)}</td>
                 <td>${f(c.sum_total)}</td>
                 <td>${f(c.sum_zachet)}</td>
-                <td>${c.sum_fin > 0 ? (c.sum_zachet / c.sum_fin * 100).toFixed(1) + "%" : "—"}</td>
+                <td>${f(c.sum_dop_fact||0)}</td>
+                <td>${pct}</td>
                 <td class="err">${f(c.debt)}</td>
                 <td class="err">${f(c.penalty)}</td>
             </tr>`;
@@ -819,21 +821,23 @@ function printDebtors() {
             <td>${f(tVT)}</td>
             <td>${fm(tST)}</td>
             <td>${fm(tSZ)}</td>
+            <td>${fm(tDP)}</td>
             <td>${tSF > 0 ? (tSZ / tSF * 100).toFixed(1) + "%" : "—"}</td>
             <td class="err">${fm(tDB)}</td>
             <td class="err">${fm(tPN)}</td>
         </tr>`;
     });
 
-    const gt = { sf:0, vt:0, st:0, sz:0, db:0, pn:0 };
+    const gt = { sf:0, vt:0, st:0, sz:0, dp:0, db:0, pn:0 };
     list.forEach(c => { gt.sf+=c.sum_fin; gt.vt+=c.vol_total; gt.st+=c.sum_total;
-                        gt.sz+=c.sum_zachet; gt.db+=c.debt; gt.pn+=c.penalty; });
+                        gt.sz+=c.sum_zachet; gt.dp+=(c.sum_dop_fact||0); gt.db+=c.debt; gt.pn+=c.penalty; });
     rows += `<tr class="tot">
         <td colspan="2">ИТОГО ПО РК: ${list.length} СХТП</td>
         <td>${fm(gt.sf)}</td>
         <td>${f(gt.vt)}</td>
         <td>${fm(gt.st)}</td>
         <td>${fm(gt.sz)}</td>
+        <td>${fm(gt.dp)}</td>
         <td>${gt.sf > 0 ? (gt.sz / gt.sf * 100).toFixed(1) + "%" : "—"}</td>
         <td class="terr">${fm(gt.db)}</td>
         <td class="terr">${fm(gt.pn)}</td>
@@ -896,14 +900,15 @@ tr:nth-child(even):not(.rh):not(.sub):not(.tot) td{background:#FAFAF8}
 <table>
 <thead><tr>
   <th style="width:22px">№</th>
-  <th style="width:200px">Наименование СХТП</th>
-  <th style="width:90px">Профинансировано, ₸</th>
-  <th style="width:68px">Поставлено, т</th>
-  <th style="width:90px">В т.ч. на сумму финансирования, ₸</th>
-  <th style="width:90px">В т.ч. зачтено в предоплату, ₸</th>
-  <th style="width:52px">% исп.</th>
-  <th style="width:90px">Остаток долга, ₸</th>
-  <th style="width:80px">Пеня, ₸</th>
+  <th style="width:185px">Наименование СХТП</th>
+  <th style="width:85px">Профинансировано, ₸</th>
+  <th style="width:58px">Поставлено, т</th>
+  <th style="width:85px">Сумма за объём, ₸</th>
+  <th style="width:85px">В т.ч. на сумму финансирования, ₸</th>
+  <th style="width:75px">В т.ч. доплата, ₸</th>
+  <th style="width:58px">% исп. на сумму финансирования</th>
+  <th style="width:85px">Остаток долга, ₸</th>
+  <th style="width:75px">Пеня, ₸</th>
 </tr></thead>
 <tbody>${rows}</tbody>
 </table>
