@@ -157,6 +157,15 @@
                 <!-- 6 KPI плашек -->
                 <div class="kpis vz-kpis6" id="vzKpis" style="margin-top:22px"></div>
 
+                <!-- Справка -->
+                <div class="card" style="margin:14px 0">
+                    <div class="cardhead" style="padding-bottom:0">
+                        <h2>Справка</h2>
+                        <span style="font-size:11px;color:var(--muted);font-weight:600">Нажмите область — список договоров</span>
+                    </div>
+                    <div id="vzSpravka" style="padding:6px 18px 14px"></div>
+                </div>
+
                 <!-- Grid: карта/таблицы (слева) + воронка/должники (справа) -->
                 <div class="grid">
                     <!-- ЛЕВАЯ: карта + переключаемые таблицы -->
@@ -195,7 +204,7 @@
                     <div class="card">
                         <h2>Воронка возврата</h2>
                         <div class="hint">Путь предоплаты: выдано → зачтено зерном → остаток.</div>
-                        <div id="vzFunnel"></div>
+                        <div id="vzFunnel" class="funnel"></div>
                         <h2 style="padding-top:4px">Должники</h2>
                         <div id="vzDebtorsList" style="padding:0 18px 10px"></div>
                         <div style="padding:0 18px 16px">

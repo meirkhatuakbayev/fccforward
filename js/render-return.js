@@ -35,6 +35,7 @@ function colorVzScale(fraction) {
 function renderReturn() {
     if (!DR) return;
     renderVzKpis();
+    renderVzSpravka();
     renderVzFunnel();
     renderVzDebtorsList();
     renderVzMap();
@@ -145,31 +146,79 @@ function renderVzKpis() {
     });
 }
 
+// ── 2б. Справка (авто-анализ исполнения) ─────────────────────────────────────
+function renderVzSpravka() {
+    const box = document.getElementById("vzSpravka");
+    if (!box) return;
+    const regs = DR.regions.filter(r => r.sum_fin > 0);
+    const done    = regs.filter(r => r.pct_exec >= 1.0);
+    const inProg  = regs.filter(r => r.pct_exec > 0 && r.pct_exec < 1.0).sort((a,b) => b.debt - a.debt);
+    const debtReg = regs.filter(r => r.debt > 0).sort((a,b) => b.debt - a.debt);
+
+    const linkReg = (r) =>
+        `<button class="vz-sp-link" onclick="vzSelectRegion('${r.code}')">${r.name}</button>`;
+
+    let rows = "";
+
+    if (done.length) {
+        rows += `<div class="vz-sp-row ok2">
+            <div class="vz-sp-ico">✓</div>
+            <div><b>Полностью исполнили:</b> ${done.map(linkReg).join(", ")}.</div>
+        </div>`;
+    }
+
+    if (debtReg.length) {
+        rows += `<div class="vz-sp-row bad">
+            <div class="vz-sp-ico">!</div>
+            <div><b>Наибольший долг:</b> ${debtReg.map(r =>
+                `<button class="vz-sp-link bad-lnk" onclick="vzSelectRegion('${r.code}')">${r.name}</button> (${fmtMlrd(r.debt)} ₸)`
+            ).join("; ")}.</div>
+        </div>`;
+    }
+
+    if (inProg.length) {
+        rows += `<div class="vz-sp-row warn">
+            <div class="vz-sp-ico">→</div>
+            <div><b>В процессе исполнения:</b> ${inProg.map(r =>
+                `<button class="vz-sp-link warn-lnk" onclick="vzSelectRegion('${r.code}')">${r.name}</button> — ${(r.pct_exec*100).toFixed(0)}%`
+            ).join("; ")} — до срока 02.11.2026.</div>
+        </div>`;
+    }
+
+    box.innerHTML = rows || `<div class="vz-sp-row ok2"><div class="vz-sp-ico">✓</div><div>Все обязательства исполнены.</div></div>`;
+}
+
 // ── 3. Воронка возврата ───────────────────────────────────────────────────────
 function renderVzFunnel() {
     const box = document.getElementById("vzFunnel");
     if (!box) return;
     const t = DR.total;
-    const allCps = DR.cps;
-    const totalSchtp = allCps.length;
-    const retSchtp = allCps.filter(c => c.vol_total > 0).length;
-    const debtSchtp = DR.debtors.length;
+    const totalSchtp = DR.cps.length;
+    const retSchtp   = DR.cps.filter(c => c.vol_total > 0).length;
+    const debtSchtp  = DR.debtors.length;
 
     const stages = [
-        { k: "Выдано (профинансировано)", schtp: totalSchtp, vol: t.vol_contr, sum: t.sum_fin, base: true },
-        { k: "Зачтено зерном",            schtp: retSchtp,   vol: t.vol_ret,   sum: t.sum_zachet },
-        { k: "Остаток долга",             schtp: debtSchtp,  vol: 0,           sum: t.debt, isDebt: true },
+        { k: "Выдано (профинансировано)", schtp: totalSchtp, vol: t.vol_contr, sum: t.sum_fin,    cls: "s0" },
+        { k: "Зачтено зерном",            schtp: retSchtp,   vol: t.vol_ret,   sum: t.sum_zachet, cls: "" },
+        { k: "Остаток долга",             schtp: debtSchtp,  vol: null,        sum: t.debt,       cls: "sdebt" },
     ];
-    const maxVol = Math.max(1, t.vol_contr);
+    const maxSum = Math.max(1, t.sum_fin);
     box.innerHTML = stages.map((s, i) => {
-        const w = s.isDebt ? (t.debt / t.sum_fin * 100) : (s.vol / maxVol * 100);
-        const sub = s.isDebt ? fmtMlrd(s.sum) + " ₸" : `${fmtT(s.schtp)} СХТП · ${fmtT(s.vol)} т · ${fmtMlrd(s.sum)} ₸`;
+        const w = Math.max(s.sum > 0 ? s.sum / maxSum * 100 : 0, s.sum > 0 ? 6 : 0);
+        const sumClr = s.cls === "sdebt"
+            ? (s.sum > 0 ? "color:#E05A4A" : "color:#3C6B4A")
+            : "color:var(--ink)";
+        const sub = s.vol !== null
+            ? `${fmtT(s.schtp)} СХТП · ${fmtT(s.vol)} т`
+            : (s.sum > 0 ? `${fmtT(s.schtp)} СХТП` : "нет долга");
         return `<div class="fstage">
-            <div class="ft"><span>${s.k}</span></div>
-            <div class="ftrack${i === 0 ? " s0" : s.isDebt ? " sdebt" : ""}">
-                <i style="width:${Math.max(w, 20).toFixed(1)}%"></i>
-                <div class="v">${sub}</div>
-            </div></div>`;
+            <div class="ft">
+                <span>${s.k}</span>
+                <span class="muted" style="font-size:13px;font-weight:800;${sumClr}">${fmtMlrd(s.sum)} ₸</span>
+            </div>
+            <div class="ftsub">${sub}</div>
+            <div class="ftrack ${s.cls}"><i style="width:${w.toFixed(1)}%"></i></div>
+        </div>`;
     }).join("");
 }
 
@@ -188,11 +237,11 @@ function renderVzDebtorsList() {
         const safeBin = (c.bin || "").replace(/'/g, "\\'");
         const safeDog = (c.dog_num || "").replace(/'/g, "\\'");
         return `<div class="vz-debtor-row" onclick="openCpReturnByBin('${safeBin}','${safeDog}')">
-            <div>
+            <div style="min-width:0;flex:1">
                 <div class="vz-debtor-name">${c.name}</div>
                 <div class="vz-debtor-sub">${regShortName} · ${c.dog_num}</div>
             </div>
-            <div style="text-align:right;flex-shrink:0">
+            <div style="text-align:right;flex-shrink:0;padding-left:8px">
                 <div class="num" style="color:#E05A4A;font-weight:800;font-size:13px">${fmtMlrd(c.debt)} ₸</div>
                 ${c.penalty > 0 ? `<div style="font-size:11px;color:#C07030;font-weight:700;margin-top:2px">пеня ${fmtMlrd(c.penalty)} ₸</div>` : ""}
             </div>
