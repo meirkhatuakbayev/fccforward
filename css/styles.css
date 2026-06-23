@@ -297,6 +297,42 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
 .ai-wrap { padding: 20px; text-align: center; }
 .footer-contact { font-size: 11px; color: var(--muted); text-align: center; margin-top: 12px; font-weight: 600; line-height: 1.4; }
 
+/* ===== НОУТБУК ≤1200px ===== */
+@media (max-width: 1200px) {
+    .wrap { max-width: 100%; padding: 0 16px 50px; }
+    .top .row { max-width: 100%; padding: 12px 16px; }
+    .kpis { grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .grid { grid-template-columns: 1.3fr 1fr; gap: 14px; }
+    .kpi .big { font-size: 22px; }
+    .side { width: 200px; }
+}
+
+/* ===== ПЛАНШЕТ ≤900px ===== */
+@media (max-width: 900px) {
+    .side { width: 190px; padding: 14px 10px; }
+    .kpis { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .kpi .big { font-size: 20px; }
+    .grid { grid-template-columns: 1fr; }
+    .cardhead { flex-wrap: wrap; gap: 8px; }
+    .seg { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .seg::-webkit-scrollbar { display: none; }
+    .segb { white-space: nowrap; flex-shrink: 0; }
+    /* Возврат: KPI 3 в ряд */
+    .vz-kpis6 { grid-template-columns: repeat(3, 1fr) !important; }
+    /* Рейтинг: скрыть долг */
+    .vz-rank-debt { display: none; }
+    .vz-rank-row { grid-template-columns: 20px 1fr 70px 36px; gap: 6px; }
+    /* Таблицы: горизонтальный скролл */
+    .tablescroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    #regTableWrap { overflow-x: auto; }
+    #vzRegPanel .tablescroll { overflow-x: auto; }
+    #vzTabArea .tablescroll,
+    #vzCropArea .tablescroll { overflow-x: auto; max-height: none; }
+    /* Фильтр подвкладок */
+    .fwd-subtabs { gap: 4px; padding: 6px 14px; }
+    .fwd-subtab { font-size: 12px; padding: 7px 14px; }
+}
+
 /* ===== МОБИЛЬНАЯ ВЕРСИЯ ===== */
 @media (max-width: 760px) {
     .side { display: none; position: fixed; z-index: 40; top: 52px; left: 0; height: calc(100vh - 52px); width: 230px; flex-direction: column; padding: 16px 12px; box-shadow: 4px 0 24px #22402e28; }
@@ -367,19 +403,61 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
     /* Таблицы Исп. по областям и По культурам */
     #vzTabArea .tablescroll,
     #vzCropArea .tablescroll { overflow-x: auto; -webkit-overflow-scrolling: touch; max-height: none; }
+    /* Должники-виджет: таблица с горизонтальным скроллом */
+    #vzDebtArea .tablescroll { overflow-x: auto !important; }
+    #vzDebtArea table { min-width: 480px; }
+    /* Рейтинг: компактнее */
+    .vz-rank-row { grid-template-columns: 18px 1fr 54px 34px; }
+    .vz-rank-analysis { display: none; }
+    /* Цепочка */
+    .vz-chain { font-size: 12px; padding: 8px 12px; gap: 7px; }
+    /* Панель исполнения по договорам */
+    #vzRegPanel .tablescroll { overflow-x: auto; }
+    /* Шапка — делаем стикинг выше для подвкладок */
+    #fwdSubtabs { top: 50px; }
+    /* Кнопки в шапке — убираем текст «PDF» если нет места */
+    .printbtn { padding: 6px 8px; }
 }
 
-@media (max-width: 420px) {
-    .kpis { grid-template-columns: 1fr 1fr; }
+/* ===== МАЛЫЙ ТЕЛЕФОН ≤480px ===== */
+@media (max-width: 480px) {
+    .kpis { grid-template-columns: 1fr 1fr; gap: 7px; margin: 10px 0; }
+    .kpi { padding: 10px 11px; }
     .kpi .big { font-size: 18px; }
-    .top .row { padding: 6px 8px; gap: 4px; }
-    .seal { width: 26px; height: 26px; font-size: 10px; border-radius: 7px; }
-    .brand h1 { font-size: 10px; max-width: 130px; }
-    .refresh, .printbtn { font-size: 10px; padding: 5px 7px; }
-    .crow { grid-template-columns: 80px 1fr 64px; gap: 6px; }
+    .kpi .lab { font-size: 9.5px; }
+    .kpi .sub { font-size: 10px; }
+    .top .row { padding: 7px 8px; gap: 4px; }
+    .seal { width: 28px; height: 28px; font-size: 10px; border-radius: 8px; }
+    .brand h1 { font-size: 10.5px; max-width: 140px; }
+    .brand p { display: none; }
+    .refresh { font-size: 10px; padding: 5px 8px; }
+    .printbtn { font-size: 10px; padding: 5px 6px; }
+    #sidebarToggle { font-size: 17px; padding: 0 3px; }
+    .wrap { padding: 0 8px 36px; }
+    .card h2 { font-size: 13px; padding: 12px 14px 0; }
+    .crow { grid-template-columns: 76px 1fr 62px; gap: 6px; }
     .rkpis { grid-template-columns: 1fr 1fr; }
-    .segb { font-size: 10px; padding: 5px 10px; }
-    #sidebarToggle { font-size: 16px; padding: 0 2px; }
+    .segb { font-size: 10.5px; padding: 5px 10px; }
+    .fwd-subtab { font-size: 11px; padding: 6px 11px; }
+    /* Возврат: KPI 2 в ряд */
+    .vz-kpis6 { grid-template-columns: repeat(2, 1fr) !important; gap: 7px !important; }
+    /* Воронка: мельче текст */
+    .ftrack .v { font-size: 10.5px; }
+    .fstage .ft { font-size: 11px; }
+    /* Рейтинг: 4 колонки без долга */
+    .vz-rank-row { grid-template-columns: 16px 1fr 52px 32px; gap: 5px; padding: 6px 10px; }
+    .vz-rank-name { font-size: 11px; }
+    .vz-rank-pct { font-size: 11px; }
+    /* Модалка */
+    .modal { border-radius: 12px; }
+    .mhead h3 { font-size: 15px; }
+    .mhead { padding: 14px 16px; }
+    .mbody { padding: 14px 16px; }
+    .cp-fig-val { font-size: 16px; }
+    /* Скрыть менее важные элементы */
+    .an-note { font-size: 10.5px; padding: 0 12px 12px; }
+    .footer-contact { font-size: 10px; }
+    .foot { font-size: 10.5px; }
 }
 
 /* ===== ПЕЧАТЬ / PDF — альбомный A4 ===== */

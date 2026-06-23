@@ -312,7 +312,7 @@ function renderVzDebtTable() {
     const totalFin  = DR.debtors.reduce((s,c) => s + (c.sum_fin||0), 0);
     const totalZach = DR.debtors.reduce((s,c) => s + (c.sum_zachet||0), 0);
 
-    box.innerHTML = `<div class="tablescroll" style="max-height:420px;overflow-x:hidden"><table class="rtab" style="table-layout:fixed;width:100%">
+    box.innerHTML = `<div class="tablescroll" style="max-height:420px;overflow-x:auto"><table class="rtab" style="table-layout:fixed;width:100%;min-width:420px">
         <colgroup>
             <col style="width:38%">
             <col style="width:15%">
