@@ -444,12 +444,13 @@ function renderVzMapGeo() {
     const byCode = {};
     DR.regions.forEach(r => byCode[r.code] = r);
 
-    // Pre-build penalty sum per region code (avoid O(n²) per feature)
-    const penByCode = {};
+    // Pre-build per-region aggregates (avoid O(n²) per feature)
+    const penByCode = {}, schtpByName = {};
     DR.regions.forEach(r => penByCode[r.code] = 0);
     DR.cps.forEach(c => {
         const rg = DR.regions.find(x => x.name === c.reg);
         if (rg) penByCode[rg.code] = (penByCode[rg.code] || 0) + (c.penalty || 0);
+        schtpByName[c.reg] = (schtpByName[c.reg] || 0) + 1;
     });
     const maxDebt    = Math.max(1, ...DR.regions.map(r => r.debt));
     const maxPenalty = Math.max(1, ...Object.values(penByCode));
@@ -489,14 +490,15 @@ function renderVzMapGeo() {
             lab.dataset.cx = c[0].toFixed(1); lab.dataset.cy = c[1].toFixed(1);
             lab.setAttribute("transform", `translate(${c[0].toFixed(1)},${c[1].toFixed(1)})`);
             const nm = regShort(rg.name);
-            const pctTxt = (rg.pct_exec * 100).toFixed(0) + "%";
-            const wMax = Math.max(nm.length * 6.6, pctTxt.length * 5.6) + 14;
+            const schtpCnt = schtpByName[rg.name] || 0;
+            const cntTxt = "СХТП " + schtpCnt + " · " + (rg.pct_exec * 100).toFixed(0) + "%";
+            const wMax = Math.max(nm.length * 6.6, cntTxt.length * 5.2) + 14;
             const rect = document.createElementNS(NS, "rect");
             rect.setAttribute("class", "pill");
             rect.setAttribute("x", (-wMax/2).toFixed(1)); rect.setAttribute("y", "-13");
             rect.setAttribute("width", wMax.toFixed(1)); rect.setAttribute("height", "26"); rect.setAttribute("rx", "7");
             const t1 = document.createElementNS(NS, "text"); t1.setAttribute("class","glab name"); t1.setAttribute("y","-4"); t1.textContent = nm;
-            const t2 = document.createElementNS(NS, "text"); t2.setAttribute("class","glab cnt2"); t2.setAttribute("y","6"); t2.textContent = pctTxt;
+            const t2 = document.createElementNS(NS, "text"); t2.setAttribute("class","glab cnt2"); t2.setAttribute("y","6"); t2.textContent = cntTxt;
             lab.appendChild(rect); lab.appendChild(t1); lab.appendChild(t2); G.appendChild(lab);
         }
     });
@@ -517,11 +519,14 @@ function vzShowTip(e, rg) {
     const tip = document.getElementById("vzTip");
     if (!tip) return;
     const pct = (rg.pct_exec * 100).toFixed(1);
+    const schtpCnt = DR.cps.reduce((s, c) => s + (c.reg === rg.name ? 1 : 0), 0);
     tip.innerHTML = `<b>${rg.name}</b>
+        <div class="l"><span>СХТП</span><span>${schtpCnt}</span></div>
         <div class="l"><span>Предоплата</span><span>${fmtMlrd(rg.sum_fin)} ₸</span></div>
-        <div class="l"><span>Зачтено зерном</span><span>${fmtMlrd(rg.sum_zachet)} ₸</span></div>
+        <div class="l"><span>Поставлено</span><span>${fmtT(rg.vol_ret)} т</span></div>
         <div class="l"><span>Исполнение</span><span>${pct}%</span></div>
-        ${rg.debt > 0 ? `<div class="l"><span>Остаток долга</span><span style="color:#E99">${fmtMlrd(rg.debt)} ₸</span></div>` : ""}`;
+        ${rg.debt > 0 ? `<div class="l"><span>Остаток долга</span><span style="color:#E99">${fmtMlrd(rg.debt)} ₸</span></div>` : ""}
+        ${rg.sum_doplata > 0 ? `<div class="l"><span>Доплата</span><span style="color:#C9A030">${fmtMlrd(rg.sum_doplata)} ₸</span></div>` : ""}`;
     tip.classList.add("show");
     const wrap = document.getElementById("vzMapWrap").getBoundingClientRect();
     let x = e.clientX - wrap.left + 14, y = e.clientY - wrap.top + 10;
