@@ -9,20 +9,8 @@ const CONFIG = {
     GEO_URL_FALLBACK: "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/KAZ/ADM1/geoBoundaries-KAZ-ADM1_simplified.geojson",
     AUTO_REFRESH_MIN: 5,
     CRM_BASE: "https://crm.fcc.kz",
-    API_URL_RETURN: "https://script.google.com/macros/s/AKfycbyBi-Hdi-c6Z7z_ddIa1c58l4e_Sv2KhGYCEMPHcTzPxPLZjN63ra9fW0xJ0nmZa0caDg/exec",
-    RETURN_SVOD_CSV: "",
-    RETURN_DETAIL_CSV: "",
-    // Исторические данные (published CSV по gid листа)
-    YEARS: {
-        "2025": {
-            svod:   "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4HRkzvFG_Oxyv9KuAxT_BFyr7o8f6Yz139OzElMShmFL0m9BL-fC1pr0OcBcJbclzhsv66B3I91Wj/pub?gid=397020838&single=true&output=csv",
-            detail: "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4HRkzvFG_Oxyv9KuAxT_BFyr7o8f6Yz139OzElMShmFL0m9BL-fC1pr0OcBcJbclzhsv66B3I91Wj/pub?gid=219239351&single=true&output=csv"
-        },
-        "2024": {
-            svod:   "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4HRkzvFG_Oxyv9KuAxT_BFyr7o8f6Yz139OzElMShmFL0m9BL-fC1pr0OcBcJbclzhsv66B3I91Wj/pub?gid=1601376729&single=true&output=csv",
-            detail: "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4HRkzvFG_Oxyv9KuAxT_BFyr7o8f6Yz139OzElMShmFL0m9BL-fC1pr0OcBcJbclzhsv66B3I91Wj/pub?gid=247314837&single=true&output=csv"
-        }
-    }
+    API_URL_RETURN: "https://script.google.com/macros/s/AKfycbyBi-Hdi-c6Z7z_ddIa1c58l4e_Sv2KhGYCEMPHcTzPxPLZjN63ra9fW0xJ0nmZa0caDg/exec"
+    // При добавлении нового года — добавить ключ YEARS: { "2025": { svod: "...", detail: "..." } }
 };
 
 const gvizURL = sheet => `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(sheet)}`;

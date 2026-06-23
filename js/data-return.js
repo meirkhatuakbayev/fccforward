@@ -193,13 +193,7 @@ async function loadReturn(yearOverride) {
     const year = yearOverride || (document.getElementById("yearSel") || {}).value || "2026";
     try {
         if (year !== "2026") {
-            // Исторические данные — напрямую из листов через GViz CSV
-            const [sv, dt] = await Promise.all([
-                fetchCSV(gvizURL("ВОЗВРАТ_" + year)),
-                fetchCSV(gvizURL("ВОЗВРАТ_РАЗВЕРНУТАЯ_" + year))
-            ]);
-            combineReturn(sv, dt);
-            renderReturn();
+            if (typeof hideYearLoader === "function") hideYearLoader();
             return;
         }
 

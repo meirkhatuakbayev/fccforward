@@ -701,20 +701,13 @@ function renderReturnMerged(filter) {
   _retFilter = filter;
   const box = q('#returnList');
 
-  const list = filter === 'active'  ? _mergedReturn.filter(m => m.hasRecord)
-             : filter === 'pending' ? _mergedReturn.filter(m => !m.hasRecord)
-             : _mergedReturn;
-
-  const pendingCount = _mergedReturn.filter(m => !m.hasRecord).length;
-  const activeCount  = _mergedReturn.filter(m =>  m.hasRecord).length;
+  const list = filter === 'active' ? _mergedReturn.filter(m => m.hasRecord) : _mergedReturn;
+  const activeCount = _mergedReturn.filter(m => m.hasRecord).length;
 
   const tabs = `
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
-      <button class="btn btn-sm ${filter==='all'    ?'btn-primary':'btn-ghost'}" onclick="renderReturnMerged('all')">Все (${_mergedReturn.length})</button>
-      <button class="btn btn-sm ${filter==='pending'?'btn-primary':'btn-ghost'}" onclick="renderReturnMerged('pending')" style="color:${filter!=='pending'?'var(--amber)':''}">Не добавлены (${pendingCount})</button>
-      <button class="btn btn-sm ${filter==='active' ?'btn-primary':'btn-ghost'}" onclick="renderReturnMerged('active')" style="color:${filter!=='active'?'var(--green)':''}">С записью (${activeCount})</button>
-      <div style="flex:1"></div>
-      ${pendingCount > 0 ? `<button class="btn btn-amber btn-sm" onclick="addAllPending()">+ Добавить всех (${pendingCount})</button>` : ''}
+      <button class="btn btn-sm ${filter==='all'   ?'btn-primary':'btn-ghost'}" onclick="renderReturnMerged('all')">Все (${_mergedReturn.length})</button>
+      <button class="btn btn-sm ${filter==='active'?'btn-primary':'btn-ghost'}" onclick="renderReturnMerged('active')" style="color:${filter!=='active'?'var(--green)':''}">С записью (${activeCount})</button>
     </div>`;
 
   if (!list.length) {
@@ -762,25 +755,6 @@ function editReturnByIdx(idx) {
   openReturnForm(_mergedReturn[idx].ret);
 }
 
-async function addAllPending() {
-  const pending = _mergedReturn.filter(m => !m.hasRecord);
-  if (!pending.length) return;
-  if (!confirm(`Добавить ${pending.length} контрагентов в возврат? У них выставится остаток долга = сумма финансирования.`)) return;
-
-  let done = 0;
-  for (const m of pending) {
-    const c = m.contractor;
-    const data = {
-      'Область': c.reg, 'Форма': c.form, 'Наименование поставщика': c.name,
-      'Район': c.rayon, 'БИН/ИИН': c.bin, '№ договора': c.dog_num,
-      'Культура': c.cult, 'Сумма финансирования, ₸': c.fin_sum,
-      'Остаток долга, ₸': c.fin_sum, 'История платежей (JSON)': '[]'
-    };
-    try { await api('saveReturn', { data }); done++; } catch(_) {}
-  }
-  toast(`Добавлено ${done} из ${pending.length} ✓`, 'ok');
-  loadReturnMerged();
-}
 
 function showAddReturnForm() {
   openReturnForm(null, null);

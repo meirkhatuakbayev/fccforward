@@ -127,12 +127,11 @@ async function loadData(yearOverride) {
         let svodRows, detRows;
 
         if (year !== "2026") {
-            const yCfg = CONFIG.YEARS && CONFIG.YEARS[year];
-            if (!yCfg) throw new Error("Нет настроек для года " + year);
-            [svodRows, detRows] = await Promise.all([
-                fetchCSV(yCfg.svod),
-                fetchCSV(yCfg.detail)
-            ]);
+            hideLoader();
+            if (typeof hideYearLoader === "function") hideYearLoader();
+            live.textContent = "Департамент закупа СХП";
+            showBanner(`Данные за ${year} год будут добавлены позже.`);
+            return;
         } else if (CONFIG.API_URL) {
             const r = await fetch(CONFIG.API_URL, {cache: "no-store"});
             if (!r.ok) throw new Error("API " + r.status);
