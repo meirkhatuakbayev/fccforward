@@ -685,15 +685,51 @@ function openCpReturn(c) {
             }).join("")
             : `<div class="ln"><span style="color:var(--muted)">Поставок нет</span></div>`;
 
-        // История платежей
+        // История платежей — расширенный формат событий
+        const fmtSum = v => {
+            if (!v) return "0 ₸";
+            if (v >= 1e9) return (v/1e9).toLocaleString("ru-RU",{maximumFractionDigits:2}) + " млрд ₸";
+            return (v/1e6).toLocaleString("ru-RU",{maximumFractionDigits:2}) + " млн ₸";
+        };
         let paymentsHTML = "";
         if (c.payments && c.payments.length > 0) {
-            paymentsHTML = `<div class="seclab">История погашений</div>
-                <div class="lines">${c.payments.map(p => `<div class="ln">
-                    <span>${fmtDate(p.date)}</span>
-                    <span class="num">${fmtMlrd(p.amount)} ₸</span>
-                    <span style="color:var(--muted);font-size:11px">деньгами</span>
-                </div>`).join("")}</div>`;
+            const evRows = c.payments.map(p => {
+                const type = p.type || "money";
+                if (type === "grain") {
+                    return `<div class="cp-ev cp-ev--grain">
+                        <div class="cp-ev-date">${fmtDate(p.date)}</div>
+                        <div class="cp-ev-body">
+                            <div class="cp-ev-label">Поставлено зерно${p.label ? " — " + p.label : ""}</div>
+                            <div class="cp-ev-meta">${fmtT(p.vol)} т · ${fmtSum(p.sum)} · зачтено в предоплату</div>
+                            <div class="cp-ev-balance">Остаток долга: <b>${fmtSum(p.balance)}</b></div>
+                        </div>
+                    </div>`;
+                }
+                if (type === "penalty") {
+                    const d1 = fmtDate(p.date_from), d2 = fmtDate(p.date_to);
+                    return `<div class="cp-ev cp-ev--penalty">
+                        <div class="cp-ev-date">${d1}<br>–<br>${d2}</div>
+                        <div class="cp-ev-body">
+                            <div class="cp-ev-label">Начислена пеня — просрочка ${p.days} дн.</div>
+                            <div class="cp-ev-meta">База: ${fmtSum(p.base)} × 0,1% × ${p.days} дн.</div>
+                            <div class="cp-ev-balance" style="color:#E05A4A">Пеня: <b>${fmtSum(p.amount)}</b></div>
+                        </div>
+                    </div>`;
+                }
+                // type === "money"
+                return `<div class="cp-ev cp-ev--money">
+                    <div class="cp-ev-date">${fmtDate(p.date)}</div>
+                    <div class="cp-ev-body">
+                        <div class="cp-ev-label">Погашено деньгами</div>
+                        <div class="cp-ev-meta">${fmtSum(p.amount)}</div>
+                        ${p.balance != null ? `<div class="cp-ev-balance">Остаток долга: <b>${fmtSum(p.balance)}</b></div>` : ""}
+                    </div>
+                </div>`;
+            }).join("");
+            paymentsHTML = `<div class="cp-sec">
+                <div class="cp-sec-title">История погашений</div>
+                <div class="cp-timeline">${evRows}</div>
+            </div>`;
         }
 
         // Блок пени

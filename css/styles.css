@@ -499,12 +499,25 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
 .cp-exec-bar { height: 10px; border-radius: 5px; background: #EEE9DB; overflow: hidden; }
 /* Примечание */
 .cp-note { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 6px; }
+/* Таймлайн истории погашений */
+.cp-timeline { display: flex; flex-direction: column; gap: 0; }
+.cp-ev { display: grid; grid-template-columns: 64px 1fr; gap: 10px; padding: 8px 8px 8px 10px; border-bottom: 1px solid #EBE6D5; border-left: 3px solid transparent; align-items: start; }
+.cp-ev:last-child { border-bottom: 0; }
+.cp-ev--grain   { border-left-color: #3C6B4A; }
+.cp-ev--money   { border-left-color: #4A7C9A; }
+.cp-ev--penalty { border-left-color: #E05A4A; background: #FFF8F7; border-radius: 0 6px 6px 0; }
+.cp-ev-date { font-size: 10.5px; font-weight: 700; color: var(--muted); text-align: right; padding-top: 2px; line-height: 1.4; }
+.cp-ev-label { font-size: 12.5px; font-weight: 700; }
+.cp-ev-meta { font-size: 11.5px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+.cp-ev-balance { font-size: 12px; font-weight: 700; margin-top: 4px; color: var(--ink); }
+
 /* Мобильные */
 @media (max-width: 520px) {
     .cp-3col { grid-template-columns: 1fr 1fr; }
     .cp-fig-val { font-size: 17px; }
     .cp-cls-row, .cp-cls-total { grid-template-columns: 1fr auto auto; }
     .cp-cls-row .cp-ml, .cp-cls-total .cp-ml { display: none; }
+    .cp-ev { grid-template-columns: 52px 1fr; }
 }
 
 /* Badge цвета */
