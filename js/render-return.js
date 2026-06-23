@@ -1,7 +1,6 @@
 // Рендеринг раздела «Возврат зерна» (ФЗ 2025/2026)
 
 let _returnLoaded = false;
-let _vzMetric = "pct";   // "pct" | "debt" | "penalty"
 let _vzMapZoom = null, _vzMapSvgSel = null, _vzMapFit = null;
 
 // ── Ленивая загрузка ─────────────────────────────────────────────────────────
@@ -9,26 +8,6 @@ function ensureVozvrat() {
     if (_returnLoaded) { if (DR) renderReturn(); return; }
     _returnLoaded = true;
     loadReturn();
-}
-
-// ── Цветовые функции ─────────────────────────────────────────────────────────
-function colorVzExec(pct) {
-    // pct 0..1: 1=зелёный (100% исп.), 0=красный (0%)
-    const t = Math.max(0, Math.min(1, pct));
-    if (t >= 1) return "#3C6B4A";
-    if (t <= 0) return "#9E4A40";
-    const g = [60, 107, 74], r2 = [158, 74, 64];
-    const m = i => Math.round(g[i] + (r2[i] - g[i]) * (1 - t));
-    return `rgb(${m(0)},${m(1)},${m(2)})`;
-}
-
-function colorVzScale(fraction) {
-    // 0=светлый, 1=тёмно-красный
-    const t = Math.max(0, Math.min(1, fraction));
-    if (t <= 0) return "#D6CFBC";
-    const lo = [214, 207, 188], hi = [158, 74, 64];
-    const m = i => Math.round(lo[i] + (hi[i] - lo[i]) * t);
-    return `rgb(${m(0)},${m(1)},${m(2)})`;
 }
 
 // ── Основной рендер ──────────────────────────────────────────────────────────
@@ -444,16 +423,9 @@ function renderVzMapGeo() {
     const byCode = {};
     DR.regions.forEach(r => byCode[r.code] = r);
 
-    // Pre-build per-region aggregates (avoid O(n²) per feature)
-    const penByCode = {}, schtpByName = {};
-    DR.regions.forEach(r => penByCode[r.code] = 0);
-    DR.cps.forEach(c => {
-        const rg = DR.regions.find(x => x.name === c.reg);
-        if (rg) penByCode[rg.code] = (penByCode[rg.code] || 0) + (c.penalty || 0);
-        schtpByName[c.reg] = (schtpByName[c.reg] || 0) + 1;
-    });
-    const maxDebt    = Math.max(1, ...DR.regions.map(r => r.debt));
-    const maxPenalty = Math.max(1, ...Object.values(penByCode));
+    // Pre-build СХТП count per region name
+    const schtpByName = {};
+    DR.cps.forEach(c => { schtpByName[c.reg] = (schtpByName[c.reg] || 0) + 1; });
 
     const proj = d3.geoMercator().fitExtent([[14,16],[906,464]], GEO);
     const gp = d3.geoPath(proj);
@@ -464,10 +436,8 @@ function renderVzMapGeo() {
         const rg = code ? byCode[code] : null;
         if (!rg) return;
 
-        let col;
-        if (_vzMetric === "pct")     col = rg.sum_fin > 0 ? colorVzExec(rg.pct_exec) : "#D6CFBC";
-        else if (_vzMetric === "debt")    col = colorVzScale(rg.debt / maxDebt);
-        else col = colorVzScale((penByCode[rg.code] || 0) / maxPenalty);
+        // Используем ту же функцию colorFor что и в разделе финансирования (map.js)
+        const col = rg.sum_fin > 0 ? colorFor(rg.pct_exec) : "#ECE6D5";
 
         const p = document.createElementNS(NS, "path");
         p.setAttribute("d", gp(f));
@@ -541,29 +511,6 @@ function vzMapZoomReset() {
     if (_vzMapZoom && _vzMapSvgSel && _vzMapFit) _vzMapSvgSel.transition().duration(300).call(_vzMapZoom.transform, _vzMapFit);
 }
 
-function setVzMetric(m) {
-    _vzMetric = m;
-    document.querySelectorAll("#viewVozvrat [data-m]").forEach(b => b.classList.toggle("act", b.dataset.m === m));
-    renderVzMapGeo();
-    renderVzMapLegend();
-}
-
-function renderVzMapLegend() {
-    const box = document.getElementById("vzMapLegend");
-    if (!box) return;
-    if (_vzMetric === "pct") {
-        box.innerHTML = `<div class="lg-scale"><span>Исполнение:</span>
-            <i style="background:#9E4A40"></i><span>0%</span>
-            <i style="background:linear-gradient(90deg,#9E4A40,#3C6B4A)"></i>
-            <i style="background:#3C6B4A"></i><span>100%</span></div>`;
-    } else {
-        const label = _vzMetric === "debt" ? "Остаток долга" : "Пеня";
-        box.innerHTML = `<div class="lg-scale"><span>${label}:</span>
-            <i style="background:#D6CFBC"></i><span>нет</span>
-            <i style="background:linear-gradient(90deg,#D6CFBC,#9E4A40)"></i>
-            <i style="background:#9E4A40"></i><span>макс.</span></div>`;
-    }
-}
 
 // ── 5. Таблица по областям ────────────────────────────────────────────────────
 function renderVzRegionTable() {
@@ -659,7 +606,7 @@ function renderVzRanking() {
     html += regs.map((r, i) => {
         const pct = (r.pct_exec * 100).toFixed(1);
         const bar = Math.min(100, r.pct_exec * 100);
-        const col = colorVzExec(r.pct_exec);
+        const col = colorFor(r.pct_exec);
         return `<div class="vz-rank-row">
             <div class="vz-rank-num">${i+1}</div>
             <div class="vz-rank-name">${r.name}</div>
