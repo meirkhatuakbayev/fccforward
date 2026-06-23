@@ -785,7 +785,7 @@ async function loadReturnMerged() {
     // Индекс записей возврата по БИН/названию
     const retIdx = {};
     allReturn.forEach(r => {
-      const key = (r['БИН/ИИН'] || r['Наименование поставщика'] || '').trim();
+      const key = String(r['БИН/ИИН'] || r['Наименование поставщика'] || '').trim();
       if (key) retIdx[key] = r;
     });
 
@@ -793,7 +793,7 @@ async function loadReturnMerged() {
     _mergedReturn = allContractors
       .filter(c => c.fin_sum > 0 && (c.status||'').toLowerCase().includes('профин'))
       .map(c => {
-        const key = (c.bin || c.name || '').trim();
+        const key = String(c.bin || c.name || '').trim();
         const ret = retIdx[key] || retIdx[c.name] || null;
         return { contractor: c, ret, hasRecord: !!ret };
       });
