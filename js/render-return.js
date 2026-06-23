@@ -156,14 +156,16 @@ function renderVzMapGeo() {
 
     const byCode = {};
     DR.regions.forEach(r => byCode[r.code] = r);
+
+    // Pre-build penalty sum per region code (avoid O(n²) per feature)
+    const penByCode = {};
+    DR.regions.forEach(r => penByCode[r.code] = 0);
+    DR.cps.forEach(c => {
+        const rg = DR.regions.find(x => x.name === c.reg);
+        if (rg) penByCode[rg.code] = (penByCode[rg.code] || 0) + (c.penalty || 0);
+    });
     const maxDebt    = Math.max(1, ...DR.regions.map(r => r.debt));
-    const maxPenalty = Math.max(1, ...DR.regions.map(r => {
-        const reg = DR.cps.filter(c => {
-            const rg = DR.regions.find(x => x.name === c.reg);
-            return rg && rg.code === r.code;
-        });
-        return reg.reduce((s, c) => s + c.penalty, 0);
-    }));
+    const maxPenalty = Math.max(1, ...Object.values(penByCode));
 
     const proj = d3.geoMercator().fitExtent([[14,16],[906,464]], GEO);
     const gp = d3.geoPath(proj);
@@ -177,10 +179,7 @@ function renderVzMapGeo() {
         let col;
         if (_vzMetric === "pct")     col = rg.sum_fin > 0 ? colorVzExec(rg.pct_exec) : "#D6CFBC";
         else if (_vzMetric === "debt")    col = colorVzScale(rg.debt / maxDebt);
-        else col = colorVzScale(
-            DR.cps.filter(c => { const rx=DR.regions.find(x=>x.name===c.reg); return rx&&rx.code===rg.code; })
-                   .reduce((s,c)=>s+c.penalty,0) / maxPenalty
-        );
+        else col = colorVzScale((penByCode[rg.code] || 0) / maxPenalty);
 
         const p = document.createElementNS(NS, "path");
         p.setAttribute("d", gp(f));

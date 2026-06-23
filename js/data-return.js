@@ -2,7 +2,6 @@
 // Глобальный объект DR — аналог D для форварда.
 
 let DR = null;
-let _returnLoaded = false;
 
 // ─── Парсер СВОД ──────────────────────────────────────────────────────────────
 function parseSvodReturn(rows) {
