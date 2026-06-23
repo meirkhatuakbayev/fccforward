@@ -174,28 +174,39 @@ function renderVzFunnel() {
     const totalSchtp = DR.cps.length;
     const retSchtp   = DR.cps.filter(c => c.vol_total > 0).length;
     const debtSchtp  = DR.debtors.length;
+    const maxSum = Math.max(1, t.sum_fin);
 
     const stages = [
-        { k: "Выдано (профинансировано)", schtp: totalSchtp, vol: t.vol_contr, sum: t.sum_fin,    cls: "s0" },
-        { k: "Зачтено зерном",            schtp: retSchtp,   vol: t.vol_ret,   sum: t.sum_zachet, cls: "" },
-        { k: "Остаток долга",             schtp: debtSchtp,  vol: null,        sum: t.debt,       cls: "sdebt" },
+        {
+            k: "Выдано (профинансировано)",
+            pct: "100%",
+            schtp: totalSchtp, vol: t.vol_contr, sum: t.sum_fin,
+            cls: "s0"
+        },
+        {
+            k: "Зачтено зерном",
+            pct: t.sum_fin > 0 ? (t.sum_zachet / t.sum_fin * 100).toFixed(1) + "% от выдано" : "—",
+            schtp: retSchtp, vol: t.vol_ret, sum: t.sum_zachet,
+            cls: ""
+        },
+        {
+            k: "Остаток долга",
+            pct: t.sum_fin > 0 ? (t.debt / t.sum_fin * 100).toFixed(1) + "% от выдано" : "—",
+            schtp: debtSchtp, vol: null, sum: t.debt,
+            cls: "sdebt"
+        },
     ];
-    const maxSum = Math.max(1, t.sum_fin);
-    box.innerHTML = stages.map((s, i) => {
-        const w = Math.max(s.sum > 0 ? s.sum / maxSum * 100 : 0, s.sum > 0 ? 6 : 0);
-        const sumClr = s.cls === "sdebt"
-            ? (s.sum > 0 ? "color:#E05A4A" : "color:#3C6B4A")
-            : "color:var(--ink)";
-        const sub = s.vol !== null
-            ? `${fmtT(s.schtp)} СХТП · ${fmtT(s.vol)} т`
-            : (s.sum > 0 ? `${fmtT(s.schtp)} СХТП` : "нет долга");
+
+    box.innerHTML = stages.map(s => {
+        const w = s.sum > 0 ? Math.max(s.sum / maxSum * 100, 34) : 0;
+        const vText = s.vol !== null
+            ? `${fmtT(s.schtp)} СХТП · ${fmtT(s.vol)} тонн · ${fmtMlrd(s.sum)} ₸`
+            : s.sum > 0 ? `${fmtT(s.schtp)} СХТП · ${fmtMlrd(s.sum)} ₸`
+            : "нет долга";
         return `<div class="fstage">
-            <div class="ft">
-                <span>${s.k}</span>
-                <span class="muted" style="font-size:13px;font-weight:800;${sumClr}">${fmtMlrd(s.sum)} ₸</span>
-            </div>
-            <div class="ftsub">${sub}</div>
-            <div class="ftrack ${s.cls}"><i style="width:${w.toFixed(1)}%"></i></div>
+            <div class="ft"><span>${s.k}</span><span class="muted">${s.pct}</span></div>
+            <div class="ftrack ${s.cls}"><i style="width:${w.toFixed(1)}%"></i>
+                <div class="v">${vText}</div></div>
         </div>`;
     }).join("");
 }
