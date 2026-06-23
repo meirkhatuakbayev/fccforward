@@ -872,6 +872,7 @@ function editReturn(idx) {
 function openReturnForm(existing, contractorHint) {
   // contractorHint — объект из allContractors когда создаём запись впервые
   const ch = contractorHint || {};
+  const chPrice = (ch.fin_vol > 0) ? Math.round((ch.fin_sum||0) / ch.fin_vol) : '';
   const e  = existing ? { ...existing } : {
     'Область':                 ch.reg     || '',
     'Форма':                   ch.form    || '',
@@ -881,6 +882,8 @@ function openReturnForm(existing, contractorHint) {
     '№ договора':              ch.dog_num || '',
     'Культура':                ch.cult    || '',
     'Сумма финансирования, ₸': ch.fin_sum || '',
+    'Объём по договору, т':    ch.fin_vol ? Number(ch.fin_vol).toFixed(3) : '',
+    'Цена предоплаты, ₸/т':   chPrice,
     'Остаток долга, ₸':        ch.fin_sum || '',
   };
   const box = q('#returnForm');
@@ -906,7 +909,7 @@ function openReturnForm(existing, contractorHint) {
         <div class="aform-grid cols2">
           <div class="field">
             <label>Контрагент (профинансированные) *</label>
-            <select id="rContractor" onchange="onSelectReturnContractor()"${existing?' disabled':''}>
+            <select id="rContractor" onchange="onSelectReturnContractor()"${existing?' style="pointer-events:none;background:#F0EBE0;color:#555;border-color:#CCC5AE" tabindex="-1"':''}>
               <option value="">— выберите контрагента —</option>
               ${ctOpts}
             </select>
@@ -940,30 +943,30 @@ function openReturnForm(existing, contractorHint) {
       </div>
 
       <div class="aform-section">
-        <div class="aform-section-label" style="display:flex;align-items:center;justify-content:space-between">
-          <span>Поставлено в разрезе культур</span>
-          <button type="button" class="btn btn-ghost btn-sm" onclick="addDeliveryRow()">＋ Добавить культуру</button>
-        </div>
+        <div class="aform-section-label">Поставлено в разрезе культур</div>
         <div style="overflow-x:auto">
-          <table class="atable" id="deliveryTable" style="font-size:12.5px;min-width:640px">
+          <table class="atable" id="deliveryTable" style="font-size:12.5px;min-width:700px">
             <thead><tr>
-              <th style="width:160px">Культура</th>
-              <th style="width:120px">Клейковина, %</th>
-              <th style="width:110px">Объём, т</th>
-              <th style="width:110px">Цена, ₸/т (авт.)</th>
-              <th style="width:130px">Сумма, ₸</th>
+              <th style="width:155px">Культура</th>
+              <th style="width:110px">Клейковина, %</th>
+              <th style="width:115px">Дата погашения</th>
+              <th style="width:105px">Объём, т</th>
+              <th style="width:105px">Цена, ₸/т (авт.)</th>
+              <th style="width:120px">Сумма, ₸</th>
               <th style="width:36px"></th>
             </tr></thead>
             <tbody id="deliveryBody"></tbody>
             <tfoot><tr style="background:#F1E8D0;font-weight:800">
-              <td colspan="2">Итого</td>
-              <td id="dTotalVol" style="text-align:right">0.000</td>
+              <td colspan="3">Итого</td>
+              <td id="dTotalVol" style="text-align:right">—</td>
               <td></td>
-              <td id="dTotalSum" style="text-align:right">0.00</td>
+              <td id="dTotalSum" style="text-align:right">—</td>
               <td></td>
             </tr></tfoot>
           </table>
         </div>
+        <button type="button" class="btn btn-ghost" style="margin-top:10px;width:100%;border:2px dashed #C8C0AC" onclick="addDeliveryRow()">＋ Добавить культуру</button>
+        <p style="font-size:11px;color:var(--muted);margin:6px 0 0;text-align:center">Строки сохраняются вместе с формой при нажатии «Сохранить»</p>
       </div>
 
       <div class="aform-section">
@@ -1064,23 +1067,25 @@ function addDeliveryRow(data = {}) {
   const tbody = q('#deliveryBody');
   if (!tbody) return;
   const tr = document.createElement('tr');
+  // Если культура не задана — берём первую из списка (Пшеница 3 класс)
+  const selCult = data.cult || CULT_LIST[0];
   const cultOpts = CULT_LIST.map(c =>
-    `<option value="${c}" ${data.cult===c?'selected':''}>${c}</option>`
+    `<option value="${c}" ${selCult===c?'selected':''}>${c}</option>`
   ).join('');
-  const selCult = data.cult || '';
   const kleiVals = KLEI_MAP[selCult] || [];
-  const kleiOpts = kleiVals.map(k => `<option value="${k}" ${data.klei==k?'selected':''}>${k}</option>`).join('');
+  const kleiOpts = kleiVals.map(k => `<option value="${k}" ${String(data.klei)===String(k)?'selected':''}>${k}</option>`).join('');
   const kleiHtml = kleiVals.length
     ? `<select class="d-klei" onchange="recalcDelivery()">${kleiOpts}</select>`
-    : `<select class="d-klei" style="visibility:hidden"></select>`;
+    : `<span class="d-klei" style="color:#BBB;font-size:11px;display:block;text-align:center;padding:4px 0">—</span>`;
 
   tr.innerHTML = `
     <td><select class="d-cult" onchange="onDeliveryCultChange(this)">${cultOpts}</select></td>
     <td class="d-klei-cell">${kleiHtml}</td>
+    <td><input class="d-date" type="date" value="${data.date||''}" style="font-size:12px;border:1px solid #CCC;border-radius:4px;padding:2px 4px;width:100%"></td>
     <td><input class="d-vol" type="number" step="0.001" min="0" value="${data.v||''}" placeholder="0.000" oninput="recalcDelivery()"></td>
-    <td><input class="d-price" type="number" readonly style="background:#F5F0E6;color:#555;border:1px solid #DDD5C0" value="${data.price||''}"></td>
+    <td><input class="d-price" type="number" readonly style="background:#F5F0E6;color:#555;border:1px solid #DDD5C0;width:90px" value="${data.price||''}"></td>
     <td><input class="d-sum" type="number" step="0.01" min="0" value="${data.s||''}" placeholder="0.00" oninput="recalcDelivery()"></td>
-    <td><button type="button" class="del-btn" onclick="this.closest('tr').remove();recalcDelivery()">✕</button></td>`;
+    <td><button type="button" class="del-btn" onclick="this.closest('tr').remove();recalcDelivery()" title="Удалить">✕</button></td>`;
   tbody.appendChild(tr);
   recalcDelivery();
 }
@@ -1094,7 +1099,7 @@ function onDeliveryCultChange(sel) {
     const opts = kleiVals.map(k => `<option value="${k}">${k}</option>`).join('');
     cell.innerHTML = `<select class="d-klei" onchange="recalcDelivery()">${opts}</select>`;
   } else {
-    cell.innerHTML = `<select class="d-klei" style="visibility:hidden"></select>`;
+    cell.innerHTML = `<span class="d-klei" style="color:#BBB;font-size:11px;display:block;text-align:center;padding:4px 0">—</span>`;
   }
   recalcDelivery();
 }
@@ -1187,11 +1192,13 @@ async function saveReturn() {
       const rows = [];
       q('#deliveryBody')?.querySelectorAll('tr').forEach(tr => {
         const cult  = tr.querySelector('.d-cult')?.value  || '';
-        const klei  = tr.querySelector('.d-klei')?.value  || '';
+        const kleiEl = tr.querySelector('.d-klei');
+        const klei  = (kleiEl?.tagName === 'SELECT') ? (kleiEl.value || '') : '';
+        const date  = tr.querySelector('.d-date')?.value  || '';
         const vol   = parseFloat(tr.querySelector('.d-vol')?.value)   || 0;
         const s     = parseFloat(tr.querySelector('.d-sum')?.value)   || 0;
         const price = parseFloat(tr.querySelector('.d-price')?.value) || 0;
-        if (cult || vol || s) rows.push({ cult, klei, v: vol, s, price });
+        if (cult || vol || s) rows.push({ cult, klei, date, v: vol, s, price });
       });
       return JSON.stringify(rows);
     })(),
