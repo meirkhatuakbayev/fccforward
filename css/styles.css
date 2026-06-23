@@ -23,7 +23,7 @@ body { font-family: Manrope, system-ui, -apple-system, Segoe UI, Roboto, sans-se
 .num { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 button { font-family: inherit; cursor: pointer; }
 .wrap { max-width: 1320px; margin: 0 auto; padding: 0 20px 60px; }
-header.top { background: var(--ink); color: #EDEADD; position: sticky; top: 0; z-index: 30; border-bottom: 3px solid var(--wheat); }
+header.top { background: var(--ink); color: #EDEADD; position: sticky; top: 0; z-index: 100; border-bottom: 3px solid var(--wheat); }
 .top .row { max-width: 1320px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .brand { display: flex; align-items: center; gap: 13px; }
 .seal { width: 42px; height: 42px; border-radius: 11px; background: linear-gradient(150deg, #F6C45E, #D69A1E); display: grid; place-items: center; color: #3a2a06; font-weight: 800; font-size: 14.5px; letter-spacing: .5px; box-shadow: inset 0 0 0 1.5px #ffffff45; }
@@ -316,6 +316,7 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
     #vzMapSvg { min-height: 220px; }
     .fwd-subtabs { padding: 6px 10px; gap: 3px; }
     .fwd-subtab { font-size: 12px; padding: 7px 13px; }
+    #fwdSubtabs { top: 52px; }
     /* Cardhead с кнопками — не выходить за границы */
     .cardhead { flex-wrap: wrap; gap: 8px; }
     .cardhead .seg { overflow-x: auto; max-width: 100%; flex-shrink: 0; }
@@ -395,7 +396,7 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
 /* ===== РАЗДЕЛ «ВОЗВРАТ ЗЕРНА» ===== */
 
 /* Под-вкладки форвардного закупа */
-#fwdSubtabs { background: var(--panel); border-bottom: 2px solid var(--line); position: sticky; top: 0; z-index: 50; }
+#fwdSubtabs { background: var(--panel); border-bottom: 2px solid var(--line); position: sticky; top: 62px; z-index: 50; }
 .fwd-subtabs { max-width: 1320px; margin: 0 auto; display: flex; gap: 4px; padding: 8px 20px; }
 .fwd-subtab { border: 0; background: transparent; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; transition: background .15s, color .15s; }
 .fwd-subtab:hover { background: #F0EADB; color: var(--ink); }
