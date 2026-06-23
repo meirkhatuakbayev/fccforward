@@ -131,7 +131,7 @@ function combineReturn(svodRows, detailRows) {
 // Строит DR из объекта D (финансирование) — работает без Apps Script
 function buildReturnFromD() {
     if (!D || !D.cps) return false;
-    const financed = D.cps.filter(c => c.sum > 0);
+    const financed = D.cps.filter(c => c.status === 'профин.' && c.sum > 0);
     if (!financed.length) return false;
 
     const regMap = {};

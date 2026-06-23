@@ -684,9 +684,9 @@ async function loadReturnMerged() {
       if (key) retIdx[key] = r;
     });
 
-    // Все профинансированные + их запись возврата (если есть)
+    // Все профинансированные (статус профин.) + их запись возврата (если есть)
     _mergedReturn = allContractors
-      .filter(c => c.fin_sum > 0)
+      .filter(c => c.fin_sum > 0 && (c.status||'').toLowerCase().includes('профин'))
       .map(c => {
         const key = (c.bin || c.name || '').trim();
         const ret = retIdx[key] || retIdx[c.name] || null;

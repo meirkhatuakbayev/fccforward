@@ -240,12 +240,12 @@ function renderVzDebtorsList() {
 
 // ── 3в. Переключатель видов в левой карточке ──────────────────────────────────
 function setVzView(v) {
-    const areas = { map: "vzMapArea", tab: "vzTabArea", crop: "vzCropArea" };
+    const areas = { map: "vzMapArea", tab: "vzTabArea", crop: "vzCropArea", debt: "vzDebtArea" };
     Object.entries(areas).forEach(([k, id]) => {
         const el = document.getElementById(id);
         if (el) el.style.display = k === v ? "" : "none";
     });
-    const btns = { map: "vzBtnMap", tab: "vzBtnTab", crop: "vzBtnCrop" };
+    const btns = { map: "vzBtnMap", tab: "vzBtnTab", crop: "vzBtnCrop", debt: "vzBtnDebt" };
     Object.entries(btns).forEach(([k, id]) => {
         const b = document.getElementById(id);
         if (b) b.classList.toggle("act", k === v);
@@ -253,10 +253,59 @@ function setVzView(v) {
     const hint = document.getElementById("vzHint");
     if (hint) hint.textContent = v === "map"
         ? "Цвет — исполнение предоплаты. Нажмите область — список договоров."
-        : v === "tab" ? "Исполнение по областям (суммы — млрд ₸, объём — тонн). Нажмите строку — договоры."
-        : "Поставка по культурам: законтрактовано vs фактически сдано. Замена культуры отмечена отдельно.";
-    if (v === "tab") renderVzTabArea();
+        : v === "tab"  ? "Исполнение по областям (суммы — млрд ₸, объём — тонн). Нажмите строку — договоры."
+        : v === "crop" ? "Поставка по культурам: законтрактовано vs фактически сдано."
+        : "Список контрагентов с непогашенной задолженностью по предоплате.";
+    if (v === "tab")  renderVzTabArea();
     if (v === "crop") renderVzCropTable();
+    if (v === "debt") renderVzDebtTable();
+}
+
+function renderVzDebtTable() {
+    const box = document.getElementById("vzDebtArea");
+    if (!box) return;
+    const debtors = DR.debtors;
+    if (!debtors.length) {
+        box.innerHTML = `<div style="color:#3C6B4A;font-size:14px;font-weight:700;padding:24px;text-align:center">✓ Все обязательства исполнены</div>`;
+        return;
+    }
+    const regShort = r => r
+        .replace("Восточно-Казахстанская","ВКО").replace("Северо-Казахстанская","СКО")
+        .replace("Западно-Казахстанская","ЗКО").replace("ская","ск.");
+
+    box.innerHTML = `<div class="tablescroll"><table class="rtable">
+        <thead><tr>
+            <th>#</th>
+            <th>Контрагент</th>
+            <th>Область</th>
+            <th>Культура</th>
+            <th>Финансирование, ₸</th>
+            <th>Зачтено, ₸</th>
+            <th style="color:#E05A4A">Остаток долга, ₸</th>
+            <th style="color:#C07030">Пеня, ₸</th>
+        </tr></thead>
+        <tbody>${debtors.map((c, i) => {
+            const safeBin = (c.bin||"").replace(/'/g,"\\'");
+            const safeDog = (c.dog_num||"").replace(/'/g,"\\'");
+            return `<tr class="rrow" onclick="openCpReturnByBin('${safeBin}','${safeDog}')">
+                <td class="num" style="color:var(--muted)">${i+1}</td>
+                <td><b>${c.name}</b><br><span class="muted">${c.form||""}</span></td>
+                <td>${regShort(c.reg)}</td>
+                <td>${c.cult||"—"}</td>
+                <td class="num">${fmtMlrd(c.sum_fin)} ₸</td>
+                <td class="num">${c.sum_zachet > 0 ? fmtMlrd(c.sum_zachet)+" ₸" : "—"}</td>
+                <td class="num" style="color:#E05A4A;font-weight:800">${fmtMlrd(c.debt)} ₸</td>
+                <td class="num" style="color:#C07030">${c.penalty > 0 ? fmtMlrd(c.penalty)+" ₸" : "—"}</td>
+            </tr>`;
+        }).join("")}</tbody>
+        <tfoot><tr style="background:#F5F0E4;font-weight:800">
+            <td colspan="4">Итого (${debtors.length} СХТП)</td>
+            <td class="num">${fmtMlrd(DR.total.sum_fin)} ₸</td>
+            <td class="num">${fmtMlrd(DR.total.sum_zachet)} ₸</td>
+            <td class="num" style="color:#E05A4A">${fmtMlrd(DR.total.debt)} ₸</td>
+            <td class="num" style="color:#C07030">${DR.totalPenalty > 0 ? fmtMlrd(DR.totalPenalty)+" ₸" : "—"}</td>
+        </tr></tfoot>
+    </table></div>`;
 }
 
 // ── 3г. Таблица по областям в левой карточке ─────────────────────────────────
