@@ -35,13 +35,11 @@ function colorVzScale(fraction) {
 function renderReturn() {
     if (!DR) return;
     renderVzKpis();
-    renderVzSpravka();
     renderVzFunnel();
     renderVzDebtorsList();
     renderVzMap();
     setVzView("map");       // инициализация табов
     renderVzRanking();
-    renderVzPenaltyForecast();
     const asof = document.getElementById("vzAsof");
     if (asof) asof.textContent = DR.date;
 }
