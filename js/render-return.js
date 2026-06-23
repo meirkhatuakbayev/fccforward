@@ -707,6 +707,10 @@ function openCpReturn(c) {
             ? `<div><div class="l">Доплата по КСН (выплачена)</div><div class="v num" style="color:#3C6B4A">${fmtMlrd(c.sum_ksn)} ₸</div></div>`
             : (c.sum_dop_plan > 0 ? `<div><div class="l">К доплате СХТП</div><div class="v num">${fmtMlrd(c.sum_dop_plan)} ₸ <span style="color:var(--muted);font-size:11px">(не выплачена)</span></div></div>` : "");
 
+        // Прогресс исполнения
+        const execPct = c.sum_fin > 0 ? Math.min(100, c.sum_zachet / c.sum_fin * 100) : 0;
+        const execColor = execPct >= 100 ? "#3C6B4A" : execPct >= 70 ? "#B97F18" : "#E05A4A";
+
         document.getElementById("modal").innerHTML = `
             <div class="mhead">
                 <button class="x" onclick="closeOv()">✕</button>
@@ -714,48 +718,92 @@ function openCpReturn(c) {
                     <div class="mava" style="background:linear-gradient(135deg,#9E4A40,#C0614F)">${ini}</div>
                     <div>
                         <h3 style="color:#F8F3E6">${c.name}</h3>
-                        <div class="msub">${c.form} · ${c.reg} обл. · ${c.rayon} р-н · по состоянию на ${todayFmt}</div>
+                        <div class="msub">${c.form} · ${c.reg} обл. · ${c.rayon} р-н · ${todayFmt}</div>
                     </div>
                 </div>
                 <span class="badge b-fin stbadge" style="background:#3c2a07;color:#F2C357">Возврат зерна</span>
             </div>
             <div class="mbody">
-                <div class="kv">
-                    <div><div class="l">БИН / ИИН</div><div class="v num">${bin||"—"}</div></div>
-                    <div><div class="l">№ договора</div><div class="v">${c.dog_num||"—"}</div></div>
-                    <div><div class="l">Дата договора</div><div class="v">${fmtDate(c.dog_date)}</div></div>
-                    <div><div class="l">Культура</div><div class="v">${c.cult||"—"}</div></div>
+
+                <div class="cp-sec">
+                    <div class="cp-sec-title">Договор</div>
+                    <div class="cp-meta">
+                        <span><span class="cp-ml">БИН</span> ${bin||"—"}</span>
+                        <span><span class="cp-ml">№</span> ${c.dog_num||"—"}</span>
+                        <span><span class="cp-ml">Дата</span> ${fmtDate(c.dog_date)}</span>
+                        <span><span class="cp-ml">Культура</span> ${c.cult||"—"}</span>
+                    </div>
                 </div>
 
-                <div class="mfig" style="grid-template-columns:1fr 1fr 1fr">
-                    <div><div class="l">Предоплата</div><div class="n num">${fmtMlrd(c.sum_fin)} ₸</div></div>
-                    <div><div class="l">Объём по договору</div><div class="n num">${fmtT(c.vol_fin)} т</div></div>
-                    <div><div class="l">Цена предоплаты</div><div class="n num">${c.price_fin > 0 ? fmtT(c.price_fin) + " ₸/т" : "—"}</div></div>
+                <div class="cp-sec cp-sec--amber">
+                    <div class="cp-sec-title">Предоплата</div>
+                    <div class="cp-3col">
+                        <div class="cp-fig">
+                            <div class="cp-fig-val num">${fmtMlrd(c.sum_fin)}<small> ₸</small></div>
+                            <div class="cp-fig-lab">выдано</div>
+                        </div>
+                        <div class="cp-fig">
+                            <div class="cp-fig-val num">${fmtT(c.vol_fin)}<small> т</small></div>
+                            <div class="cp-fig-lab">объём по договору</div>
+                        </div>
+                        <div class="cp-fig">
+                            <div class="cp-fig-val num">${c.price_fin > 0 ? fmtT(c.price_fin) : "—"}<small>${c.price_fin > 0 ? " ₸/т" : ""}</small></div>
+                            <div class="cp-fig-lab">цена</div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="seclab">Поставлено зерна (по классам)</div>
-                <div class="lines">${clHTML}</div>
-
-                <div class="mfig" style="grid-template-columns:1fr 1fr 1fr;margin-top:4px">
-                    <div><div class="l">Всего поставлено</div><div class="n num">${fmtT(c.vol_total)} т</div></div>
-                    <div><div class="l">Сумма</div><div class="n num">${fmtMlrd(c.sum_total)} ₸</div></div>
-                    <div><div class="l">Средняя цена</div><div class="n num">${c.price_avg > 0 ? fmtT(c.price_avg) + " ₸/т" : "—"}</div></div>
+                <div class="cp-sec cp-sec--green">
+                    <div class="cp-sec-title">Поставлено зерна</div>
+                    ${classes.length ? `<div class="cp-classes">${classes.map(x => {
+                        const pr = x.d.vol > 0 ? fmtT(Math.round(x.d.sum / x.d.vol)) : "—";
+                        return `<div class="cp-cls-row">
+                            <span class="cp-cls-name">${x.label}</span>
+                            <span class="num">${fmtT(x.d.vol)} т</span>
+                            <span class="num">${fmtMlrd(x.d.sum)} ₸</span>
+                            <span class="cp-ml">${pr} ₸/т</span>
+                        </div>`;
+                    }).join("")}</div>` : `<div class="cp-empty">Поставок нет</div>`}
+                    ${c.vol_total > 0 ? `<div class="cp-cls-total">
+                        <span>Итого</span>
+                        <span class="num">${fmtT(c.vol_total)} т</span>
+                        <span class="num">${fmtMlrd(c.sum_total)} ₸</span>
+                        <span class="cp-ml">${c.price_avg > 0 ? fmtT(c.price_avg) + " ₸/т" : "—"}</span>
+                    </div>` : ""}
                 </div>
 
-                <div class="kv" style="margin-top:4px">
-                    <div><div class="l">Зачтено в предоплату</div><div class="v num">${fmtMlrd(c.sum_zachet)} ₸</div></div>
-                    <div><div class="l">Остаток объёма</div><div class="v num" style="${c.vol_left>0?"color:#E05A4A":""}">${fmtT(c.vol_left)} т</div></div>
-                    <div><div class="l">Погашено зерном</div><div class="v num">${fmtMlrd(c.paid_grain)} ₸</div></div>
-                    <div><div class="l">Погашено деньгами</div><div class="v num">${fmtMlrd(c.paid_money)} ₸</div></div>
-                    ${doplataTxt}
+                <div class="cp-sec">
+                    <div class="cp-sec-title">Взаиморасчёты</div>
+                    <div class="cp-pairs">
+                        <div class="cp-pair"><span class="cp-ml">Зачтено в предоплату</span><span class="num">${fmtMlrd(c.sum_zachet)} ₸</span></div>
+                        <div class="cp-pair"><span class="cp-ml">Погашено зерном</span><span class="num">${fmtMlrd(c.paid_grain)} ₸</span></div>
+                        <div class="cp-pair"><span class="cp-ml">Погашено деньгами</span><span class="num">${fmtMlrd(c.paid_money)} ₸</span></div>
+                        ${c.vol_left > 0 ? `<div class="cp-pair"><span class="cp-ml">Остаток объёма</span><span class="num" style="color:#E05A4A">${fmtT(c.vol_left)} т</span></div>` : ""}
+                        ${c.sum_ksn > 0 ? `<div class="cp-pair"><span class="cp-ml">Доплата по КСН</span><span class="num" style="color:#3C6B4A">${fmtMlrd(c.sum_ksn)} ₸ <span style="font-size:11px;font-weight:600;color:var(--muted)">(выплачена)</span></span></div>` : ""}
+                        ${c.sum_dop_plan > 0 && !c.sum_ksn ? `<div class="cp-pair"><span class="cp-ml">К доплате СХТП</span><span class="num">${fmtMlrd(c.sum_dop_plan)} ₸ <span style="font-size:11px;color:var(--muted)">(не выплачена)</span></span></div>` : ""}
+                    </div>
                 </div>
 
-                <div class="mfig" style="grid-template-columns:1fr 1fr;margin-top:8px">
-                    <div><div class="l">Остаток долга</div><div class="n num" style="${debtColor}">${fmtMlrd(c.debt)} ₸</div></div>
-                    <div><div class="l">Остаток погашения</div><div class="n num">${fmtMlrd(c.debt_left)} ₸</div></div>
+                <div class="cp-sec">
+                    <div class="cp-sec-title">Исполнение предоплаты — ${execPct.toFixed(1)}%</div>
+                    <div class="cp-exec-bar"><div style="width:${execPct.toFixed(1)}%;background:${execColor};height:100%;border-radius:5px;transition:width .5s"></div></div>
                 </div>
 
-                ${penHTML}
+                <div class="cp-sec" style="border-left-color:${c.debt > 0 ? "#E05A4A" : "#3C6B4A"}">
+                    <div class="cp-sec-title">Итог</div>
+                    <div class="cp-2col">
+                        <div class="cp-fig">
+                            <div class="cp-fig-val num" style="color:${c.debt > 0 ? "#E05A4A" : "#3C6B4A"}">${fmtMlrd(c.debt)}<small> ₸</small></div>
+                            <div class="cp-fig-lab">остаток долга</div>
+                        </div>
+                        <div class="cp-fig">
+                            <div class="cp-fig-val num" style="color:${c.penalty > 0 ? "#E05A4A" : "var(--muted)"}">${c.penalty > 0 ? fmtMlrd(c.penalty) : "0"}<small> ₸</small></div>
+                            <div class="cp-fig-lab">пеня</div>
+                        </div>
+                    </div>
+                    <div class="cp-note">${c.penalty > 0 ? "Пеня начислена с 03.11.2026 · 0,1% в день" : "Срок поставки: 02.11.2026 — пеня не начислена"}</div>
+                </div>
+
                 ${paymentsHTML}
 
                 <div class="mbtn" style="margin-top:12px">

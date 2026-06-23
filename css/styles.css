@@ -469,6 +469,44 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
 .dl.soon { background: #FBF0D8; border-color: #E6CF95; }
 .dl.soon .dlrow { color: #9A6716; }
 
+/* ── Карточка контрагента «Возврат зерна» (cp-sec) ── */
+.cp-sec { padding: 12px 14px; border-left: 3px solid var(--line); margin: 0 -2px 10px; border-radius: 0 8px 8px 0; background: #FDFAF4; }
+.cp-sec--amber { border-left-color: #D69A1E; background: #FFFBF0; }
+.cp-sec--green  { border-left-color: #3C6B4A; background: #F4FAF4; }
+.cp-sec-title { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 8px; }
+/* Реквизиты: строчки через · */
+.cp-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; font-weight: 600; }
+.cp-ml { color: var(--muted); font-weight: 600; }
+/* 3-колонная сетка крупных цифр */
+.cp-3col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.cp-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.cp-fig { text-align: center; }
+.cp-fig-val { font-size: 20px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.cp-fig-val small { font-size: 12px; font-weight: 700; color: var(--muted); }
+.cp-fig-lab { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+/* Строки по классам зерна */
+.cp-classes { display: flex; flex-direction: column; gap: 0; }
+.cp-cls-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px 10px; align-items: center; padding: 5px 0; border-bottom: 1px solid #EBE6D5; font-size: 12.5px; font-weight: 600; }
+.cp-cls-row:last-child { border: 0; }
+.cp-cls-name { font-weight: 700; }
+.cp-cls-total { display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px 10px; align-items: center; padding: 6px 0 2px; font-size: 12.5px; font-weight: 800; border-top: 2px solid #D6D0BE; margin-top: 2px; }
+.cp-empty { font-size: 12px; color: var(--muted); font-weight: 600; padding: 4px 0; }
+/* Пары ключ-значение */
+.cp-pairs { display: flex; flex-direction: column; gap: 0; }
+.cp-pair { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid #EBE6D5; font-size: 12.5px; font-weight: 600; }
+.cp-pair:last-child { border: 0; }
+/* Прогресс-бар исполнения */
+.cp-exec-bar { height: 10px; border-radius: 5px; background: #EEE9DB; overflow: hidden; }
+/* Примечание */
+.cp-note { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 6px; }
+/* Мобильные */
+@media (max-width: 520px) {
+    .cp-3col { grid-template-columns: 1fr 1fr; }
+    .cp-fig-val { font-size: 17px; }
+    .cp-cls-row, .cp-cls-total { grid-template-columns: 1fr auto auto; }
+    .cp-cls-row .cp-ml, .cp-cls-total .cp-ml { display: none; }
+}
+
 /* Badge цвета */
 .b-ok2 { background: #E9F0E8; color: #3C6B4A; }
 .b-warn { background: #FBF0D8; color: #9A6716; }
