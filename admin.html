@@ -287,7 +287,6 @@ a { color: var(--green); text-decoration: none; }
           <select id="fReg"   onchange="applyFinFilters()" class="fin-sel"><option value="">Все области</option></select>
           <select id="fRayon" onchange="applyFinFilters()" class="fin-sel"><option value="">Все районы</option></select>
           <select id="fCult"  onchange="applyFinFilters()" class="fin-sel"><option value="">Все культуры</option></select>
-          <select id="fHpp"   onchange="applyFinFilters()" class="fin-sel"><option value="">Все ХПП</option></select>
           <button class="btn btn-ghost btn-sm" onclick="clearFinFilters()">Сбросить</button>
         </div>
         <div id="contractorList"></div>
@@ -464,17 +463,17 @@ async function loadContractors() {
 }
 
 function buildFinFilters() {
-  const uniq = (field) => [...new Set(allContractors.map(c => c[field]||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
+  const financed = allContractors.filter(c => c.fin_sum > 0);
+  const uniq = (arr, field) => [...new Set(arr.map(c => c[field]||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
   const fill = (id, vals) => {
     const sel = q('#'+id); if (!sel) return;
     const cur = sel.value;
     sel.innerHTML = sel.options[0].outerHTML + vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
     if (vals.includes(cur)) sel.value = cur;
   };
-  fill('fReg',   uniq('reg'));
-  fill('fRayon', uniq('rayon'));
-  fill('fCult',  uniq('cult'));
-  fill('fHpp',   uniq('hpp'));
+  fill('fReg',   uniq(financed, 'reg'));
+  fill('fRayon', uniq(financed, 'rayon'));
+  fill('fCult',  uniq(financed, 'cult'));
 }
 
 function applyFinFilters() {
@@ -482,21 +481,21 @@ function applyFinFilters() {
   const reg   = q('#fReg')?.value   || '';
   const rayon = q('#fRayon')?.value || '';
   const cult  = q('#fCult')?.value  || '';
-  const hpp   = q('#fHpp')?.value   || '';
-  const list  = allContractors.filter(c =>
+  // Только профинансированные
+  const list = allContractors.filter(c =>
+    c.fin_sum > 0 &&
     (!txt   || c.name.toLowerCase().includes(txt) || (c.bin||'').includes(txt)) &&
     (!reg   || c.reg   === reg)   &&
     (!rayon || c.rayon === rayon) &&
-    (!cult  || c.cult  === cult)  &&
-    (!hpp   || c.hpp   === hpp)
+    (!cult  || c.cult  === cult)
   );
   renderContractorList(list, cult);
 }
 
 function clearFinFilters() {
-  ['searchInput','fReg','fRayon','fCult','fHpp'].forEach(id => {
+  ['searchInput','fReg','fRayon','fCult'].forEach(id => {
     const el = q('#'+id); if (!el) return;
-    if (el.tagName === 'SELECT') el.value = ''; else el.value = '';
+    el.value = '';
   });
   applyFinFilters();
 }
@@ -523,51 +522,45 @@ function renderContractorList(list, activeCult) {
 
   let tbody = '';
   groups.forEach(g => {
-    const regSum  = g.items.reduce((s,c)=>s+(c.fin_sum||0),0);
-    const regVol  = g.items.reduce((s,c)=>s+(c.fin_vol||0),0);
-    const regCnt  = g.items.length;
-    // Строка-заголовок области
+    const regSum = g.items.reduce((s,c)=>s+(c.fin_sum||0),0);
+    const regVol = g.items.reduce((s,c)=>s+(c.fin_vol||0),0);
+    const regCnt = g.items.length;
     tbody += `<tr class="fin-reg-hdr">
-      <td colspan="7"><b>${esc(g.reg)}</b> &nbsp;<span style="font-weight:400;opacity:.7">${regCnt} контр. · ${fmtNum(regSum)} ₸ · ${fmtNum(regVol)} т</span></td>
+      <td colspan="4"><b>${esc(g.reg)}</b> &nbsp;<span style="font-weight:400;opacity:.7">${regCnt} СХТП · ${fmtNum(regVol)} т · ${fmtNum(regSum)} ₸</span></td>
     </tr>`;
-    // Строки контрагентов
     g.items.forEach(c => {
       tbody += `<tr onclick="openContractor('${esc(c.bin)}','${esc(c.name)}')">
-        <td style="padding-left:22px"><b>${esc(c.name)}</b><br><span class="muted">${esc(c.form)}${c.rayon?' · '+esc(c.rayon)+' р-н':''}</span></td>
+        <td style="padding-left:22px"><b>${esc(c.name)}</b><br><span class="muted">${esc(c.form)}${c.rayon?' · '+esc(c.rayon)+' р-н':''} · ${esc(c.cult)||'—'}</span></td>
         <td class="muted">${esc(c.bin)||'—'}</td>
-        <td class="muted">${esc(c.cult)||'—'}</td>
-        <td class="muted">${esc(c.hpp)||'—'}</td>
-        <td class="muted">${esc(c.dog_num)||'—'}</td>
-        <td>${c.fin_sum>0?`<span class="badge-fin">${fmt(c.fin_sum)} ₸</span>`:`<span class="badge-no">—</span>`}</td>
-        <td class="muted">${esc(c.status)||'—'}</td>
+        <td style="text-align:right;font-weight:700">${c.fin_vol>0?fmtNum(c.fin_vol)+' т':'—'}</td>
+        <td style="text-align:right"><span class="badge-fin">${fmt(c.fin_sum)} ₸</span></td>
       </tr>`;
     });
-    // Итог по области (+ итог по культуре если фильтр активен)
     if (activeCult) {
-      const cultItems = g.items.filter(c=>c.cult===activeCult);
-      const cultSum   = cultItems.reduce((s,c)=>s+(c.fin_sum||0),0);
-      const cultVol   = cultItems.reduce((s,c)=>s+(c.fin_vol||0),0);
+      const ci = g.items.filter(c=>c.cult===activeCult);
       tbody += `<tr class="fin-reg-sum">
-        <td colspan="5" style="padding-left:22px;text-align:left">Итого по «${esc(activeCult)}» в ${esc(g.reg)}: ${cultItems.length} СХТП</td>
-        <td>${fmtNum(cultSum)} ₸</td>
-        <td>${fmtNum(cultVol)} т</td>
+        <td style="padding-left:22px">Итого «${esc(activeCult)}» в ${esc(g.reg)}: ${ci.length} СХТП</td>
+        <td></td>
+        <td style="text-align:right;font-weight:700">${fmtNum(ci.reduce((s,c)=>s+(c.fin_vol||0),0))} т</td>
+        <td style="text-align:right;font-weight:700">${fmtNum(ci.reduce((s,c)=>s+(c.fin_sum||0),0))} ₸</td>
       </tr>`;
     }
   });
 
-  // Итоговая строка по всей выборке
   const totalSum = list.reduce((s,c)=>s+(c.fin_sum||0),0);
   const totalVol = list.reduce((s,c)=>s+(c.fin_vol||0),0);
   tbody += `<tr style="background:#F1E8D0;font-weight:800">
-    <td colspan="5">Итого по выборке: ${list.length} контрагентов</td>
-    <td>${fmtNum(totalSum)} ₸</td>
-    <td>${fmtNum(totalVol)} т</td>
+    <td>Итого: ${list.length} контрагентов</td>
+    <td></td>
+    <td style="text-align:right">${fmtNum(totalVol)} т</td>
+    <td style="text-align:right">${fmtNum(totalSum)} ₸</td>
   </tr>`;
 
   box.innerHTML = `<div style="overflow-x:auto"><table class="atable">
     <thead><tr>
-      <th>Наименование</th><th>БИН/ИИН</th><th>Культура</th><th>ХПП</th>
-      <th>№ договора</th><th>Финансирование</th><th>Объём, т</th>
+      <th>Наименование поставщика</th><th>БИН/ИИН</th>
+      <th style="text-align:right">Законтрактованный объём</th>
+      <th style="text-align:right">Выделенная сумма</th>
     </tr></thead>
     <tbody>${tbody}</tbody>
   </table></div>`;
