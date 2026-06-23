@@ -397,14 +397,14 @@ function renderVzCropTable() {
     box._rendered = true;
 
     const CROPS = [
-        { key: "cl3", label: "Пшеница 3 класс",  svodMatch: s => s.includes("пшениц") },
-        { key: "cl4", label: "Пшеница 4 класс",  svodMatch: s => s.includes("пшениц") },
-        { key: "cl5", label: "Пшеница 5 класс",  svodMatch: s => s.includes("пшениц") },
-        { key: "bar", label: "Ячмень 2 класс",   svodMatch: s => s.includes("ячмень") },
+        { key: "cl3", label: "Пшеница 3 класс" },
+        { key: "cl4", label: "Пшеница 4 класс" },
+        { key: "cl5", label: "Пшеница 5 класс" },
+        { key: "bar", label: "Ячмень 2 класс"  },
     ];
 
     const agg = CROPS.map(cr => ({
-        label: cr.label, key: cr.key, svodMatch: cr.svodMatch,
+        label: cr.label, key: cr.key,
         vol_contr: 0, sum_contr: 0,
         vol_fact: 0,  sum_fact: 0,
         vol_subst: 0
@@ -413,7 +413,7 @@ function renderVzCropTable() {
     DR.cps.forEach(c => {
         const cult = (c.cult || "").toLowerCase();
         let ci = -1;
-        if      (cult.includes("пшениц") && cult.includes("3")) ci = 0;
+        if (cult.includes("пшениц") && cult.includes("3"))      ci = 0;
         else if (cult.includes("пшениц") && cult.includes("4")) ci = 1;
         else if (cult.includes("пшениц") && cult.includes("5")) ci = 2;
         else if (cult.includes("ячмень"))                        ci = 3;
@@ -423,6 +423,7 @@ function renderVzCropTable() {
             agg[ci].vol_contr += c.vol_fin || 0;
             agg[ci].sum_contr += c.sum_fin || 0;
         }
+
         const delivs = [c.cl3, c.cl4, c.cl5, c.bar];
         delivs.forEach((d, di) => {
             if (!d || !d.vol) return;
@@ -432,88 +433,45 @@ function renderVzCropTable() {
         });
     });
 
-    // Законтрактованный объём из СВОД (D.crops — официальные данные ФЗ)
-    // Пшеница 3/4/5кл делим поровну между тремя строками пшеницы
-    const svodByMatch = {};
-    if (D && D.crops) {
-        D.crops.forEach(cr => {
-            const cn = (cr.n || "").toLowerCase();
-            // contr[3] = объём законтрактован, fin[3] = объём профинансирован
-            const vContr = cr.contr[3] || 0;
-            const vFin   = cr.fin[3]   || 0;
-            const sContr = cr.contr[2] || 0;
-            const sFin   = cr.fin[2]   || 0;
-            if (cn.includes("пшениц")) {
-                svodByMatch["пшениц"] = svodByMatch["пшениц"] || { vContr:0, vFin:0, sContr:0, sFin:0, cnt:0 };
-                svodByMatch["пшениц"].vContr += vContr;
-                svodByMatch["пшениц"].vFin   += vFin;
-                svodByMatch["пшениц"].sContr += sContr;
-                svodByMatch["пшениц"].sFin   += sFin;
-                svodByMatch["пшениц"].cnt++;
-            } else if (cn.includes("ячмень")) {
-                svodByMatch["ячмень"] = { vContr, vFin, sContr, sFin, cnt: 1 };
-            } else {
-                svodByMatch[cn] = { vContr, vFin, sContr, sFin, cnt: 1 };
-            }
-        });
-    }
-    // Для пшеницы — распределяем поровну между 3 строками класса
-    const wheatCnt = 3;
-    agg.forEach(r => {
-        const cn = r.key === "bar" ? "ячмень" : "пшениц";
-        const sv = svodByMatch[cn];
-        if (sv) {
-            const div = (cn === "пшениц") ? wheatCnt : 1;
-            r.svod_vol_contr = sv.vContr / div;
-            r.svod_vol_fin   = sv.vFin   / div;
-            r.svod_sum_contr = sv.sContr / div;
-            r.svod_sum_fin   = sv.sFin   / div;
-        } else {
-            r.svod_vol_contr = 0; r.svod_vol_fin = 0;
-            r.svod_sum_contr = 0; r.svod_sum_fin = 0;
-        }
-    });
-
-    const active = agg.filter(r => r.svod_vol_contr > 0 || r.vol_contr > 0 || r.vol_fact > 0);
+    const active = agg.filter(r => r.vol_contr > 0 || r.vol_fact > 0);
 
     const rows = active.map(r => {
-        const pct    = r.svod_vol_fin > 0 ? r.vol_fact / r.svod_vol_fin * 100 : 0;
-        const pctTxt = r.svod_vol_fin > 0 ? pct.toFixed(1) + "%" : "—";
-        const pc     = r.svod_vol_fin === 0 ? "" : pct >= 95 ? "#3C6B4A" : pct >= 70 ? "#9A6716" : "#E05A4A";
+        const pct = r.vol_contr > 0 ? r.vol_fact / r.vol_contr * 100 : 0;
+        const pctTxt = r.vol_contr > 0 ? pct.toFixed(1) + "%" : "—";
+        const pc = r.vol_contr === 0 ? "" : pct >= 95 ? "#3C6B4A" : pct >= 70 ? "#9A6716" : "#E05A4A";
         const substNote = r.vol_subst > 0
             ? `<br><span style="font-size:9.5px;color:#9A6716;font-weight:600">в т.ч. ${fmtT(r.vol_subst)} т — замена</span>` : "";
+        const noContr = r.vol_contr === 0 && r.vol_fact > 0
+            ? `<br><span style="font-size:9.5px;color:#9A6716;font-weight:600">вне контракта (замена)</span>` : "";
         return `<tr>
-            <td class="l">${r.label}${substNote}</td>
-            <td style="color:#3C6B4A;font-weight:700">${r.svod_vol_contr > 0 ? fmtT(r.svod_vol_contr) : "—"}</td>
-            <td>${r.svod_vol_fin > 0 ? fmtT(r.svod_vol_fin) : "—"}</td>
-            <td>${r.svod_sum_fin > 0 ? fmtMlrd(r.svod_sum_fin) : "—"}</td>
-            <td class="gs" style="${r.vol_fact === 0 ? "opacity:.45" : ""}">${r.vol_fact > 0 ? fmtT(r.vol_fact) : "0"}</td>
-            <td style="${r.sum_fact === 0 ? "opacity:.45" : ""}">${r.sum_fact > 0 ? fmtMlrd(r.sum_fact) : "—"}</td>
+            <td class="l">${r.label}${substNote}${noContr}</td>
+            <td>${r.vol_contr > 0 ? fmtT(r.vol_contr) : "—"}</td>
+            <td>${r.sum_contr > 0 ? fmtMlrd(r.sum_contr) : "—"}</td>
+            <td style="${r.vol_fact === 0 ? "opacity:.5" : ""}">${r.vol_fact > 0 ? fmtT(r.vol_fact) : "0"}</td>
+            <td style="${r.sum_fact === 0 ? "opacity:.5" : ""}">${r.sum_fact > 0 ? fmtMlrd(r.sum_fact) : "—"}</td>
             <td style="color:${pc};font-weight:800">${pctTxt}</td>
         </tr>`;
     }).join("");
 
-    const tv  = active.reduce((s,r)=>s+r.svod_vol_contr,0);
-    const tvf = active.reduce((s,r)=>s+r.svod_vol_fin,0);
-    const tsf = active.reduce((s,r)=>s+r.svod_sum_fin,0);
-    const fv  = active.reduce((s,r)=>s+r.vol_fact,0);
-    const fs  = active.reduce((s,r)=>s+r.sum_fact,0);
-    const totPct = tvf > 0 ? (fv/tvf*100).toFixed(1)+"%" : "—";
-    const totPc  = tvf > 0 && fv/tvf >= 0.95 ? "#3C6B4A" : "#9A6716";
+    const tv = active.reduce((s,r)=>s+r.vol_contr,0);
+    const ts = active.reduce((s,r)=>s+r.sum_contr,0);
+    const fv = active.reduce((s,r)=>s+r.vol_fact,0);
+    const fs = active.reduce((s,r)=>s+r.sum_fact,0);
+    const totPct = tv > 0 ? (fv/tv*100).toFixed(1)+"%" : "—";
+    const totPc = tv > 0 && fv/tv >= 0.95 ? "#3C6B4A" : "#9A6716";
 
     box.innerHTML = `<div class="tablescroll" style="max-height:390px">
         <table class="rtab">
         <thead>
             <tr class="grp">
                 <th class="l" rowspan="2">Культура</th>
-                <th colspan="3">Законтрактовано (ФЗ)</th>
+                <th colspan="2">По договору</th>
                 <th class="gs" colspan="2">Фактически поставлено</th>
                 <th rowspan="2">% выполн.</th>
             </tr>
             <tr>
-                <th style="color:#7bbf8e">Объём дог., т</th>
-                <th>Объём профин., т</th>
-                <th>Сумма профин., ₸</th>
+                <th>Объём, т</th>
+                <th>Сумма, ₸</th>
                 <th class="gs">Объём, т</th>
                 <th>Сумма за зерно ₸</th>
             </tr>
@@ -521,9 +479,8 @@ function renderVzCropTable() {
         <tbody>${rows}</tbody>
         <tfoot><tr>
             <td class="l">Итого</td>
-            <td style="color:#3C6B4A;font-weight:800">${fmtT(tv)}</td>
-            <td>${fmtT(tvf)}</td>
-            <td>${fmtMlrd(tsf)}</td>
+            <td>${fmtT(tv)}</td>
+            <td>${fmtMlrd(ts)}</td>
             <td>${fmtT(fv)}</td>
             <td>${fmtMlrd(fs)}</td>
             <td style="color:${totPc}">${totPct}</td>
