@@ -335,6 +335,7 @@ function listContractors() {
       form:     String(row[C.form]   || '').trim(),
       rayon:    String(row[C.rayon]  || '').trim(),
       cult:     String(row[C.cult]   || '').trim(),
+      hpp:      String(row[C.app_hpp] || '').trim(),
       status:   String(row[C.status] || '').trim(),
       fin_sum:  Number(row[C.fin_sum])  || 0,
       fin_vol:  Number(row[C.fin_vol])  || 0,
