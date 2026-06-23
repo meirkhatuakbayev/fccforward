@@ -34,11 +34,6 @@
             </div>
         </div>
         <div class="spacer"></div>
-        <select id="yearSel" onchange="onYearChange(this.value)" title="Выбрать год программы" style="background:#2A5038;color:#F6C45E;border:1.5px solid #4A7C56;border-radius:8px;padding:5px 10px;font-size:13px;font-weight:700;cursor:pointer;outline:none;">
-            <option value="2026">ФЗ 2026</option>
-            <option value="2025">ФЗ 2025</option>
-            <option value="2024">ФЗ 2024</option>
-        </select>
         <div class="live"><span class="dot" id="dot"></span><span id="liveTxt">Департамент закупа СХП</span></div>
         <button class="refresh" id="btnRefresh">Обновить</button>
         <button class="refresh printbtn" id="btnPrint">📄 PDF</button>
@@ -58,9 +53,15 @@
     <main class="main">
         <!-- Под-вкладки Форвардного закупа -->
         <div id="fwdSubtabs">
-            <div class="fwd-subtabs">
+            <div class="fwd-subtabs" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                 <button class="fwd-subtab act" data-sub="report" onclick="switchForwardSub('report')">Финансирование</button>
                 <button class="fwd-subtab" data-sub="vozvrat" onclick="switchForwardSub('vozvrat')">Возврат зерна</button>
+                <div class="spacer"></div>
+                <select id="yearSel" onchange="onYearChange(this.value)" title="Выбрать год программы" style="background:#3C6B4A;color:#F6C45E;border:1.5px solid #5A8B6A;border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer;outline:none;height:34px;">
+                    <option value="2026">ФЗ 2026</option>
+                    <option value="2025">ФЗ 2025</option>
+                    <option value="2024">ФЗ 2024</option>
+                </select>
             </div>
         </div>
 
