@@ -172,8 +172,13 @@
                         <div class="hint" id="vzHint">Цвет — исполнение предоплаты. Нажмите область — список договоров.</div>
                         <!-- Карта -->
                         <div id="vzMapArea">
-                            <div class="mapwrap" id="vzMapWrap" style="position:relative">
+                            <div class="mapwrap" id="vzMapWrap">
                                 <div class="maptip" id="vzTip"></div>
+                                <div class="mapzoom">
+                                    <button onclick="vzMapZoomBy(1.6)" title="Приблизить">+</button>
+                                    <button onclick="vzMapZoomBy(0.62)" title="Отдалить">−</button>
+                                    <button onclick="vzMapZoomReset()" title="Сбросить">⟲</button>
+                                </div>
                                 <svg class="kz" viewBox="0 0 920 480" id="vzMapSvg"></svg>
                             </div>
                             <div class="maplegend" id="vzMapLegend">

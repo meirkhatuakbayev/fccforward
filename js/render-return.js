@@ -529,6 +529,13 @@ function vzShowTip(e, rg) {
     tip.style.left = x + "px"; tip.style.top = y + "px";
 }
 
+function vzMapZoomBy(f) {
+    if (_vzMapZoom && _vzMapSvgSel) _vzMapSvgSel.transition().duration(250).call(_vzMapZoom.scaleBy, f);
+}
+function vzMapZoomReset() {
+    if (_vzMapZoom && _vzMapSvgSel && _vzMapFit) _vzMapSvgSel.transition().duration(300).call(_vzMapZoom.transform, _vzMapFit);
+}
+
 function setVzMetric(m) {
     _vzMetric = m;
     document.querySelectorAll("#viewVozvrat [data-m]").forEach(b => b.classList.toggle("act", b.dataset.m === m));
