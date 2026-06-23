@@ -16,18 +16,22 @@ function setMapView(tab) {
 
 let _fwdSub = "report";
 
-function showYearLoader() {
+let _ylTimer = null;
+
+function showYearLoader(text) {
     const yl = document.getElementById("yearLoader");
-    const vr = document.getElementById("viewReport");
-    if (yl) yl.style.display = "flex";
-    if (vr) vr.style.visibility = "hidden";
+    const t  = document.getElementById("ylTitle");
+    if (!yl) return;
+    if (t) t.textContent = text || "Загрузка данных";
+    clearTimeout(_ylTimer);
+    yl.classList.add("show");
 }
 
 function hideYearLoader() {
     const yl = document.getElementById("yearLoader");
-    const vr = document.getElementById("viewReport");
-    if (yl) yl.style.display = "none";
-    if (vr) vr.style.visibility = "";
+    if (!yl) return;
+    // небольшая задержка чтобы контент успел отрисоваться
+    _ylTimer = setTimeout(() => yl.classList.remove("show"), 120);
 }
 
 function onYearChange(yr) {
@@ -37,7 +41,8 @@ function onYearChange(yr) {
         : `Форвардный закуп урожая&nbsp;${yr} года`;
     D  = null;
     DR = null;
-    showYearLoader();
+    _returnLoaded = false;
+    showYearLoader("Загрузка ФЗ " + yr);
     loadData(yr);
     if (_fwdSub === "vozvrat") loadReturn(yr);
 }
@@ -53,7 +58,10 @@ function switchForwardSub(sub) {
     if (title) title.innerHTML = sub === "vozvrat"
         ? `Возврат зерна&nbsp;— форвардный закуп ${yr}`
         : `Форвардный закуп урожая&nbsp;${yr} года`;
-    if (sub === "vozvrat") ensureVozvrat();
+    if (sub === "vozvrat") {
+        if (!DR) showYearLoader("Загрузка возврата");
+        ensureVozvrat();
+    }
 }
 
 function switchView(v) {

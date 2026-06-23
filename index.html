@@ -65,10 +65,10 @@
             </div>
         </div>
 
-        <!-- Мини-лоадер при смене года -->
-        <div id="yearLoader" style="display:none">
+        <!-- Оверлей при смене года / вкладки -->
+        <div id="yearLoader">
             <div class="yl-seal">ПКК</div>
-            <div class="yl-title">Загрузка данных</div>
+            <div class="yl-title" id="ylTitle">Загрузка данных</div>
             <div class="yl-bar"><i></i></div>
         </div>
 
@@ -208,13 +208,11 @@
                         <div id="vzDebtArea" style="display:none"></div>
                     </div>
 
-                    <!-- ПРАВАЯ: воронка + должники -->
+                    <!-- ПРАВАЯ: воронка -->
                     <div class="card">
                         <h2>Воронка возврата</h2>
                         <div class="hint">Путь предоплаты: выдано → зачтено зерном → остаток.</div>
                         <div id="vzFunnel" class="funnel"></div>
-                        <h2 style="padding-top:4px">Должники</h2>
-                        <div id="vzDebtorsList" style="padding:0 18px 10px"></div>
                         <div style="padding:0 18px 16px">
                             <button class="refresh" style="font-size:11px;width:100%;padding:8px" onclick="printDebtors()">📄 Реестр должников (PDF)</button>
                         </div>

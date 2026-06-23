@@ -21,6 +21,7 @@ function renderReturn() {
     renderVzRanking();
     const asof = document.getElementById("vzAsof");
     if (asof) asof.textContent = DR.date;
+    if (typeof hideYearLoader === "function") hideYearLoader();
 }
 
 // ── 1. Авто-сводка ───────────────────────────────────────────────────────────
@@ -273,37 +274,41 @@ function renderVzDebtTable() {
         .replace("Восточно-Казахстанская","ВКО").replace("Северо-Казахстанская","СКО")
         .replace("Западно-Казахстанская","ЗКО").replace("ская","ск.");
 
-    box.innerHTML = `<div class="tablescroll"><table class="rtable">
+    const totalDebt = debtors.reduce((s,c) => s + c.debt, 0);
+    const totalPen  = debtors.reduce((s,c) => s + (c.penalty||0), 0);
+    const totalFin  = debtors.reduce((s,c) => s + (c.sum_fin||0), 0);
+    const totalZach = debtors.reduce((s,c) => s + (c.sum_zachet||0), 0);
+
+    const rows = debtors.map((c, i) => {
+        const safeBin = (c.bin||"").replace(/'/g,"\\'");
+        const safeDog = (c.dog_num||"").replace(/'/g,"\\'");
+        return `<tr onclick="openCpReturnByBin('${safeBin}','${safeDog}')">
+            <td class="l">
+                <b>${c.name}</b>
+                <br><span style="font-size:10px;font-weight:600;opacity:.6">${regShort(c.reg)} · ${c.cult||"—"}</span>
+            </td>
+            <td>${fmtMlrd(c.sum_fin)}</td>
+            <td>${c.sum_zachet > 0 ? fmtMlrd(c.sum_zachet) : "—"}</td>
+            <td style="color:#E05A4A;font-weight:800">${fmtMlrd(c.debt)}</td>
+            <td style="color:#C07030">${c.penalty > 0 ? fmtMlrd(c.penalty) : "—"}</td>
+        </tr>`;
+    }).join("");
+
+    box.innerHTML = `<div class="tablescroll" style="max-height:390px"><table class="rtab">
         <thead><tr>
-            <th>#</th>
-            <th>Контрагент</th>
-            <th>Область</th>
-            <th>Культура</th>
-            <th>Финансирование, ₸</th>
-            <th>Зачтено, ₸</th>
-            <th style="color:#E05A4A">Остаток долга, ₸</th>
-            <th style="color:#C07030">Пеня, ₸</th>
+            <th class="l">Контрагент / Область · Культура</th>
+            <th>Профинанс. ₸</th>
+            <th>Зачтено ₸</th>
+            <th>Остаток долга ₸</th>
+            <th>Пеня ₸</th>
         </tr></thead>
-        <tbody>${debtors.map((c, i) => {
-            const safeBin = (c.bin||"").replace(/'/g,"\\'");
-            const safeDog = (c.dog_num||"").replace(/'/g,"\\'");
-            return `<tr class="rrow" onclick="openCpReturnByBin('${safeBin}','${safeDog}')">
-                <td class="num" style="color:var(--muted)">${i+1}</td>
-                <td><b>${c.name}</b><br><span class="muted">${c.form||""}</span></td>
-                <td>${regShort(c.reg)}</td>
-                <td>${c.cult||"—"}</td>
-                <td class="num">${fmtMlrd(c.sum_fin)} ₸</td>
-                <td class="num">${c.sum_zachet > 0 ? fmtMlrd(c.sum_zachet)+" ₸" : "—"}</td>
-                <td class="num" style="color:#E05A4A;font-weight:800">${fmtMlrd(c.debt)} ₸</td>
-                <td class="num" style="color:#C07030">${c.penalty > 0 ? fmtMlrd(c.penalty)+" ₸" : "—"}</td>
-            </tr>`;
-        }).join("")}</tbody>
-        <tfoot><tr style="background:#F5F0E4;font-weight:800">
-            <td colspan="4">Итого (${debtors.length} СХТП)</td>
-            <td class="num">${fmtMlrd(DR.total.sum_fin)} ₸</td>
-            <td class="num">${fmtMlrd(DR.total.sum_zachet)} ₸</td>
-            <td class="num" style="color:#E05A4A">${fmtMlrd(DR.total.debt)} ₸</td>
-            <td class="num" style="color:#C07030">${DR.totalPenalty > 0 ? fmtMlrd(DR.totalPenalty)+" ₸" : "—"}</td>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+            <td class="l">Итого (${debtors.length} должников)</td>
+            <td>${fmtMlrd(totalFin)}</td>
+            <td>${fmtMlrd(totalZach)}</td>
+            <td style="color:#E05A4A;font-weight:800">${fmtMlrd(totalDebt)}</td>
+            <td style="color:#C07030">${totalPen > 0 ? fmtMlrd(totalPen) : "—"}</td>
         </tr></tfoot>
     </table></div>`;
 }

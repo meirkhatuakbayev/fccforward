@@ -229,5 +229,6 @@ async function loadReturn(yearOverride) {
         console.error("loadReturn:", e);
         const box = document.getElementById("vzErrBox");
         if (box) box.textContent = "Не удалось загрузить данные: " + e.message;
+        if (typeof hideYearLoader === "function") hideYearLoader();
     }
 }
