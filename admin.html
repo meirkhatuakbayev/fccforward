@@ -920,15 +920,15 @@ function openReturnForm(existing, contractorHint) {
           </div>
           <div class="field">
             <label>Культура</label>
-            <input type="text" id="rCult" value="${esc(e['Культура']||'')}" placeholder="Пшеница 3 класс">
+            <input type="text" id="rCult" value="${esc(e['Культура']||'')}" placeholder="Пшеница 3 класс"${existing?' readonly class="autofilled"':''}>
           </div>
           <div class="field">
             <label>№ договора</label>
-            <input type="text" id="rDogNum" value="${esc(e['№ договора']||'')}">
+            <input type="text" id="rDogNum" value="${esc(e['№ договора']||'')}"${existing?' readonly class="autofilled"':''}>
           </div>
           <div class="field">
             <label>Дата договора</label>
-            <input type="text" id="rDogDate" value="${esc(e['Дата договора']||'')}" placeholder="01.03.2026">
+            <input type="text" id="rDogDate" value="${esc(e['Дата договора']||'')}" placeholder="01.03.2026"${existing?' readonly class="autofilled"':''}>
           </div>
         </div>
       </div>
@@ -972,30 +972,54 @@ function openReturnForm(existing, contractorHint) {
       <div class="aform-section">
         <div class="aform-section-label">Погашение и расчёты</div>
         <div class="aform-grid cols3">
-          <div class="field"><label>Зачтено в предоплату, ₸</label><input type="number" id="rZachet"    value="${e['Зачтено в предоплату, ₸']||''}"></div>
-          <div class="field"><label>Остаток долга, ₸ (авт.)</label><input type="number" id="rDebt"      readonly class="autofilled" value="${e['Остаток долга, ₸']||''}"></div>
-          <div class="field"><label>Пеня, ₸</label>               <input type="number" id="rPenalty"   value="${e['Пеня, ₸']||''}"></div>
-          <div class="field"><label>Погашено деньгами, ₸</label>  <input type="number" id="rPaidMoney" value="${e['Погашено деньгами, ₸']||''}"></div>
-          <div class="field"><label>Погашено зерном, ₸</label>    <input type="number" id="rPaidGrain" value="${e['Погашено зерном, ₸']||''}"></div>
-          <div class="field"><label>Доплата план, ₸</label>       <input type="number" id="rDopPlan"   value="${e['Доплата план, ₸']||''}"></div>
-          <div class="field"><label>Доплата факт, ₸</label>       <input type="number" id="rDopFact"   value="${e['Доплата факт, ₸']||''}"></div>
-          <div class="field"><label>КСН, ₸</label>                <input type="number" id="rKsn"       value="${e['КСН, ₸']||''}"></div>
+          <div class="field">
+            <label>Погашено зерном (объём), т (авт.)</label>
+            <input type="number" id="rPaidGrainVol" readonly class="autofilled" step="0.001" value="">
+          </div>
+          <div class="field">
+            <label>Сумма за поставленное зерно, ₸ (авт.)</label>
+            <input type="number" id="rPaidGrain" readonly class="autofilled" value="">
+          </div>
+          <div class="field">
+            <label>Зачтено в предоплату, ₸ (авт.)</label>
+            <input type="number" id="rZachet" readonly class="autofilled" value="${e['Зачтено в предоплату, ₸']||''}">
+          </div>
+          <div class="field">
+            <label>Остаток долга, ₸ (авт.)</label>
+            <input type="number" id="rDebt" readonly class="autofilled" value="${e['Остаток долга, ₸']||''}">
+          </div>
+          <div class="field">
+            <label>Погашено деньгами, ₸</label>
+            <input type="number" id="rPaidMoney" step="0.01" value="${e['Погашено деньгами, ₸']||''}" oninput="recalcReturn()">
+          </div>
+          <div class="field">
+            <label>% исполнения (авт.)</label>
+            <input type="text" id="rPct" readonly class="autofilled" value="">
+          </div>
+          <div class="field"><label>Пеня, ₸</label><input type="number" id="rPenalty" value="${e['Пеня, ₸']||''}"></div>
+          <div class="field"><label>Доплата план, ₸</label><input type="number" id="rDopPlan" value="${e['Доплата план, ₸']||''}"></div>
+          <div class="field"><label>Доплата факт, ₸</label><input type="number" id="rDopFact" value="${e['Доплата факт, ₸']||''}"></div>
+          <div class="field"><label>КСН, ₸</label><input type="number" id="rKsn" value="${e['КСН, ₸']||''}"></div>
         </div>
       </div>
 
       <div class="aform-section">
-        <div class="aform-section-label">История погашений</div>
-        <table class="hist-table" id="histTable">
-          <thead><tr>
-            <th style="width:110px">Тип</th>
-            <th style="width:110px">Дата</th>
-            <th>Сумма / объём, ₸</th>
-            <th style="width:130px">Остаток долга, ₸</th>
-            <th style="width:36px"></th>
-          </tr></thead>
-          <tbody id="histBody"></tbody>
-        </table>
-        <button class="btn btn-ghost add-hist-btn" onclick="addHistRow()">+ Добавить событие</button>
+        <div class="aform-section-label">История погашений (авт. из поставок)</div>
+        <div style="overflow-x:auto">
+          <table class="atable" id="histTable" style="font-size:12px;min-width:680px">
+            <thead><tr>
+              <th>Дата</th>
+              <th>Культура</th>
+              <th>Клейковина</th>
+              <th style="text-align:right">Объём, т</th>
+              <th style="text-align:right">Сумма, ₸</th>
+              <th style="text-align:right">Остаток долга, ₸</th>
+              <th style="text-align:right">% исп.</th>
+            </tr></thead>
+            <tbody id="histBody"></tbody>
+          </table>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin:6px 0 0">Заполняется автоматически из раздела «Поставлено в разрезе культур»</p>
       </div>
 
       <div class="aform-actions">
@@ -1028,11 +1052,7 @@ function openReturnForm(existing, contractorHint) {
     }
   } catch(_) {}
 
-  // Загружаем историю платежей
-  try {
-    const hist = JSON.parse(e['История платежей (JSON)'] || '[]');
-    hist.forEach(p => addHistRow(p));
-  } catch(_) {}
+  // История строится автоматически через recalcReturn
 
   // Показываем кнопку удаления только для существующих записей
   const delBtn = q('#delReturnBtn');
@@ -1124,37 +1144,69 @@ function recalcDelivery() {
 
 function recalcReturn() {
   const tbody = q('#deliveryBody');
-  let volTotal = 0, sumTotal = 0;
+  let grainVol = 0, grainSum = 0;
+  const rows = [];
   if (tbody) {
     tbody.querySelectorAll('tr').forEach(tr => {
-      volTotal += parseFloat(tr.querySelector('.d-vol')?.value) || 0;
-      sumTotal += parseFloat(tr.querySelector('.d-sum')?.value) || 0;
+      const vol  = parseFloat(tr.querySelector('.d-vol')?.value) || 0;
+      const sum  = parseFloat(tr.querySelector('.d-sum')?.value) || 0;
+      const cult = tr.querySelector('.d-cult')?.value || '';
+      const kleiEl = tr.querySelector('.d-klei');
+      const klei = (kleiEl?.tagName === 'SELECT') ? (kleiEl.value || '') : '';
+      const date = tr.querySelector('.d-date')?.value || '';
+      grainVol += vol;
+      grainSum += sum;
+      rows.push({ date, cult, klei, vol, sum });
     });
   }
-  const finSum = parseFloat(q('#rFinSum')?.value) || 0;
-  const zachet = parseFloat(q('#rZachet')?.value) || 0;
-  const debt   = Math.max(0, finSum - zachet);
-  if (q('#rDebt')) q('#rDebt').value = debt || '';
+  const finSum    = parseFloat(q('#rFinSum')?.value) || 0;
+  const paidMoney = parseFloat(q('#rPaidMoney')?.value) || 0;
+  const zachet    = grainSum + paidMoney;
+  const debt      = Math.max(0, finSum - zachet);
+  const pct       = finSum > 0 ? (zachet / finSum * 100).toFixed(1) : '0.0';
+
+  if (q('#rPaidGrainVol')) q('#rPaidGrainVol').value = grainVol ? grainVol.toFixed(3) : '';
+  if (q('#rPaidGrain'))    q('#rPaidGrain').value    = grainSum ? grainSum.toFixed(2) : '';
+  if (q('#rZachet'))       q('#rZachet').value       = zachet   ? zachet.toFixed(2)   : '';
+  if (q('#rDebt'))         q('#rDebt').value         = debt     ? debt.toFixed(2)      : '';
+  if (q('#rPct'))          q('#rPct').value          = pct + ' %';
+
+  // Автогенерация истории погашений из строк поставок
+  const histBody = q('#histBody');
+  if (!histBody) return;
+  histBody.innerHTML = '';
+  // Сортируем по дате (строки без даты — в конец)
+  const sorted = [...rows].sort((a, b) => {
+    if (!a.date && !b.date) return 0;
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return a.date.localeCompare(b.date);
+  });
+  let runDebt = finSum;
+  sorted.forEach((r, i) => {
+    runDebt -= r.sum;
+    const runDebtFmt  = runDebt.toFixed(2);
+    const runPct      = finSum > 0 ? (((finSum - runDebt) / finSum) * 100).toFixed(1) : '0.0';
+    const dateStr     = r.date ? r.date.split('-').reverse().join('.') : '—';
+    const kultStr     = r.klei ? `${r.cult} (кл. ${r.klei})` : r.cult;
+    const tr = document.createElement('tr');
+    tr.style.background = i % 2 === 0 ? '#FDFAF4' : '#F5EFE0';
+    tr.innerHTML = `
+      <td>${dateStr}</td>
+      <td>${kultStr}</td>
+      <td style="text-align:center">${r.klei || '—'}</td>
+      <td style="text-align:right">${r.vol.toFixed(3)}</td>
+      <td style="text-align:right">${r.sum.toFixed(2)}</td>
+      <td style="text-align:right;color:${runDebt>0?'#C04A2A':'#3C6B4A'};font-weight:700">${Number(runDebtFmt).toLocaleString('ru')}</td>
+      <td style="text-align:right;font-weight:700;color:${parseFloat(runPct)>=100?'#3C6B4A':'#B97F18'}">${runPct}%</td>`;
+    histBody.appendChild(tr);
+  });
+  if (sorted.length === 0) {
+    histBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#AAA;padding:12px;font-style:italic">Добавьте строки в разделе «Поставлено в разрезе культур»</td></tr>`;
+  }
 }
 
-function addHistRow(p = {}) {
-  const tbody = q('#histBody');
-  if (!tbody) return;
-  const types = [
-    {v:'grain',   l:'Поставка зерна'},
-    {v:'money',   l:'Погашение деньгами'},
-    {v:'penalty', l:'Начисление пени'},
-  ];
-  const typeOpts = types.map(t => `<option value="${t.v}" ${p.type===t.v?'selected':''}>${t.l}</option>`).join('');
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><select class="h-type">${typeOpts}</select></td>
-    <td><input class="h-date" type="text" value="${esc(p.date||p.date_from||'')}" placeholder="15.11.2026"></td>
-    <td><input class="h-amount" type="number" value="${p.amount||''}" placeholder="Сумма ₸"></td>
-    <td><input class="h-balance" type="number" value="${p.balance!=null?p.balance:''}" placeholder="Остаток ₸"></td>
-    <td><button class="del-btn" onclick="this.closest('tr').remove()">✕</button></td>`;
-  tbody.appendChild(tr);
-}
+// addHistRow удалён — история строится автоматически в recalcReturn()
 
 async function saveReturn() {
   const rowIdx = parseInt(q('#rRowIdx').value) || null;
@@ -1162,25 +1214,34 @@ async function saveReturn() {
   const ctName = sel ? sel.options[sel.selectedIndex]?.text : '';
   const ctBin  = sel ? sel.value : '';
 
-  if (!ctBin && !q('#rFinSum').value) { toast('Выберите контрагента', 'err'); return; }
+  if (!ctBin && !q('#rFinSum')?.value) { toast('Выберите контрагента', 'err'); return; }
 
-  // Собираем историю платежей
-  const histRows = [];
-  q('#histBody').querySelectorAll('tr').forEach(tr => {
-    const type   = tr.querySelector('.h-type')?.value;
-    const date   = tr.querySelector('.h-date')?.value?.trim();
-    const amount = parseFloat(tr.querySelector('.h-amount')?.value) || 0;
-    const bal    = tr.querySelector('.h-balance')?.value;
-    if (date || amount) {
-      histRows.push({ type, date, amount, balance: bal !== '' ? parseFloat(bal) : null });
+  // Валидация строк поставок — объём, сумма, клейковина обязательны
+  let delivErr = false;
+  const delivRows = [];
+  q('#deliveryBody')?.querySelectorAll('tr').forEach((tr, i) => {
+    const cult   = tr.querySelector('.d-cult')?.value || '';
+    const kleiEl = tr.querySelector('.d-klei');
+    const klei   = (kleiEl?.tagName === 'SELECT') ? kleiEl.value : '';
+    const date   = tr.querySelector('.d-date')?.value || '';
+    const vol    = parseFloat(tr.querySelector('.d-vol')?.value) || 0;
+    const s      = parseFloat(tr.querySelector('.d-sum')?.value) || 0;
+    const price  = parseFloat(tr.querySelector('.d-price')?.value) || 0;
+    // Клейковина обязательна если SELECT виден
+    if (kleiEl?.tagName === 'SELECT' && !klei) {
+      toast(`Строка ${i+1}: укажите клейковину`, 'err'); delivErr = true; return;
     }
+    if (!vol)  { toast(`Строка ${i+1}: укажите объём`, 'err'); delivErr = true; return; }
+    if (!s)    { toast(`Строка ${i+1}: укажите сумму`, 'err'); delivErr = true; return; }
+    delivRows.push({ cult, klei, date, v: vol, s, price });
   });
+  if (delivErr) return;
 
   const num = id => parseFloat(q('#'+id)?.value || 0) || 0;
 
   const data = {
     'Область':                   q('#rReg')?.value     || '',
-    'Наименование поставщика':   ctName.replace(' — выберите контрагента —','') || '',
+    'Наименование поставщика':   ctName.replace('— выберите контрагента —','').trim() || '',
     'БИН/ИИН':                   ctBin,
     'Культура':                  q('#rCult')?.value    || '',
     '№ договора':                q('#rDogNum')?.value  || '',
@@ -1188,36 +1249,22 @@ async function saveReturn() {
     'Объём по договору, т':      num('rVolFin'),
     'Цена предоплаты, ₸/т':      num('rPriceFin'),
     'Сумма финансирования, ₸':   num('rFinSum'),
-    'Поставлено JSON':           (() => {
-      const rows = [];
-      q('#deliveryBody')?.querySelectorAll('tr').forEach(tr => {
-        const cult  = tr.querySelector('.d-cult')?.value  || '';
-        const kleiEl = tr.querySelector('.d-klei');
-        const klei  = (kleiEl?.tagName === 'SELECT') ? (kleiEl.value || '') : '';
-        const date  = tr.querySelector('.d-date')?.value  || '';
-        const vol   = parseFloat(tr.querySelector('.d-vol')?.value)   || 0;
-        const s     = parseFloat(tr.querySelector('.d-sum')?.value)   || 0;
-        const price = parseFloat(tr.querySelector('.d-price')?.value) || 0;
-        if (cult || vol || s) rows.push({ cult, klei, date, v: vol, s, price });
-      });
-      return JSON.stringify(rows);
-    })(),
+    'Поставлено JSON':           JSON.stringify(delivRows),
     'Всего поставлено, т':       parseFloat(q('#dTotalVol')?.textContent) || 0,
     'Всего сумма за зерно, ₸':   parseFloat(q('#dTotalSum')?.textContent) || 0,
-    // Обратная совместимость — заполняем старые колонки из JSON-строк
-    'Пш 3кл объём, т': 0, 'Пш 3кл сумма, ₸': 0,
-    'Пш 4кл объём, т': 0, 'Пш 4кл сумма, ₸': 0,
-    'Пш 5кл объём, т': 0, 'Пш 5кл сумма, ₸': 0,
-    'Ячмень 2кл объём, т': 0, 'Ячмень 2кл сумма, ₸': 0,
     'Зачтено в предоплату, ₸':   num('rZachet'),
     'Остаток долга, ₸':          num('rDebt'),
+    '% исполнения':              q('#rPct')?.value || '',
     'Пеня, ₸':                   num('rPenalty'),
     'Погашено деньгами, ₸':      num('rPaidMoney'),
     'Погашено зерном, ₸':        num('rPaidGrain'),
     'Доплата план, ₸':           num('rDopPlan'),
     'Доплата факт, ₸':           num('rDopFact'),
     'КСН, ₸':                    num('rKsn'),
-    'История платежей (JSON)':   JSON.stringify(histRows),
+    'Пш 3кл объём, т': 0, 'Пш 3кл сумма, ₸': 0,
+    'Пш 4кл объём, т': 0, 'Пш 4кл сумма, ₸': 0,
+    'Пш 5кл объём, т': 0, 'Пш 5кл сумма, ₸': 0,
+    'Ячмень 2кл объём, т': 0, 'Ячмень 2кл сумма, ₸': 0,
   };
 
   try {
