@@ -1272,7 +1272,7 @@ async function saveReturn() {
     toast('Сохранено ✓', 'ok');
     allReturn = [];
     backToReturnList();
-    loadReturn();
+    loadReturnMerged();
   } catch(e) { toast(e.message, 'err'); }
 }
 
@@ -1290,7 +1290,7 @@ async function deleteReturn() {
     toast('Запись удалена ✓', 'ok');
     allReturn = [];
     backToReturnList();
-    loadReturn();
+    loadReturnMerged();
   } catch(e) { toast('Ошибка: ' + e.message, 'err'); }
 }
 
