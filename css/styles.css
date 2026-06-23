@@ -395,7 +395,7 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
 /* ===== РАЗДЕЛ «ВОЗВРАТ ЗЕРНА» ===== */
 
 /* Под-вкладки форвардного закупа */
-#fwdSubtabs { background: var(--panel); border-bottom: 2px solid var(--line); }
+#fwdSubtabs { background: var(--panel); border-bottom: 2px solid var(--line); position: sticky; top: 0; z-index: 50; }
 .fwd-subtabs { max-width: 1320px; margin: 0 auto; display: flex; gap: 4px; padding: 8px 20px; }
 .fwd-subtab { border: 0; background: transparent; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; transition: background .15s, color .15s; }
 .fwd-subtab:hover { background: #F0EADB; color: var(--ink); }

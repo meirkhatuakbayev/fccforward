@@ -576,7 +576,7 @@ function vzSelectRegion(code) {
     if (!panel || !pname) return;
     pname.textContent = reg.name + " область";
     panel.style.display = "";
-    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
 
     const cps = DR.cps
         .filter(c => { const r = DR.regions.find(x => x.name === c.reg); return r && r.code === code; })

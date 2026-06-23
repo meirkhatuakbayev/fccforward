@@ -11,9 +11,10 @@ function render() {
 
 function renderKpis() {
     const t = D.total, finPct = t.limit ? t.fin[2] / t.limit * 100 : 0, convVol = t.rec[3] ? t.fin[3] / t.rec[3] * 100 : 0;
+    const nm = v => (v / 1e9).toLocaleString("ru-RU", {maximumFractionDigits: 2});
     const items = [
-        {lab: "Лимит по РК",              big: fmtMlrd(t.limit),    unit: "₸",    sub: t.limit.toLocaleString("ru-RU") + " ₸"},
-        {lab: "Профинансировано",          big: fmtMlrd(t.fin[2]),   unit: "₸",    sub: finPct.toFixed(1) + "% от лимита", pct: finPct},
+        {lab: "Лимит по РК",              big: nm(t.limit),    unit: "млрд ₸", sub: t.limit.toLocaleString("ru-RU") + " ₸"},
+        {lab: "Профинансировано",          big: nm(t.fin[2]),   unit: "млрд ₸", sub: finPct.toFixed(1) + "% от лимита", pct: finPct},
         {lab: "Законтрактованный объём",   big: fmtT(t.fin[3]),      unit: "тонн", sub: "заявлено " + fmtT(t.rec[3]) + " тонн"},
         {lab: "Контрагенты · заявки",      big: t.fin[0],            unit: "СХТП", sub: t.fin[1] + " профинанс. заявок"},
         {lab: "Конверсия по объёму",       big: convVol.toFixed(0),  unit: "%",    sub: "заявки → финансирование", pct: convVol}
