@@ -424,7 +424,7 @@ function switchTab(tab) {
   q('#tabFinancing').style.display     = tab === 'financing' ? '' : 'none';
   q('#tabReturn').style.display        = tab === 'return'    ? '' : 'none';
   q('#tabUsersContent').style.display  = tab === 'users'     ? '' : 'none';
-  if (tab === 'return' && !allReturn.length) loadReturn();
+  if (tab === 'return') loadReturnMerged();
   if (tab === 'users') loadUsers();
 }
 
@@ -663,52 +663,147 @@ function backToList() {
 
 // ── Возврат зерна ──────────────────────────────────────────────────────────
 
-async function loadReturn() {
+let _mergedReturn = [];
+let _retFilter = 'all';
+
+async function loadReturnMerged() {
   const box = q('#returnList');
   box.innerHTML = spinner();
   try {
-    const r = await api('listReturn');
-    allReturn = r.data;
-    renderReturnList(allReturn);
+    // Грузим параллельно: финансирование (если не загружено) + записи возврата
+    const [, retR] = await Promise.all([
+      allContractors.length ? Promise.resolve() : api('listContractors').then(r => { allContractors = r.data; }),
+      api('listReturn')
+    ]);
+    allReturn = retR.data;
+
+    // Индекс записей возврата по БИН/названию
+    const retIdx = {};
+    allReturn.forEach(r => {
+      const key = (r['БИН/ИИН'] || r['Наименование поставщика'] || '').trim();
+      if (key) retIdx[key] = r;
+    });
+
+    // Все профинансированные + их запись возврата (если есть)
+    _mergedReturn = allContractors
+      .filter(c => c.fin_sum > 0)
+      .map(c => {
+        const key = (c.bin || c.name || '').trim();
+        const ret = retIdx[key] || retIdx[c.name] || null;
+        return { contractor: c, ret, hasRecord: !!ret };
+      });
+
+    renderReturnMerged(_retFilter);
   } catch(e) { box.innerHTML = `<p style="color:var(--red);padding:20px">${e.message}</p>`; }
 }
 
-function renderReturnList(list) {
+function renderReturnMerged(filter) {
+  _retFilter = filter;
   const box = q('#returnList');
+
+  const list = filter === 'active'  ? _mergedReturn.filter(m => m.hasRecord)
+             : filter === 'pending' ? _mergedReturn.filter(m => !m.hasRecord)
+             : _mergedReturn;
+
+  const pendingCount = _mergedReturn.filter(m => !m.hasRecord).length;
+  const activeCount  = _mergedReturn.filter(m =>  m.hasRecord).length;
+
+  const tabs = `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+      <button class="btn btn-sm ${filter==='all'    ?'btn-primary':'btn-ghost'}" onclick="renderReturnMerged('all')">Все (${_mergedReturn.length})</button>
+      <button class="btn btn-sm ${filter==='pending'?'btn-primary':'btn-ghost'}" onclick="renderReturnMerged('pending')" style="color:${filter!=='pending'?'var(--amber)':''}">Не добавлены (${pendingCount})</button>
+      <button class="btn btn-sm ${filter==='active' ?'btn-primary':'btn-ghost'}" onclick="renderReturnMerged('active')" style="color:${filter!=='active'?'var(--green)':''}">С записью (${activeCount})</button>
+      <div style="flex:1"></div>
+      ${pendingCount > 0 ? `<button class="btn btn-amber btn-sm" onclick="addAllPending()">+ Добавить всех (${pendingCount})</button>` : ''}
+    </div>`;
+
   if (!list.length) {
-    box.innerHTML = `<div class="empty-state"><div class="icon">🌾</div><p>Записей по возврату пока нет. Нажмите «+ Добавить запись»</p></div>`;
+    box.innerHTML = tabs + `<div class="empty-state"><div class="icon">🌾</div><p>Нет контрагентов по выбранному фильтру</p></div>`;
     return;
   }
-  box.innerHTML = `<div style="overflow-x:auto"><table class="atable">
+
+  box.innerHTML = tabs + `<div style="overflow-x:auto"><table class="atable">
     <thead><tr>
       <th>Контрагент</th><th>Область</th><th>Культура</th>
-      <th>Финансирование, ₸</th><th>Поставлено, т</th><th>Зачтено, ₸</th>
-      <th>Остаток долга, ₸</th><th>Пеня, ₸</th><th></th>
+      <th>Финансирование, ₸</th><th>Поставлено, т</th>
+      <th>Остаток долга, ₸</th><th>Статус</th><th></th>
     </tr></thead>
-    <tbody>${list.map((r,i) => `<tr>
-      <td><b>${esc(r['Наименование поставщика'])}</b></td>
-      <td>${esc(r['Область'])}</td>
-      <td>${esc(r['Культура'])||'—'}</td>
-      <td>${fmtNum(r['Сумма финансирования, ₸'])}</td>
-      <td>${fmtNum(r['Всего поставлено, т'])}</td>
-      <td>${fmtNum(r['Зачтено в предоплату, ₸'])}</td>
-      <td style="color:${+r['Остаток долга, ₸']>0?'var(--red)':'var(--green)'};font-weight:700">${fmtNum(r['Остаток долга, ₸'])}</td>
-      <td style="color:${+r['Пеня, ₸']>0?'var(--red)':'var(--muted)'}">${fmtNum(r['Пеня, ₸'])}</td>
-      <td><button class="btn btn-ghost btn-sm" onclick="editReturn(${i})">✏️ Изменить</button></td>
-    </tr>`).join('')}</tbody>
+    <tbody>${list.map((m, i) => {
+      const c = m.contractor, r = m.ret;
+      const debt   = r ? +r['Остаток долга, ₸']      : c.fin_sum;
+      const vol    = r ? +r['Всего поставлено, т']    : 0;
+      const status = m.hasRecord ? 'В работе' : 'Не начат';
+      const statusColor = m.hasRecord ? 'var(--green)' : 'var(--amber)';
+      return `<tr>
+        <td><b>${esc(c.name)}</b><br><span class="muted">${esc(c.form)}, ${esc(c.rayon)}</span></td>
+        <td>${esc(c.reg)}</td>
+        <td>${esc(c.cult)||'—'}</td>
+        <td><span class="badge-fin">${fmt(c.fin_sum)} ₸</span></td>
+        <td>${vol ? fmtNum(vol) + ' т' : '—'}</td>
+        <td style="color:${debt>0?'var(--red)':'var(--green)'};font-weight:700">${fmtNum(debt)} ₸</td>
+        <td><span style="font-size:11px;font-weight:700;color:${statusColor}">${status}</span></td>
+        <td>
+          ${m.hasRecord
+            ? `<button class="btn btn-ghost btn-sm" onclick="editReturnByIdx(${_mergedReturn.indexOf(m)})">✏️</button>`
+            : `<button class="btn btn-amber btn-sm" onclick="addReturnFromContractor(${_mergedReturn.indexOf(m)})">+ Добавить</button>`
+          }
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
   </table></div>`;
 }
 
+function addReturnFromContractor(idx) {
+  const m = _mergedReturn[idx];
+  openReturnForm(null, m.contractor);
+}
+
+function editReturnByIdx(idx) {
+  openReturnForm(_mergedReturn[idx].ret);
+}
+
+async function addAllPending() {
+  const pending = _mergedReturn.filter(m => !m.hasRecord);
+  if (!pending.length) return;
+  if (!confirm(`Добавить ${pending.length} контрагентов в возврат? У них выставится остаток долга = сумма финансирования.`)) return;
+
+  let done = 0;
+  for (const m of pending) {
+    const c = m.contractor;
+    const data = {
+      'Область': c.reg, 'Форма': c.form, 'Наименование поставщика': c.name,
+      'Район': c.rayon, 'БИН/ИИН': c.bin, '№ договора': c.dog_num,
+      'Культура': c.cult, 'Сумма финансирования, ₸': c.fin_sum,
+      'Остаток долга, ₸': c.fin_sum, 'История платежей (JSON)': '[]'
+    };
+    try { await api('saveReturn', { data }); done++; } catch(_) {}
+  }
+  toast(`Добавлено ${done} из ${pending.length} ✓`, 'ok');
+  loadReturnMerged();
+}
+
 function showAddReturnForm() {
-  openReturnForm(null);
+  openReturnForm(null, null);
 }
 
 function editReturn(idx) {
   openReturnForm(allReturn[idx]);
 }
 
-function openReturnForm(existing) {
-  const e = existing || {};
+function openReturnForm(existing, contractorHint) {
+  // contractorHint — объект из allContractors когда создаём запись впервые
+  const ch = contractorHint || {};
+  const e  = existing ? { ...existing } : {
+    'Область':                 ch.reg     || '',
+    'Форма':                   ch.form    || '',
+    'Наименование поставщика': ch.name    || '',
+    'Район':                   ch.rayon   || '',
+    'БИН/ИИН':                 ch.bin     || '',
+    '№ договора':              ch.dog_num || '',
+    'Культура':                ch.cult    || '',
+    'Сумма финансирования, ₸': ch.fin_sum || '',
+    'Остаток долга, ₸':        ch.fin_sum || '',
+  };
   const box = q('#returnForm');
   q('#returnList').style.display = 'none';
   box.style.display = '';
