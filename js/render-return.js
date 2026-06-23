@@ -896,7 +896,7 @@ tr:nth-child(even):not(.rh):not(.sub):not(.tot) td{background:#FAFAF8}
   <th style="width:200px">Наименование СХТП</th>
   <th style="width:90px">Профинансировано, ₸</th>
   <th style="width:68px">Поставлено, т</th>
-  <th style="width:90px">Поставлено, ₸</th>
+  <th style="width:90px">В т.ч. на сумму финансирования, ₸</th>
   <th style="width:90px">В т.ч. зачтено в предоплату, ₸</th>
   <th style="width:90px">Остаток долга, ₸</th>
   <th style="width:80px">Пеня, ₸</th>
