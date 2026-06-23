@@ -207,6 +207,20 @@ td.r { text-align: right; font-variant-numeric: tabular-nums; }
 @keyframes slide { 0% { margin-left: -40%; } 100% { margin-left: 102%; } }
 .loader .field { margin-top: 26px; width: min(620px, 92vw); height: 150px; overflow: visible; }
 
+/* ── Inline-скелетон внутри карточек ─────────────────────────────────────── */
+.block-loader { display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding: 48px 0; gap: 14px; animation: yl-in .2s ease; }
+.block-loader .bl-seal { width:40px; height:40px; border-radius:10px;
+    background:linear-gradient(150deg,#F6C45E,#D69A1E);
+    display:grid; place-items:center; color:#3a2a06; font-weight:800; font-size:13px;
+    box-shadow:inset 0 0 0 2px #ffffff66, 0 6px 16px -6px #b9801e88;
+    animation: bob 2s ease-in-out infinite; }
+.block-loader .bl-text { font-size:13px; font-weight:700; color:#22402E; }
+.block-loader .bl-text::after { content:''; display:inline-block; width:1.2em; text-align:left; animation:dots 1.5s steps(1,end) infinite; }
+.block-loader .bl-bar { width:140px; height:3px; background:#E7DDC4; border-radius:3px; overflow:hidden; }
+.block-loader .bl-bar i { display:block; width:38%; height:100%; border-radius:3px;
+    background:linear-gradient(90deg,#E8A82E,#F2C357); animation:slide 1.1s ease-in-out infinite; }
+
 /* ── Оверлей при смене года / вкладки ────────────────────────────────────── */
 #yearLoader { position: fixed; inset: 0; z-index: 900;
     display: flex; flex-direction: column; align-items: center; justify-content: center;

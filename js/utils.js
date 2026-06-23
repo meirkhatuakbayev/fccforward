@@ -3,6 +3,14 @@ const el = (t, c) => { const e = document.createElement(t); if (c) e.className =
 const fmtT = n => Math.round(n).toLocaleString("ru-RU");
 const fmtMlrd = n => (n / 1e9).toLocaleString("ru-RU", {maximumFractionDigits: 2}) + " млрд";
 
+function blockLoader(text) {
+    return `<div class="block-loader">
+        <div class="bl-seal">ПКК</div>
+        <div class="bl-text">${text || "Загрузка"}</div>
+        <div class="bl-bar"><i></i></div>
+    </div>`;
+}
+
 function fullReg(n) {
     n = String(n).trim();
     return SVOD_TO_FULL[n] || DETAIL_TO_FULL[n] || n;

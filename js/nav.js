@@ -42,11 +42,15 @@ function onYearChange(yr) {
     D  = null;
     DR = null;
     _returnLoaded = false;
-    // сбрасываем кэш отрисовки вкладок возврата
     ["vzTabArea","vzCropArea","vzDebtArea"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el._rendered = false;
     });
+    // Показываем inline-скелетон в блоках KPI
+    const kEl = document.getElementById("kpis");
+    if (kEl) kEl.innerHTML = blockLoader("Загрузка финансирования");
+    const vkEl = document.getElementById("vzKpis");
+    if (vkEl) vkEl.innerHTML = blockLoader("Загрузка возврата");
     showYearLoader("Загрузка ФЗ " + yr);
     loadData(yr);
     if (_fwdSub === "vozvrat") loadReturn(yr);
@@ -64,7 +68,11 @@ function switchForwardSub(sub) {
         ? `Возврат зерна&nbsp;— форвардный закуп ${yr}`
         : `Форвардный закуп урожая&nbsp;${yr} года`;
     if (sub === "vozvrat") {
-        if (!DR) showYearLoader("Загрузка возврата");
+        if (!DR) {
+            const vkEl = document.getElementById("vzKpis");
+            if (vkEl) vkEl.innerHTML = blockLoader("Загрузка данных возврата");
+            showYearLoader("Загрузка возврата");
+        }
         ensureVozvrat();
     }
 }
