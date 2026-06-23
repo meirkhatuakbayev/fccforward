@@ -130,11 +130,23 @@ function combineReturn(svodRows, detailRows) {
 // ─── Загрузка данных ──────────────────────────────────────────────────────────
 // Строит DR из объекта D (финансирование) — работает без Apps Script
 function buildReturnFromD() {
-    if (!D || !D.cps) return false;
+    if (!D || !D.cps || !D.total) return false;
     const financed = D.cps.filter(c => c.status === 'профин.' && c.sum > 0);
     if (!financed.length) return false;
 
-    const regMap = {};
+    // Итоги берём из СВОД — там правильные цифры профин. (сумма и объём)
+    // D.total.fin = [schtp, apps, sum_fin, vol_fin]
+    const totalFinSum = D.total.fin[2] || 0;
+    const totalFinVol = D.total.fin[3] || 0;
+
+    // Строим detail-строки (для карточек контрагентов)
+    // Для отдельной строки sum_fin пропорционально из СВОД по области
+    const regFinMap = {};
+    (D.regions || []).forEach(r => {
+        // r.fin = [schtp, apps, sum, vol]
+        regFinMap[r.name] = { sum_fin: r.fin[2] || 0, vol_fin: r.fin[3] || 0 };
+    });
+
     const detail = financed.map(c => {
         const row = new Array(65).fill(0);
         row[2]  = c.reg;
@@ -146,29 +158,31 @@ function buildReturnFromD() {
         row[10] = (c.dates && c.dates.dogDate) || "";
         row[14] = (c.cults || []).join(", ");
         row[17] = c.vol  || 0;
-        row[19] = c.sum  || 0;
-        row[56] = c.sum  || 0; // долг = вся сумма финансирования
+        row[19] = c.sum  || 0; // заявленная сумма (ближайший прокси до Apps Script)
+        row[56] = c.sum  || 0;
         row[61] = c.sum  || 0;
         row.payments = [];
-
-        const reg = c.reg || "Прочие";
-        if (!regMap[reg]) regMap[reg] = { name: reg, vol_contr: 0, sum_fin: 0, debt: 0 };
-        regMap[reg].vol_contr += c.vol || 0;
-        regMap[reg].sum_fin   += c.sum || 0;
-        regMap[reg].debt      += c.sum || 0;
         return row;
     });
 
-    const svod = Object.values(regMap).map(r => {
-        const sr = new Array(25).fill(0);
-        sr[1] = r.name; sr[4] = r.vol_contr; sr[5] = r.sum_fin; sr[20] = r.debt;
-        return sr;
-    });
-    const tots = Object.values(regMap).reduce((a, r) =>
-        ({ vol_contr: a.vol_contr + r.vol_contr, sum_fin: a.sum_fin + r.sum_fin, debt: a.debt + r.debt }),
-        { vol_contr: 0, sum_fin: 0, debt: 0 });
+    // СВОД строим из D.regions — там правильные цифры профин. по областям
+    const svod = (D.regions || [])
+        .filter(r => r.fin && r.fin[2] > 0)
+        .map(r => {
+            const sr = new Array(25).fill(0);
+            sr[1]  = r.name;
+            sr[4]  = r.fin[3] || 0; // vol_contr
+            sr[5]  = r.fin[2] || 0; // sum_fin
+            sr[20] = r.fin[2] || 0; // долг = вся сумма (ещё ничего не вернули)
+            return sr;
+        });
+
+    // Итоговая строка — из D.total.fin (правильно: 31.17 млрд)
     const tr = new Array(25).fill(0);
-    tr[1] = "Итого по РК:"; tr[4] = tots.vol_contr; tr[5] = tots.sum_fin; tr[20] = tots.debt;
+    tr[1]  = "Итого по РК:";
+    tr[4]  = totalFinVol;
+    tr[5]  = totalFinSum;
+    tr[20] = totalFinSum;
     svod.push(tr);
 
     combineReturn(svod, detail);
