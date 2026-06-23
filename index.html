@@ -59,8 +59,6 @@
                 <div class="spacer"></div>
                 <select id="yearSel" onchange="onYearChange(this.value)" title="Выбрать год программы" style="background:#3C6B4A;color:#F6C45E;border:1.5px solid #5A8B6A;border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer;outline:none;height:34px;">
                     <option value="2026">ФЗ 2026</option>
-                    <option value="2025">ФЗ 2025</option>
-                    <option value="2024">ФЗ 2024</option>
                 </select>
             </div>
         </div>
@@ -219,21 +217,22 @@
                     </div>
                 </div>
 
-                <!-- Панель области (список договоров) -->
+                <!-- Панель исполнения по договорам -->
                 <div class="card region" id="vzRegPanel" style="display:none;margin-top:18px">
                     <div class="rhead">
-                        <h2 id="vzRegName"></h2>
+                        <h2 id="vzRegName">Исполнение по договорам</h2>
                         <button class="close" onclick="document.getElementById('vzRegPanel').style.display='none'">Закрыть ✕</button>
                     </div>
-                    <div class="tablescroll">
-                        <table>
+                    <div class="tablescroll" style="max-height:520px">
+                        <table class="rtab">
                             <thead><tr>
-                                <th>Контрагент</th>
+                                <th class="l">Область</th>
+                                <th class="l">Контрагент</th>
                                 <th>Культура</th>
-                                <th class="r">Объём, т</th>
-                                <th class="r">Предоплата, ₸</th>
-                                <th class="r">Поставлено, т</th>
-                                <th class="r">Долг, ₸</th>
+                                <th>Объём, т</th>
+                                <th>Предоплата, ₸</th>
+                                <th>Поставлено, т</th>
+                                <th>Долг, ₸</th>
                             </tr></thead>
                             <tbody id="vzRegRows"></tbody>
                         </table>

@@ -265,38 +265,59 @@ function setVzView(v) {
 function renderVzDebtTable() {
     const box = document.getElementById("vzDebtArea");
     if (!box) return;
-    const debtors = DR.debtors;
-    if (!debtors.length) {
+    if (!DR.debtors.length) {
         box.innerHTML = `<div style="color:#3C6B4A;font-size:14px;font-weight:700;padding:24px;text-align:center">✓ Все обязательства исполнены</div>`;
         return;
     }
-    const regShort = r => r
-        .replace("Восточно-Казахстанская","ВКО").replace("Северо-Казахстанская","СКО")
-        .replace("Западно-Казахстанская","ЗКО").replace("ская","ск.");
 
-    const totalDebt = debtors.reduce((s,c) => s + c.debt, 0);
-    const totalPen  = debtors.reduce((s,c) => s + (c.penalty||0), 0);
-    const totalFin  = debtors.reduce((s,c) => s + (c.sum_fin||0), 0);
-    const totalZach = debtors.reduce((s,c) => s + (c.sum_zachet||0), 0);
+    // Сортируем: область А→Я, внутри — контрагент А→Я
+    const sorted = [...DR.debtors].sort((a, b) =>
+        (a.reg||"").localeCompare(b.reg||"", "ru") ||
+        (a.name||"").localeCompare(b.name||"", "ru")
+    );
 
-    const rows = debtors.map((c, i) => {
-        const safeBin = (c.bin||"").replace(/'/g,"\\'");
-        const safeDog = (c.dog_num||"").replace(/'/g,"\\'");
-        return `<tr onclick="openCpReturnByBin('${safeBin}','${safeDog}')">
-            <td class="l">
-                <b>${c.name}</b>
-                <br><span style="font-size:10px;font-weight:600;opacity:.6">${regShort(c.reg)} · ${c.cult||"—"}</span>
-            </td>
-            <td>${fmtMlrd(c.sum_fin)}</td>
-            <td>${c.sum_zachet > 0 ? fmtMlrd(c.sum_zachet) : "—"}</td>
-            <td style="color:#E05A4A;font-weight:800">${fmtMlrd(c.debt)}</td>
-            <td style="color:#C07030">${c.penalty > 0 ? fmtMlrd(c.penalty) : "—"}</td>
+    // Группируем по области
+    const groups = [];
+    sorted.forEach(c => {
+        const last = groups[groups.length - 1];
+        if (!last || last.reg !== c.reg) groups.push({ reg: c.reg, items: [c] });
+        else last.items.push(c);
+    });
+
+    let rows = "";
+    groups.forEach(g => {
+        const regDebt = g.items.reduce((s,c) => s + c.debt, 0);
+        const regCnt  = g.items.length;
+        rows += `<tr class="rtab-reg-hdr">
+            <td class="l" colspan="4"><b>${g.reg}</b></td>
+            <td style="color:#E05A4A;font-weight:800">${fmtMlrd(regDebt)} ₸</td>
+            <td></td>
         </tr>`;
-    }).join("");
+        g.items.forEach((c, i) => {
+            const safeBin = (c.bin||"").replace(/'/g,"\\'");
+            const safeDog = (c.dog_num||"").replace(/'/g,"\\'");
+            rows += `<tr onclick="openCpReturnByBin('${safeBin}','${safeDog}')">
+                <td class="l" style="padding-left:22px"><b>${c.name}</b>
+                    <br><span style="font-size:10px;font-weight:600;opacity:.6">${c.cult||"—"} · ${c.dog_num||""}</span>
+                </td>
+                <td>${c.form||"—"}</td>
+                <td>${fmtMlrd(c.sum_fin)} ₸</td>
+                <td>${c.sum_zachet > 0 ? fmtMlrd(c.sum_zachet)+" ₸" : "—"}</td>
+                <td style="color:#E05A4A;font-weight:800">${fmtMlrd(c.debt)} ₸</td>
+                <td style="color:#C07030">${c.penalty > 0 ? fmtMlrd(c.penalty)+" ₸" : "—"}</td>
+            </tr>`;
+        });
+    });
 
-    box.innerHTML = `<div class="tablescroll" style="max-height:390px"><table class="rtab">
+    const totalDebt = DR.debtors.reduce((s,c) => s + c.debt, 0);
+    const totalPen  = DR.debtors.reduce((s,c) => s + (c.penalty||0), 0);
+    const totalFin  = DR.debtors.reduce((s,c) => s + (c.sum_fin||0), 0);
+    const totalZach = DR.debtors.reduce((s,c) => s + (c.sum_zachet||0), 0);
+
+    box.innerHTML = `<div class="tablescroll" style="max-height:420px"><table class="rtab">
         <thead><tr>
-            <th class="l">Контрагент / Область · Культура</th>
+            <th class="l">Контрагент</th>
+            <th>Форма</th>
             <th>Профинанс. ₸</th>
             <th>Зачтено ₸</th>
             <th>Остаток долга ₸</th>
@@ -304,11 +325,11 @@ function renderVzDebtTable() {
         </tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
-            <td class="l">Итого (${debtors.length} должников)</td>
-            <td>${fmtMlrd(totalFin)}</td>
-            <td>${fmtMlrd(totalZach)}</td>
-            <td style="color:#E05A4A;font-weight:800">${fmtMlrd(totalDebt)}</td>
-            <td style="color:#C07030">${totalPen > 0 ? fmtMlrd(totalPen) : "—"}</td>
+            <td class="l" colspan="2">Итого (${DR.debtors.length} должников)</td>
+            <td>${fmtMlrd(totalFin)} ₸</td>
+            <td>${fmtMlrd(totalZach)} ₸</td>
+            <td style="color:#E05A4A;font-weight:800">${fmtMlrd(totalDebt)} ₸</td>
+            <td style="color:#C07030">${totalPen > 0 ? fmtMlrd(totalPen)+" ₸" : "—"}</td>
         </tr></tfoot>
     </table></div>`;
 }
@@ -629,34 +650,61 @@ function renderVzRegionTable() {
             <td class="r num" style="${t.debt>0?"color:#E05A4A;font-weight:800":""}">${fmtMlrd(t.debt)}</td>
             <td class="r num">${totPenalty > 0 ? fmtMlrd(totPenalty) : "—"}</td>
         </tr></tfoot>
-    </table></div>`;
+    </table></div>
+    <div style="padding:10px 0 4px">
+        <button class="segb" style="font-size:12px" onclick="vzSelectRegion('all')">📋 Все договоры по областям</button>
+    </div>`;
 }
 
-// ── 6. Клик по области (список договоров) ────────────────────────────────────
+// ── 6. Список договоров (по клику на область или показ всех) ─────────────────
 function vzSelectRegion(code) {
-    const reg = DR.regions.find(r => r.code === code);
-    if (!reg) return;
     const panel = document.getElementById("vzRegPanel");
     const pname = document.getElementById("vzRegName");
     if (!panel || !pname) return;
-    pname.textContent = reg.name + " область";
+
+    let cps;
+    if (code === "all") {
+        pname.textContent = "Исполнение по договорам — все области";
+        // Сортируем: область А→Я, внутри — контрагент А→Я
+        cps = [...DR.cps].sort((a, b) =>
+            (a.reg||"").localeCompare(b.reg||"", "ru") ||
+            (a.name||"").localeCompare(b.name||"", "ru")
+        );
+    } else {
+        const reg = DR.regions.find(r => r.code === code);
+        if (!reg) return;
+        pname.textContent = reg.name + " область";
+        cps = DR.cps
+            .filter(c => { const r = DR.regions.find(x => x.name === c.reg); return r && r.code === code; })
+            .sort((a, b) => (a.name||"").localeCompare(b.name||"", "ru"));
+    }
+
+    // Строим строки с группировкой по области если показываем все
+    let rows = "";
+    let lastReg = null;
+    cps.forEach(c => {
+        const safeBin = c.bin.replace(/'/g,"\\'");
+        const safeDog = c.dog_num.replace(/'/g,"\\'");
+        if (code === "all" && c.reg !== lastReg) {
+            lastReg = c.reg;
+            rows += `<tr class="rtab-reg-hdr">
+                <td class="l" colspan="7"><b>${c.reg}</b></td>
+            </tr>`;
+        }
+        rows += `<tr style="cursor:pointer" onclick="openCpReturnByBin('${safeBin}','${safeDog}')">
+            <td class="l">${code === "all" ? "" : c.reg}</td>
+            <td class="l">${c.name}<div class="cpsub">${c.form||""} · ${c.dog_num||""}</div></td>
+            <td>${c.cult||"—"}</td>
+            <td>${fmtT(c.vol_fin)}</td>
+            <td>${fmtMlrd(c.sum_fin)}</td>
+            <td>${fmtT(c.vol_total)}</td>
+            <td style="${c.debt>0?"color:#E05A4A;font-weight:700":""}">${c.debt>0?fmtMlrd(c.debt)+" ₸":"✓"}</td>
+        </tr>`;
+    });
+
+    document.getElementById("vzRegRows").innerHTML = rows;
     panel.style.display = "";
     panel.scrollIntoView({ behavior: "smooth", block: "start" });
-
-    const cps = DR.cps
-        .filter(c => { const r = DR.regions.find(x => x.name === c.reg); return r && r.code === code; })
-        .sort((a, b) => b.debt - a.debt);
-
-    const rows = cps.map(c => `
-        <tr style="cursor:pointer" onclick="openCpReturnByBin('${c.bin.replace(/'/g,"\\'")}','${c.dog_num.replace(/'/g,"\\'")}')">
-            <td class="cpname">${c.name}<div class="cpsub">${c.form} · ${c.dog_num}</div></td>
-            <td>${c.cult||"—"}</td>
-            <td class="r num">${fmtT(c.vol_fin)}</td>
-            <td class="r num">${fmtMlrd(c.sum_fin)}</td>
-            <td class="r num">${fmtT(c.vol_total)}</td>
-            <td class="r num" style="${c.debt>0?"color:#E05A4A;font-weight:700":""}">${c.debt>0?fmtMlrd(c.debt):"✓"}</td>
-        </tr>`).join("");
-    document.getElementById("vzRegRows").innerHTML = rows;
 }
 
 // ── 7. Рейтинг + авто-анализ ─────────────────────────────────────────────────
