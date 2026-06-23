@@ -481,9 +481,10 @@ function applyFinFilters() {
   const reg   = q('#fReg')?.value   || '';
   const rayon = q('#fRayon')?.value || '';
   const cult  = q('#fCult')?.value  || '';
-  // Только профинансированные
+  // Только профинансированные, без свод-строк «Прочие»
   const list = allContractors.filter(c =>
     c.fin_sum > 0 &&
+    c.reg && c.reg !== 'Прочие' &&
     (!txt   || c.name.toLowerCase().includes(txt) || (c.bin||'').includes(txt)) &&
     (!reg   || c.reg   === reg)   &&
     (!rayon || c.rayon === rayon) &&
@@ -525,44 +526,42 @@ function renderContractorList(list, activeCult) {
     const regSum = g.items.reduce((s,c)=>s+(c.fin_sum||0),0);
     const regVol = g.items.reduce((s,c)=>s+(c.fin_vol||0),0);
     const regCnt = g.items.length;
-    tbody += `<tr class="fin-reg-hdr">
-      <td colspan="4"><b>${esc(g.reg)}</b> &nbsp;<span style="font-weight:400;opacity:.7">${regCnt} СХТП · ${fmtNum(regVol)} т · ${fmtNum(regSum)} ₸</span></td>
-    </tr>`;
+    // Заголовок области (без цифр — они идут в итоговой строке снизу)
+    tbody += `<tr class="rtab-reg-hdr"><td colspan="4">${esc(g.reg)}</td></tr>`;
     g.items.forEach(c => {
       tbody += `<tr onclick="openContractor('${esc(c.bin)}','${esc(c.name)}')">
-        <td style="padding-left:22px"><b>${esc(c.name)}</b><br><span class="muted">${esc(c.form)}${c.rayon?' · '+esc(c.rayon)+' р-н':''} · ${esc(c.cult)||'—'}</span></td>
-        <td class="muted">${esc(c.bin)||'—'}</td>
-        <td style="text-align:right;font-weight:700">${c.fin_vol>0?fmtNum(c.fin_vol)+' т':'—'}</td>
-        <td style="text-align:right"><span class="badge-fin">${fmt(c.fin_sum)} ₸</span></td>
+        <td class="l" style="padding-left:20px">${esc(c.name)}<br><span class="muted" style="font-size:10px;font-weight:500">${esc(c.form)}${c.rayon?' · '+esc(c.rayon)+' р-н':''} · ${esc(c.cult)||'—'}</span></td>
+        <td style="color:var(--muted);font-size:10px">${esc(c.bin)||'—'}</td>
+        <td>${c.fin_vol>0?fmtNum(c.fin_vol)+' т':'—'}</td>
+        <td style="font-weight:700">${fmt(c.fin_sum)} ₸</td>
       </tr>`;
     });
-    if (activeCult) {
-      const ci = g.items.filter(c=>c.cult===activeCult);
-      tbody += `<tr class="fin-reg-sum">
-        <td style="padding-left:22px">Итого «${esc(activeCult)}» в ${esc(g.reg)}: ${ci.length} СХТП</td>
-        <td></td>
-        <td style="text-align:right;font-weight:700">${fmtNum(ci.reduce((s,c)=>s+(c.fin_vol||0),0))} т</td>
-        <td style="text-align:right;font-weight:700">${fmtNum(ci.reduce((s,c)=>s+(c.fin_sum||0),0))} ₸</td>
-      </tr>`;
-    }
+    // Итого по области — снизу после контрагентов
+    tbody += `<tr style="background:#EDE5CE;font-weight:700;font-size:11px">
+      <td class="l" style="padding-left:20px;color:var(--ink)">Итого по ${esc(g.reg)}: ${regCnt} СХТП</td>
+      <td></td>
+      <td style="color:var(--ink)">${fmtNum(regVol)} т</td>
+      <td style="color:var(--ink)">${fmtNum(regSum)} ₸</td>
+    </tr>`;
   });
 
   const totalSum = list.reduce((s,c)=>s+(c.fin_sum||0),0);
   const totalVol = list.reduce((s,c)=>s+(c.fin_vol||0),0);
-  tbody += `<tr style="background:#F1E8D0;font-weight:800">
-    <td>Итого: ${list.length} контрагентов</td>
-    <td></td>
-    <td style="text-align:right">${fmtNum(totalVol)} т</td>
-    <td style="text-align:right">${fmtNum(totalSum)} ₸</td>
-  </tr>`;
 
-  box.innerHTML = `<div style="overflow-x:auto"><table class="atable">
+  box.innerHTML = `<div style="overflow-x:auto"><table class="rtab">
     <thead><tr>
-      <th>Наименование поставщика</th><th>БИН/ИИН</th>
-      <th style="text-align:right">Законтрактованный объём</th>
-      <th style="text-align:right">Выделенная сумма</th>
+      <th class="l">Наименование поставщика</th>
+      <th class="l">БИН/ИИН</th>
+      <th>Законтрактованный объём</th>
+      <th>Выделенная сумма</th>
     </tr></thead>
     <tbody>${tbody}</tbody>
+    <tfoot><tr>
+      <td class="l">Итого: ${list.length} контрагентов</td>
+      <td></td>
+      <td>${fmtNum(totalVol)} т</td>
+      <td>${fmtNum(totalSum)} ₸</td>
+    </tr></tfoot>
   </table></div>`;
 }
 
