@@ -113,6 +113,8 @@ a { color: var(--green); text-decoration: none; }
 .btn-red:hover    { background: #922B21; }
 .btn-ghost  { background: transparent; border: 1.5px solid var(--line); color: var(--ink); }
 .btn-ghost:hover  { border-color: var(--green); color: var(--green); }
+.btn-danger { background: #C0392B; color: #fff; }
+.btn-danger:hover { background: #96281B; }
 .btn-sm { padding: 5px 12px; font-size: 12px; border-radius: 7px; }
 
 /* Contractor list table */
@@ -893,6 +895,7 @@ function openReturnForm(existing, contractorHint) {
 
       <div class="aform-actions">
         <button class="btn btn-ghost" onclick="backToReturnList()">Отмена</button>
+        <button class="btn btn-danger" id="delReturnBtn" style="display:none" onclick="deleteReturn()">🗑 Удалить запись</button>
         <button class="btn btn-primary" onclick="saveReturn()">💾 Сохранить</button>
       </div>
     </div>`;
@@ -909,7 +912,10 @@ function openReturnForm(existing, contractorHint) {
     hist.forEach(p => addHistRow(p));
   } catch(_) {}
 
-  // Если редактируем существующего — уже заполнено, пересчитаем
+  // Показываем кнопку удаления только для существующих записей
+  const delBtn = q('#delReturnBtn');
+  if (delBtn) delBtn.style.display = e.rowIdx ? '' : 'none';
+
   recalcReturn();
 }
 
@@ -1015,6 +1021,19 @@ async function saveReturn() {
 function backToReturnList() {
   q('#returnList').style.display = '';
   q('#returnForm').style.display = 'none';
+}
+
+async function deleteReturn() {
+  const rowIdx = parseInt(q('#rRowIdx').value);
+  if (!rowIdx) return;
+  if (!confirm('Удалить эту запись из таблицы возврата? Действие нельзя отменить.')) return;
+  try {
+    await api('deleteReturn', { rowIdx });
+    toast('Запись удалена ✓', 'ok');
+    allReturn = [];
+    backToReturnList();
+    loadReturn();
+  } catch(e) { toast('Ошибка: ' + e.message, 'err'); }
 }
 
 // ── Пользователи ───────────────────────────────────────────────────────────

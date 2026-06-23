@@ -211,6 +211,7 @@ function doPost(e) {
       case 'addContractor':    return ok(addContractor(body, user));
       case 'listReturn':       return ok(listReturn());
       case 'saveReturn':       return ok(saveReturn(body, user));
+      case 'deleteReturn':     return ok(deleteReturn(body, user));
       case 'listUsers':        checkAdmin(user); return ok(listUsers());
       case 'saveUser':         checkAdmin(user); return ok(saveUser(body));
       case 'changePassword':   return ok(changePassword(body, user));
@@ -466,6 +467,16 @@ function saveReturn(body, user) {
   }
 
   addLog(ss, user.name, 'Возврат', rowIdx || 'новая', rd);
+  return { ok: true };
+}
+
+function deleteReturn(body, user) {
+  const { rowIdx } = body;
+  if (!rowIdx) return { ok: false, error: 'Не указан rowIdx' };
+  const ss = SpreadsheetApp.openById(SS_ID);
+  const sh = ensureReturnSheet(ss);
+  sh.deleteRow(rowIdx);
+  addLog(ss, user.name, 'Возврат', rowIdx, { действие: 'УДАЛЕНИЕ' });
   return { ok: true };
 }
 
