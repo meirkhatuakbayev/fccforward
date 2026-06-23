@@ -23,7 +23,147 @@ const SESSION_H    = 8; // часов
 // ── Точка входа ──────────────────────────────────────────────────────────────
 
 function doGet(e) {
+  const action = (e && e.parameter && e.parameter.action) || '';
+  if (action === 'getReturn') return ok(getReturnForDashboard());
   return ok({ status: 'ПКК Admin API работает' });
+}
+
+// ── Публичная отдача данных возврата для дашборда (без авторизации) ──────────
+
+function getReturnForDashboard() {
+  try {
+    const ss = SpreadsheetApp.openById(SS_ID);
+
+    // 1. Читаем профинансированных контрагентов
+    const detSheet = ss.getSheetByName(SH_DETAIL);
+    if (!detSheet) return { ok: false, error: 'Лист финансирования не найден' };
+    const detData = detSheet.getDataRange().getValues();
+
+    const financed = {}; // key = bin || name
+    for (let i = DATA_ROW; i < detData.length; i++) {
+      const row  = detData[i];
+      const name = String(row[C.name] || '').trim();
+      const bin  = String(row[C.bin]  || '').trim();
+      if (!name || name.includes('Итого') || name === 'Наименование поставщика') continue;
+      const finSum = Number(row[C.fin_sum]) || 0;
+      if (finSum <= 0) continue;
+      const key = bin || name;
+      if (financed[key]) continue;
+      financed[key] = {
+        reg:       String(row[C.reg]    || '').trim(),
+        form:      String(row[C.form]   || '').trim(),
+        name, bin,
+        rayon:     String(row[C.rayon]  || '').trim(),
+        dog_num:   String(row[C.dog_num] || '').trim(),
+        dog_date:  String(row[C.dog_date] || '').trim(),
+        cult:      String(row[C.cult]   || '').trim(),
+        vol_fin:   Number(row[C.fin_vol])  || 0,
+        price_fin: Number(row[C.fin_price] || row[C.app_price] || 0),
+        sum_fin:   finSum,
+      };
+    }
+
+    // 2. Читаем лист ВОЗВРАТ
+    const retSheet = ss.getSheetByName(SH_RETURN);
+    const retMap   = {};
+    if (retSheet && retSheet.getLastRow() > 1) {
+      const retData = retSheet.getDataRange().getValues();
+      for (let i = 1; i < retData.length; i++) {
+        const row  = retData[i];
+        const name = String(row[2] || '').trim();
+        const bin  = String(row[4] || '').trim();
+        if (!name) continue;
+        retMap[bin || name] = row;
+      }
+    }
+
+    // 3. Строим detail-строки (формат для parseDetailReturn)
+    const detail = [];
+    const regAgg  = {};
+
+    Object.values(financed).forEach(function(f) {
+      const ret = retMap[f.bin || f.name] || null;
+      const n   = function(idx) { return ret ? (Number(ret[idx]) || 0) : 0; };
+
+      const row = new Array(65).fill(0);
+      row[2]  = f.reg;
+      row[3]  = f.form;
+      row[4]  = f.name;
+      row[5]  = f.rayon;
+      row[6]  = f.bin;
+      row[9]  = ret ? String(ret[5] || f.dog_num)  : f.dog_num;
+      row[10] = ret ? String(ret[6] || f.dog_date) : f.dog_date;
+      row[14] = ret ? String(ret[7] || f.cult)     : f.cult;
+      row[17] = ret ? n(8)  || f.vol_fin   : f.vol_fin;
+      row[18] = ret ? n(9)  || f.price_fin : f.price_fin;
+      row[19] = ret ? n(10) || f.sum_fin   : f.sum_fin;
+
+      // Классы зерна: Пш5кл=col23/24, Пш4кл=col25/26, Пш3кл=col27/28, Ячмень=col29/30
+      row[27] = n(11); row[28] = n(12); // Пш 3 класс
+      row[25] = n(13); row[26] = n(14); // Пш 4 класс
+      row[23] = n(15); row[24] = n(16); // Пш 5 класс
+      row[29] = n(17); row[30] = n(18); // Ячмень
+
+      row[52] = n(19); // vol_total
+      row[53] = n(20); // sum_total
+      row[32] = n(21); // sum_zachet
+      row[56] = ret ? n(22) : Math.max(0, f.sum_fin); // debt
+      row[57] = n(23); // penalty
+      row[58] = n(24); // paid_money
+      row[59] = n(25); // paid_grain
+      row[34] = n(26); // dop_plan
+      row[40] = n(27); // dop_fact
+      row[44] = n(28); // ksn
+      row[61] = n(22); // debt_left = debt
+
+      try { row.payments = ret ? JSON.parse(ret[29] || '[]') : []; }
+      catch(_) { row.payments = []; }
+
+      detail.push(row);
+
+      // Агрегация по области
+      const reg = f.reg || 'Прочие';
+      if (!regAgg[reg]) regAgg[reg] = { name: reg, vol_contr:0, sum_fin:0, vol_ret:0,
+        sum_ret:0, sum_zachet:0, sum_doplata:0, sum_ksn:0, debt:0 };
+      const g = regAgg[reg];
+      g.vol_contr   += Number(row[17]) || 0;
+      g.sum_fin     += Number(row[19]) || 0;
+      g.vol_ret     += Number(row[52]) || 0;
+      g.sum_ret     += Number(row[53]) || 0;
+      g.sum_zachet  += Number(row[32]) || 0;
+      g.sum_doplata += (Number(row[34]) || 0) + (Number(row[44]) || 0);
+      g.sum_ksn     += Number(row[44]) || 0;
+      g.debt        += Number(row[56]) || 0;
+    });
+
+    // 4. Строим svod-строки (формат для parseSvodReturn)
+    const svod = [];
+    var totals = { vol_contr:0, sum_fin:0, vol_ret:0, sum_ret:0,
+                   sum_zachet:0, sum_doplata:0, sum_ksn:0, debt:0 };
+
+    Object.values(regAgg).forEach(function(r) {
+      const pct = r.sum_fin > 0 ? r.sum_zachet / r.sum_fin : 0;
+      const sr  = new Array(25).fill(0);
+      sr[1] = r.name; sr[4] = r.vol_contr; sr[5] = r.sum_fin;
+      sr[9] = r.vol_ret; sr[10] = r.sum_ret; sr[11] = r.sum_zachet;
+      sr[12] = r.sum_doplata; sr[13] = pct; sr[17] = r.sum_ksn; sr[20] = r.debt;
+      svod.push(sr);
+      Object.keys(totals).forEach(function(k) { totals[k] += r[k] || 0; });
+    });
+
+    // Итого по РК
+    const tr = new Array(25).fill(0);
+    tr[1]  = 'Итого по РК:'; tr[4] = totals.vol_contr; tr[5] = totals.sum_fin;
+    tr[9]  = totals.vol_ret; tr[10] = totals.sum_ret;   tr[11] = totals.sum_zachet;
+    tr[12] = totals.sum_doplata;
+    tr[13] = totals.sum_fin > 0 ? totals.sum_zachet / totals.sum_fin : 0;
+    tr[17] = totals.sum_ksn; tr[20] = totals.debt;
+    svod.push(tr);
+
+    return { ok: true, svod: svod, detail: detail };
+  } catch(err) {
+    return { ok: false, error: err.message };
+  }
 }
 
 function doPost(e) {

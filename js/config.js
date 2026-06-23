@@ -9,7 +9,7 @@ const CONFIG = {
     GEO_URL_FALLBACK: "https://raw.githubusercontent.com/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/KAZ/ADM1/geoBoundaries-KAZ-ADM1_simplified.geojson",
     AUTO_REFRESH_MIN: 5,
     CRM_BASE: "https://crm.fcc.kz",
-    API_URL_RETURN: "",           // <<< ВСТАВИТЬ URL Apps Script для раздела «Возврат»
+    API_URL_RETURN: "https://script.google.com/macros/s/AKfycbyBi-Hdi-c6Z7z_ddIa1c58l4e_Sv2KhGYCEMPHcTzPxPLZjN63ra9fW0xJ0nmZa0caDg/exec",
     RETURN_SVOD_CSV: "",          // фолбэк: gviz CSV листа СВОД возврата
     RETURN_DETAIL_CSV: ""         // фолбэк: gviz CSV листа РАЗВЁРНУТАЯ возврата
 };
