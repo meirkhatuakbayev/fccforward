@@ -774,9 +774,111 @@ function openCpReturn(c) {
 
 // ── 10. Реестр должников (PDF) ───────────────────────────────────────────────
 function printDebtors() {
-    const prev = document.title;
-    document.title = "Реестр должников — Возврат ФЗ";
-    document.body.classList.add("print-debtors");
-    window.print();
-    setTimeout(() => { document.body.classList.remove("print-debtors"); document.title = prev; }, 500);
+    const list = DR.cps.filter(c => c.penalty > 0)
+        .sort((a, b) => a.reg.localeCompare(b.reg, "ru") || b.debt - a.debt);
+
+    if (!list.length) { alert("СХТП с начисленной пеней нет"); return; }
+
+    const f  = n => Math.round(n).toLocaleString("ru-RU");
+    const fm = n => (n / 1e9).toLocaleString("ru-RU", { maximumFractionDigits: 2 }) + " млрд";
+
+    // Группировка по области
+    const byReg = {};
+    list.forEach(c => { (byReg[c.reg] = byReg[c.reg] || []).push(c); });
+
+    const today = new Date().toLocaleDateString("ru-RU",
+        { day: "2-digit", month: "2-digit", year: "numeric" });
+
+    let num = 1;
+    let rows = "";
+
+    const sum6 = arr => arr.reduce((s, c) => s + c, 0);
+
+    Object.entries(byReg).forEach(([reg, cps]) => {
+        rows += `<tr class="rh"><td colspan="9">${reg} область — ${cps.length} СХТП</td></tr>`;
+
+        let tSF = 0, tVT = 0, tST = 0, tSZ = 0, tDB = 0, tPN = 0;
+        cps.forEach(c => {
+            tSF += c.sum_fin; tVT += c.vol_total; tST += c.sum_total;
+            tSZ += c.sum_zachet; tDB += c.debt; tPN += c.penalty;
+            rows += `<tr>
+                <td class="c">${num++}</td>
+                <td class="l">${c.name}<div class="s">${c.form} · ${c.dog_num} · ${c.cult || ""}</div></td>
+                <td class="r">${f(c.sum_fin)}</td>
+                <td class="r">${f(c.vol_total)}</td>
+                <td class="r">${f(c.sum_total)}</td>
+                <td class="r">${f(c.sum_zachet)}</td>
+                <td class="r err">${f(c.debt)}</td>
+                <td class="r err">${f(c.penalty)}</td>
+            </tr>`;
+        });
+        rows += `<tr class="sub">
+            <td colspan="2">Итого: ${cps.length} СХТП</td>
+            <td class="r">${fm(tSF)}</td>
+            <td class="r">${f(tVT)} т</td>
+            <td class="r">${fm(tST)}</td>
+            <td class="r">${fm(tSZ)}</td>
+            <td class="r err">${fm(tDB)}</td>
+            <td class="r err">${fm(tPN)}</td>
+        </tr>`;
+    });
+
+    const gt = { sf:0, vt:0, st:0, sz:0, db:0, pn:0 };
+    list.forEach(c => { gt.sf+=c.sum_fin; gt.vt+=c.vol_total; gt.st+=c.sum_total;
+                        gt.sz+=c.sum_zachet; gt.db+=c.debt; gt.pn+=c.penalty; });
+    rows += `<tr class="tot">
+        <td colspan="2">ИТОГО ПО РК: ${list.length} СХТП</td>
+        <td class="r">${fm(gt.sf)}</td>
+        <td class="r">${f(gt.vt)} т</td>
+        <td class="r">${fm(gt.st)}</td>
+        <td class="r">${fm(gt.sz)}</td>
+        <td class="r terr">${fm(gt.db)}</td>
+        <td class="r terr">${fm(gt.pn)}</td>
+    </tr>`;
+
+    const html = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
+<title>Реестр должников — Возврат ФЗ</title>
+<style>
+@page { size: A4 landscape; margin: 12mm 10mm; }
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+body{font-size:9px;color:#1a1a1a}
+h1{font-size:12px;font-weight:700;margin-bottom:3px}
+.meta{font-size:8px;color:#666;margin-bottom:8px}
+table{width:100%;border-collapse:collapse}
+th{background:#22402E;color:#F4ECD8;font-size:8.5px;font-weight:700;
+   padding:5px 5px;text-align:center;border:1px solid #1a3020}
+td{padding:3px 5px;border:1px solid #ddd;vertical-align:top}
+.s{font-size:7.5px;color:#666;margin-top:1px}
+.c{text-align:center}.r{text-align:right;font-variant-numeric:tabular-nums}.l{text-align:left}
+.err{color:#B03020;font-weight:700}
+tr.rh td{background:#FDF3DE;font-weight:800;font-size:9.5px;
+         padding:5px 5px;border-top:2px solid #E8A82E;border-bottom:1px solid #E8A82E;color:#3a2a06}
+tr.sub td{background:#F5F0E6;font-weight:700;border-top:1px solid #bbb;border-bottom:2px solid #aaa;font-size:8.5px}
+tr.tot td{background:#22402E;color:#F4ECD8;font-weight:800;font-size:9px}
+tr.tot .terr{color:#FFBBAA}
+tr:nth-child(even):not(.rh):not(.sub):not(.tot) td{background:#FAFAF8}
+</style></head><body>
+<h1>Реестр СХТП с начисленной пеней — Возврат зерна (ФЗ 2025/2026)</h1>
+<div class="meta">АО «НК «Продкорпорация» · Департамент закупа СХП · Сформировано: ${today}</div>
+<table>
+<thead><tr>
+  <th style="width:22px">№</th>
+  <th style="width:200px">Наименование СХТП</th>
+  <th style="width:90px">Профинансировано, ₸</th>
+  <th style="width:68px">Поставлено, т</th>
+  <th style="width:90px">Поставлено, ₸</th>
+  <th style="width:90px">В т.ч. зачтено в предоплату, ₸</th>
+  <th style="width:90px">Остаток долга, ₸</th>
+  <th style="width:80px">Пеня, ₸</th>
+</tr></thead>
+<tbody>${rows}</tbody>
+</table>
+</body></html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) { alert("Разрешите всплывающие окна для этой страницы"); return; }
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 500);
 }
