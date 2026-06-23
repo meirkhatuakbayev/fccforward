@@ -324,7 +324,8 @@ function listContractors() {
     const row  = data[i];
     const name = String(row[C.name] || '').trim();
     const bin  = String(row[C.bin]  || '').trim();
-    if (!name || name.includes('Итого') || name === 'Наименование поставщика') continue;
+    const reg  = String(row[C.reg]  || '').trim();
+    if (!name || !reg || name.includes('Итого') || name === 'Наименование поставщика') continue;
     const key = bin || name;
     if (seen[key]) continue;
     seen[key] = true;

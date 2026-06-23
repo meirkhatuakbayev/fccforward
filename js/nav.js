@@ -42,6 +42,11 @@ function onYearChange(yr) {
     D  = null;
     DR = null;
     _returnLoaded = false;
+    // сбрасываем кэш отрисовки вкладок возврата
+    ["vzTabArea","vzCropArea","vzDebtArea"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el._rendered = false;
+    });
     showYearLoader("Загрузка ФЗ " + yr);
     loadData(yr);
     if (_fwdSub === "vozvrat") loadReturn(yr);
