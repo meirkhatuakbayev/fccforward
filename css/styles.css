@@ -471,18 +471,21 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
     body.print-return #viewVozvrat { display: block !important; }
 
     /* Скрываем карту, воронку, должников, рейтинг — оставляем KPI + таблицы */
-    body.print-return .card:has(#vzMapSvg),
     body.print-return .card:has(#vzFunnel),
     body.print-return .card:has(#vzRanking),
     body.print-return #vzRegPanel { display: none !important; }
+
+    /* Внутри левой карточки — только таблицы, карта скрыта */
     body.print-return #vzMapArea,
-    body.print-return .maplegend,
+    body.print-return #vzMapLegend,
     body.print-return .cardhead,
     body.print-return .hint { display: none !important; }
 
-    /* Обе таблицы — видны */
+    /* Обе таблицы — видны, без ограничения высоты */
     body.print-return #vzTabArea,
     body.print-return #vzCropArea { display: block !important; }
+    body.print-return #vzTabArea .tablescroll,
+    body.print-return #vzCropArea .tablescroll { max-height: none !important; overflow: visible !important; }
 
     /* KPI — 6 в ряд, компактно */
     body.print-return .vz-kpis6 { grid-template-columns: repeat(6, 1fr) !important; gap: 6px !important; margin: 8px 0 !important; }
