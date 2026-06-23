@@ -958,23 +958,158 @@ function openCpReturn(c) {
 // ── 10. Печать раздела возврата (кнопка «PDF» в шапке) ───────────────────────
 function printReturnSection() {
     if (!DR) { alert("Данные ещё загружаются."); return; }
-    // Рендерим обе таблицы и показываем их
-    renderVzTabArea();
-    renderVzCropTable();
-    const tabArea  = document.getElementById("vzTabArea");
-    const cropArea = document.getElementById("vzCropArea");
-    const prevTab  = tabArea  ? tabArea.style.display  : "";
-    const prevCrop = cropArea ? cropArea.style.display : "";
-    if (tabArea)  tabArea.style.display  = "";
-    if (cropArea) cropArea.style.display = "";
+    const t = DR.total;
+    const today = new Date().toLocaleDateString("ru-RU", { day:"2-digit", month:"2-digit", year:"numeric" });
+    const f  = n => Math.round(n).toLocaleString("ru-RU");
+    const fm = n => (n / 1e9).toLocaleString("ru-RU", { maximumFractionDigits: 2 }) + " млрд";
 
-    document.body.classList.add("print-return");
-    window.print();
-    setTimeout(() => {
-        document.body.classList.remove("print-return");
-        if (tabArea)  tabArea.style.display  = prevTab;
-        if (cropArea) cropArea.style.display = prevCrop;
-    }, 400);
+    // Таблица по областям
+    const regs = DR.regions.filter(r => r.sum_fin > 0)
+        .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+    let regRows = "";
+    let num = 1;
+    regs.forEach(r => {
+        const pct = r.sum_fin > 0 ? (r.sum_zachet / r.sum_fin * 100).toFixed(1) + "%" : "—";
+        const debtCol = r.debt > 0 ? `<td class="err">${f(r.debt)}</td>` : `<td class="ok">✓</td>`;
+        regRows += `<tr>
+            <td class="c">${num++}</td>
+            <td class="l">${r.name}</td>
+            <td>${f(r.vol_contr)}</td>
+            <td>${f(r.sum_fin)}</td>
+            <td>${f(r.vol_ret)}</td>
+            <td>${f(r.sum_zachet)}</td>
+            <td>${pct}</td>
+            ${debtCol}
+        </tr>`;
+    });
+    regRows += `<tr class="tot">
+        <td colspan="2">ИТОГО ПО РК: ${regs.length} областей</td>
+        <td>${f(t.vol_contr)}</td>
+        <td>${f(t.sum_fin)}</td>
+        <td>${f(t.vol_ret)}</td>
+        <td>${f(t.sum_zachet)}</td>
+        <td>${t.sum_fin > 0 ? (t.sum_zachet / t.sum_fin * 100).toFixed(1) + "%" : "—"}</td>
+        <td class="${t.debt > 0 ? "terr" : "tok"}">${t.debt > 0 ? f(t.debt) : "✓"}</td>
+    </tr>`;
+
+    // Таблица по культурам
+    const CROPS = [
+        { key: "cl3", label: "Пшеница 3 класс" },
+        { key: "cl4", label: "Пшеница 4 класс" },
+        { key: "cl5", label: "Пшеница 5 класс" },
+        { key: "bar", label: "Ячмень 2 класс"  },
+    ];
+    const agg = CROPS.map(cr => ({ label: cr.label, key: cr.key, vol_contr: 0, sum_contr: 0, vol_fact: 0, sum_fact: 0 }));
+    DR.cps.forEach(c => {
+        const cult = (c.cult || "").toLowerCase();
+        let ci = -1;
+        if      (cult.includes("пшениц") && cult.includes("3")) ci = 0;
+        else if (cult.includes("пшениц") && cult.includes("4")) ci = 1;
+        else if (cult.includes("пшениц") && cult.includes("5")) ci = 2;
+        else if (cult.includes("ячмень"))                        ci = 3;
+        if (ci >= 0) { agg[ci].vol_contr += c.vol_fin || 0; agg[ci].sum_contr += c.sum_fin || 0; }
+        [c.cl3, c.cl4, c.cl5, c.bar].forEach((d, di) => {
+            if (!d || !d.vol) return;
+            agg[di].vol_fact += d.vol; agg[di].sum_fact += d.sum;
+        });
+    });
+    const active = agg.filter(r => r.vol_contr > 0 || r.vol_fact > 0);
+    let cropRows = active.map(r => {
+        const pct = r.vol_contr > 0 ? (r.vol_fact / r.vol_contr * 100).toFixed(1) + "%" : "—";
+        return `<tr>
+            <td class="l">${r.label}</td>
+            <td>${r.vol_contr > 0 ? f(r.vol_contr) : "—"}</td>
+            <td>${r.sum_contr > 0 ? f(r.sum_contr) : "—"}</td>
+            <td>${f(r.vol_fact)}</td>
+            <td>${r.sum_fact > 0 ? f(r.sum_fact) : "—"}</td>
+            <td>${pct}</td>
+        </tr>`;
+    }).join("");
+    const ctv = active.reduce((s,r)=>s+r.vol_contr,0);
+    const cts = active.reduce((s,r)=>s+r.sum_contr,0);
+    const cfv = active.reduce((s,r)=>s+r.vol_fact,0);
+    const cfs = active.reduce((s,r)=>s+r.sum_fact,0);
+    cropRows += `<tr class="tot"><td>Итого</td><td>${f(ctv)}</td><td>${f(cts)}</td><td>${f(cfv)}</td><td>${f(cfs)}</td>
+        <td>${ctv > 0 ? (cfv/ctv*100).toFixed(1)+"%" : "—"}</td></tr>`;
+
+    const debtorCount = DR.debtors ? DR.debtors.length : 0;
+
+    const html = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
+<title>Отчёт — Возврат зерна ФЗ</title>
+<style>
+@page { size: A4 landscape; margin: 12mm 10mm; }
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+body{font-size:11px;color:#1a1a1a}
+h2{font-size:12px;font-weight:800;margin:10px 0 5px;color:#22402E}
+table{width:100%;border-collapse:collapse;margin-bottom:10px}
+th{background:#22402E;color:#F4ECD8;font-size:10px;font-weight:700;padding:6px;text-align:center;border:1px solid #1a3020}
+td{padding:5px 6px;border:1px solid #ddd;vertical-align:middle;text-align:center;font-variant-numeric:tabular-nums}
+.l{text-align:left}.c{text-align:center}
+.err{color:#B03020;font-weight:700}.ok{color:#2F5D40;font-weight:700}
+tr.tot td{background:#22402E;color:#F4ECD8;font-weight:800;text-align:center}
+tr.tot td:first-child,.tot .l{text-align:left}
+.terr{color:#FFBBAA}.tok{color:#AAFFCC}
+tr:nth-child(even):not(.tot) td{background:#FAFAF8}
+.doc-header{background:linear-gradient(135deg,#1a3020,#2F5D40);color:#F4ECD8;padding:12px 18px;
+  margin-bottom:10px;border-radius:6px;display:flex;align-items:center;gap:16px}
+.seal{width:48px;height:48px;border-radius:11px;flex-shrink:0;background:linear-gradient(150deg,#F6C45E,#D69A1E);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#3a2a06;
+  box-shadow:inset 0 0 0 2px #ffffff44}
+.info h1{font-size:13px;font-weight:800;color:#fff;margin:0 0 3px}
+.org{font-size:9.5px;color:#B8D4C0;font-weight:600;margin-bottom:5px}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge{background:#ffffff18;border:1px solid #ffffff30;border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#F4ECD8}
+.badge.warn{background:#9E4A4044;border-color:#C06A5C66;color:#FFCCC0}
+.dt{font-size:9px;color:#8EB89E;margin-left:auto;text-align:right;align-self:flex-end}
+.kpi-row{display:flex;gap:8px;margin-bottom:10px}
+.kpi-box{flex:1;border:1px solid #DDD5C0;border-radius:6px;padding:8px 10px;background:#FFFEF9}
+.kpi-lab{font-size:8.5px;color:#8A8070;font-weight:700;text-transform:uppercase;letter-spacing:.2px}
+.kpi-val{font-size:15px;font-weight:800;color:#22402E;margin-top:2px}
+.kpi-sub{font-size:9px;color:#8A8070;margin-top:1px}
+</style></head><body>
+<div class="doc-header">
+  <div class="seal">ПКК</div>
+  <div class="info">
+    <h1>Отчёт по возврату зерна — Форвардный закуп</h1>
+    <div class="org">АО «НК «Продкорпорация» · Департамент закупа СХП</div>
+    <div class="badges">
+      <span class="badge">ФЗ 2026</span>
+      <span class="badge">${DR.cps.length} контрагентов</span>
+      ${debtorCount > 0 ? `<span class="badge warn">${debtorCount} должников</span>` : '<span class="badge">Долгов нет</span>'}
+    </div>
+  </div>
+  <div class="dt">Сформировано:<br><b>${today}</b></div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi-box"><div class="kpi-lab">Профинансировано</div><div class="kpi-val">${fm(t.sum_fin)}</div><div class="kpi-sub">${f(t.vol_contr)} т</div></div>
+  <div class="kpi-box"><div class="kpi-lab">Поставлено (зачтено)</div><div class="kpi-val">${fm(t.sum_zachet)}</div><div class="kpi-sub">${f(t.vol_ret)} т</div></div>
+  <div class="kpi-box"><div class="kpi-lab">Остаток долга</div><div class="kpi-val" style="color:${t.debt>0?'#B03020':'#2F5D40'}">${fm(t.debt)}</div><div class="kpi-sub">${t.sum_fin>0?(t.sum_zachet/t.sum_fin*100).toFixed(1)+"% исп.":"—"}</div></div>
+  <div class="kpi-box"><div class="kpi-lab">Контрагенты</div><div class="kpi-val">${DR.cps.length}</div><div class="kpi-sub">из них должников: ${debtorCount}</div></div>
+</div>
+
+<h2>Исполнение по областям</h2>
+<table><thead><tr>
+  <th style="width:22px">№</th><th style="width:140px">Область</th>
+  <th>Объём дог., т</th><th>Профинансировано, ₸</th>
+  <th>Поставлено, т</th><th>Зачтено, ₸</th>
+  <th>% исп.</th><th>Остаток долга, ₸</th>
+</tr></thead><tbody>${regRows}</tbody></table>
+
+<h2>Исполнение по культурам</h2>
+<table><thead><tr>
+  <th style="width:130px">Культура</th>
+  <th>Объём по дог., т</th><th>Сумма по дог., ₸</th>
+  <th>Поставлено, т</th><th>Сумма за зерно, ₸</th><th>% исп.</th>
+</tr></thead><tbody>${cropRows}</tbody></table>
+
+</body></html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) { alert("Разрешите всплывающие окна для этой страницы"); return; }
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 500);
 }
 
 // ── 11. Реестр должников (PDF) ───────────────────────────────────────────────

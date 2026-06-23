@@ -51,7 +51,18 @@ $("#vTab").addEventListener("click", () => setMapView("tab"));
 $("#vWx").addEventListener("click", () => setMapView("weather"));
 
 // Обновить данные / Скачать PDF
-document.getElementById("btnRefresh").addEventListener("click", loadData);
+document.getElementById("btnRefresh").addEventListener("click", () => {
+    if (_fwdSub === "vozvrat") {
+        DR = null;
+        _returnLoaded = false;
+        ["vzTabArea","vzCropArea","vzDebtArea"].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el._rendered = false;
+        });
+        loadReturn();
+    }
+    loadData();
+});
 document.getElementById("btnPrint").addEventListener("click", () => {
     if (_fwdSub === "vozvrat") printReturnSection();
     else printPDF();
