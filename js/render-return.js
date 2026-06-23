@@ -34,7 +34,6 @@ function colorVzScale(fraction) {
 // ── Основной рендер ──────────────────────────────────────────────────────────
 function renderReturn() {
     if (!DR) return;
-    renderVzSummary();
     renderVzKpis();
     renderVzFunnel();
     renderVzDebtorsList();
@@ -123,6 +122,13 @@ function renderVzKpis() {
             sub: "на сумму финансирования",
             tag: pctTag, pct: pctNum, pctBar: pctBarClr
         },
+        {
+            lab: "Остаток долга",
+            big: fmtMlrd(t.debt), unit: "₸",
+            sub: DR.debtors.length + " СХТП-должников",
+            tag: t.debt > 0 ? "#9E4A40" : "#3C6B4A",
+            red: t.debt > 0
+        },
     ];
 
     const box = document.getElementById("vzKpis");
@@ -132,7 +138,7 @@ function renderVzKpis() {
         const c = el("div", "kpi");
         c.innerHTML = `<div class="tag" style="background:${it.tag}"></div>
             <div class="lab">${it.lab}</div>
-            <div class="big num">${it.big}<small>${it.unit}</small></div>
+            <div class="big num" style="${it.red ? "color:#E05A4A" : ""}">${it.big}<small>${it.unit}</small></div>
             <div class="sub">${it.sub}</div>
             ${it.pct != null ? `<div class="bar"><i style="width:${Math.min(100,it.pct)}%;${it.pctBar ? "background:" + it.pctBar : ""}"></i></div>` : ""}`;
         box.appendChild(c);
@@ -233,40 +239,40 @@ function renderVzTabArea() {
         .map(r => {
             const cnt = cntByCode[r.code] || 0;
             const p = r.pct_exec * 100;
-            const pc = p >= 95 ? "color:#3C6B4A" : p >= 70 ? "color:#9A6716" : "color:#E05A4A";
-            return `<tr style="cursor:pointer" onclick="vzSelectRegion('${r.code}')">
-                <td class="cpname">${r.name}<div class="cpsub">${cnt} СХТП</div></td>
-                <td class="r num">${fmtMlrd(r.sum_fin)}</td>
-                <td class="r num">${fmtT(r.vol_ret)}</td>
-                <td class="r num">${fmtMlrd(r.sum_ret)}</td>
-                <td class="r num">${r.sum_doplata > 0 ? fmtMlrd(r.sum_doplata) : "—"}</td>
-                <td class="r num">${fmtMlrd(r.sum_zachet)}</td>
-                <td class="r num" style="${pc};font-weight:800">${p.toFixed(1)}%</td>
+            const pc = p >= 95 ? "#3C6B4A" : p >= 70 ? "#9A6716" : "#E05A4A";
+            return `<tr onclick="vzSelectRegion('${r.code}')">
+                <td class="l">${r.name}<br><span style="font-size:10px;font-weight:600;opacity:.6">${cnt} СХТП</span></td>
+                <td>${fmtMlrd(r.sum_fin)}</td>
+                <td>${fmtT(r.vol_ret)}</td>
+                <td>${fmtMlrd(r.sum_ret)}</td>
+                <td>${r.sum_doplata > 0 ? fmtMlrd(r.sum_doplata) : "—"}</td>
+                <td>${fmtMlrd(r.sum_zachet)}</td>
+                <td style="color:${pc};font-weight:800">${p.toFixed(1)}%</td>
             </tr>`;
         }).join("");
 
     const t = DR.total;
     const totP = (t.pct_exec * 100);
-    const totPc = totP >= 95 ? "color:#3C6B4A" : "color:#9A6716";
-    box.innerHTML = `<div class="tablescroll" style="max-height:390px"><table>
+    const totPc = totP >= 95 ? "#3C6B4A" : "#9A6716";
+    box.innerHTML = `<div class="tablescroll" style="max-height:390px"><table class="rtab">
         <thead><tr>
-            <th>Область</th>
-            <th class="r">Профинанс. ₸</th>
-            <th class="r">Объём т</th>
-            <th class="r">Сумма за зерно ₸</th>
-            <th class="r">Доплата ₸</th>
-            <th class="r">Зачтено ₸</th>
-            <th class="r">% исп.</th>
+            <th class="l">Область</th>
+            <th>Профинанс. ₸</th>
+            <th>Объём т</th>
+            <th>Сумма за зерно ₸</th>
+            <th>Доплата ₸</th>
+            <th>Зачтено ₸</th>
+            <th>% исп.</th>
         </tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
-            <td class="cpname">Итого по РК<div class="cpsub">${DR.cps.length} СХТП</div></td>
-            <td class="r num">${fmtMlrd(t.sum_fin)}</td>
-            <td class="r num">${fmtT(t.vol_ret)}</td>
-            <td class="r num">${fmtMlrd(t.sum_ret)}</td>
-            <td class="r num">${fmtMlrd(t.sum_doplata)}</td>
-            <td class="r num">${fmtMlrd(t.sum_zachet)}</td>
-            <td class="r num" style="${totPc};font-weight:800">${totP.toFixed(1)}%</td>
+            <td class="l">Итого по РК<br><span style="font-size:10px;font-weight:600;opacity:.7">${DR.cps.length} СХТП</span></td>
+            <td>${fmtMlrd(t.sum_fin)}</td>
+            <td>${fmtT(t.vol_ret)}</td>
+            <td>${fmtMlrd(t.sum_ret)}</td>
+            <td>${fmtMlrd(t.sum_doplata)}</td>
+            <td>${fmtMlrd(t.sum_zachet)}</td>
+            <td style="color:${totPc}">${totP.toFixed(1)}%</td>
         </tr></tfoot>
     </table></div>`;
 }
@@ -324,18 +330,18 @@ function renderVzCropTable() {
     const rows = active.map(r => {
         const pct = r.vol_contr > 0 ? r.vol_fact / r.vol_contr * 100 : 0;
         const pctTxt = r.vol_contr > 0 ? pct.toFixed(1) + "%" : "—";
-        const pc = r.vol_contr === 0 ? "" : pct >= 95 ? "color:#3C6B4A" : pct >= 70 ? "color:#9A6716" : "color:#E05A4A";
+        const pc = r.vol_contr === 0 ? "" : pct >= 95 ? "#3C6B4A" : pct >= 70 ? "#9A6716" : "#E05A4A";
         const substNote = r.vol_subst > 0
-            ? `<div class="cpsub" style="color:#9A6716">в т.ч. ${fmtT(r.vol_subst)} т — замена культуры</div>` : "";
+            ? `<br><span style="font-size:9.5px;color:#9A6716;font-weight:600">в т.ч. ${fmtT(r.vol_subst)} т — замена</span>` : "";
         const noContr = r.vol_contr === 0 && r.vol_fact > 0
-            ? `<div class="cpsub" style="color:#9A6716">вне контракта (замена)</div>` : "";
+            ? `<br><span style="font-size:9.5px;color:#9A6716;font-weight:600">вне контракта (замена)</span>` : "";
         return `<tr>
-            <td class="cpname">${r.label}${substNote}${noContr}</td>
-            <td class="r num">${r.vol_contr > 0 ? fmtT(r.vol_contr) : "—"}</td>
-            <td class="r num">${r.sum_contr > 0 ? fmtMlrd(r.sum_contr) : "—"}</td>
-            <td class="r num" style="${r.vol_fact > 0 ? "font-weight:700" : "color:var(--muted)"}">${r.vol_fact > 0 ? fmtT(r.vol_fact) : "0"}</td>
-            <td class="r num" style="${r.sum_fact > 0 ? "font-weight:700" : "color:var(--muted)"}">${r.sum_fact > 0 ? fmtMlrd(r.sum_fact) : "—"}</td>
-            <td class="r num" style="${pc};font-weight:800">${pctTxt}</td>
+            <td class="l">${r.label}${substNote}${noContr}</td>
+            <td>${r.vol_contr > 0 ? fmtT(r.vol_contr) : "—"}</td>
+            <td>${r.sum_contr > 0 ? fmtMlrd(r.sum_contr) : "—"}</td>
+            <td style="${r.vol_fact === 0 ? "opacity:.5" : ""}">${r.vol_fact > 0 ? fmtT(r.vol_fact) : "0"}</td>
+            <td style="${r.sum_fact === 0 ? "opacity:.5" : ""}">${r.sum_fact > 0 ? fmtMlrd(r.sum_fact) : "—"}</td>
+            <td style="color:${pc};font-weight:800">${pctTxt}</td>
         </tr>`;
     }).join("");
 
@@ -344,32 +350,32 @@ function renderVzCropTable() {
     const fv = active.reduce((s,r)=>s+r.vol_fact,0);
     const fs = active.reduce((s,r)=>s+r.sum_fact,0);
     const totPct = tv > 0 ? (fv/tv*100).toFixed(1)+"%" : "—";
-    const totPc = tv > 0 && fv/tv >= 0.95 ? "color:#3C6B4A" : "color:#9A6716";
+    const totPc = tv > 0 && fv/tv >= 0.95 ? "#3C6B4A" : "#9A6716";
 
     box.innerHTML = `<div class="tablescroll" style="max-height:390px">
-        <table>
+        <table class="rtab">
         <thead>
-            <tr>
-                <th rowspan="2">Культура</th>
-                <th class="r vz-crop-grp" colspan="2">По договору</th>
-                <th class="r vz-crop-grp" colspan="2">Фактически поставлено</th>
-                <th class="r" rowspan="2">% выполн.</th>
+            <tr class="grp">
+                <th class="l" rowspan="2">Культура</th>
+                <th colspan="2">По договору</th>
+                <th class="gs" colspan="2">Фактически поставлено</th>
+                <th rowspan="2">% выполн.</th>
             </tr>
             <tr>
-                <th class="r">Объём, т</th>
-                <th class="r">Сумма, ₸</th>
-                <th class="r">Объём, т</th>
-                <th class="r">Сумма за зерно ₸</th>
+                <th>Объём, т</th>
+                <th>Сумма, ₸</th>
+                <th class="gs">Объём, т</th>
+                <th>Сумма за зерно ₸</th>
             </tr>
         </thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
-            <td class="cpname">Итого</td>
-            <td class="r num">${fmtT(tv)}</td>
-            <td class="r num">${fmtMlrd(ts)}</td>
-            <td class="r num">${fmtT(fv)}</td>
-            <td class="r num">${fmtMlrd(fs)}</td>
-            <td class="r num" style="${totPc};font-weight:800">${totPct}</td>
+            <td class="l">Итого</td>
+            <td>${fmtT(tv)}</td>
+            <td>${fmtMlrd(ts)}</td>
+            <td>${fmtT(fv)}</td>
+            <td>${fmtMlrd(fs)}</td>
+            <td style="color:${totPc}">${totPct}</td>
         </tr></tfoot>
         </table>
     </div>`;

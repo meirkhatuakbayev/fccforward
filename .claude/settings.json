@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m ' *)",
+      "Bash(node -e ' *)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/uakbayevmeirkhat/.nvm/versions/**)",
+      "Bash(open /Users/uakbayevmeirkhat/Desktop/dashboard/index.html)",
+      "Bash(node --check js/render-return.js)",
+      "Bash(/usr/bin/env node *)"
+    ]
+  }
+}

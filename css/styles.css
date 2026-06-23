@@ -308,9 +308,7 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
     /* Cardhead с кнопками — не выходить за границы */
     .cardhead { flex-wrap: wrap; gap: 8px; }
     .cardhead .seg { overflow-x: auto; max-width: 100%; flex-shrink: 0; }
-    #vzTabArea table, #vzCropArea table { font-size: 11px; }
-    #vzTabArea th, #vzCropArea th { font-size: 10px; padding: 5px 7px; }
-    #vzTabArea td, #vzCropArea td { padding: 6px 7px; }
+    .vz-kpis6 { grid-template-columns: repeat(2, 1fr) !important; }
 }
 
 @media (max-width: 420px) {
@@ -403,15 +401,14 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
 .vz-arr { color: var(--muted); font-size: 16px; font-weight: 400; flex-shrink: 0; }
 .vz-chain .num { font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* Таблицы внутри левой карточки (исп. по областям / по культурам) */
-#vzTabArea, #vzCropArea { padding: 4px 0 2px; }
-#vzTabArea table, #vzCropArea table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-#vzTabArea th, #vzCropArea th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--muted); padding: 7px 10px; background: #F5F0E6; border-bottom: 1px solid var(--line); white-space: nowrap; }
-#vzTabArea td, #vzCropArea td { padding: 8px 10px; border-bottom: 1px solid #F0EBDC; vertical-align: middle; }
-#vzTabArea tbody tr:hover td, #vzCropArea tbody tr:hover td { background: #F7F3E8; }
-#vzTabArea tfoot td, #vzCropArea tfoot td { font-weight: 800; font-size: 12.5px; background: #F0EBDB; border-top: 2px solid var(--line); }
-#vzTabArea .cpsub, #vzCropArea .cpsub { font-size: 10.5px; color: var(--muted); font-weight: 600; margin-top: 2px; }
-.vz-crop-grp { border-bottom: 1px solid var(--line); text-align: center !important; }
+/* 6-кол KPI-сетка (раздел возврат) */
+.vz-kpis6 { grid-template-columns: repeat(6, 1fr) !important; }
+@media (max-width: 1200px) { .vz-kpis6 { grid-template-columns: repeat(3, 1fr) !important; } }
+@media (max-width: 600px)  { .vz-kpis6 { grid-template-columns: repeat(2, 1fr) !important; } }
+
+/* Таблицы в левой карточке используют .rtab — только контейнеры */
+#vzTabArea, #vzCropArea { padding: 2px 0 0; }
+#vzTabArea .tablescroll, #vzCropArea .tablescroll { border-top: 1px solid var(--line); }
 
 /* Переключатель Карта/Таблица/Культуры (использует .seg/.segb из общих стилей) */
 
