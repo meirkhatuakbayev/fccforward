@@ -14,9 +14,9 @@ const ID_MAP = {
 };
 
 function featCode(f) {
-    const id = String(f.id || (f.properties && (f.properties.id || f.properties.shapeISO)) || "").toUpperCase();
+    const id = String(f.id || (f.properties && f.properties.id) || "").toUpperCase();
     if (ID_MAP[id]) return ID_MAP[id];
-    return matchCode((f.properties && (f.properties.name || f.properties.NAME_1 || f.properties.shapeName)) || "");
+    return matchCode((f.properties && (f.properties.name || f.properties.NAME_1)) || "");
 }
 
 function matchCode(nm) {

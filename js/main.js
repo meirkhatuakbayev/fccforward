@@ -57,3 +57,6 @@ document.getElementById("btnPrint").addEventListener("click", printPDF);
 
 // Загрузка данных
 loadGeoData().then(() => { loadData(); });
+
+// Страховка: если через 15 сек лоадер всё ещё висит — скрываем принудительно
+setTimeout(hideLoader, 15000);

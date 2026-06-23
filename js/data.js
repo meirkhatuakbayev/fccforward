@@ -9,7 +9,6 @@ async function fetchCSV(url) {
 
 async function loadGeoData() {
     if (GEO) return;
-    if (window.KAZ_GEO) { GEO = window.KAZ_GEO; return; }
     if (window.am5geodata_kazakhstanLow) { GEO = window.am5geodata_kazakhstanLow; return; }
     for (const u of [CONFIG.GEO_URL, CONFIG.GEO_URL_FALLBACK]) {
         try { const r = await fetch(u, {cache: "force-cache"}); if (r.ok) { GEO = await r.json(); return; } } catch (e) {}
