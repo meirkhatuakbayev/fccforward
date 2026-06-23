@@ -479,6 +479,8 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Воронка: вариант остатка долга */
 .ftrack.sdebt i { background: linear-gradient(90deg, #9E4A40, #C06A5C); }
+.ftrack.szachet i { background: linear-gradient(90deg, #2F5D40, #3C6B4A); }
+.ftrack.szachet .v { color: #1a2a1a; text-shadow: none; }
 
 /* Рейтинг */
 .vz-rank-title { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 10px; }

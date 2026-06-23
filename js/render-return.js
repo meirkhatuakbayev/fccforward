@@ -188,7 +188,7 @@ function renderVzFunnel() {
             k: "Зачтено зерном",
             pct: t.sum_fin > 0 ? (t.sum_zachet / t.sum_fin * 100).toFixed(1) + "% от выдано" : "—",
             schtp: retSchtp, vol: t.vol_ret, sum: t.sum_zachet,
-            cls: ""
+            cls: "szachet"
         },
         {
             k: "Остаток долга",
