@@ -37,6 +37,7 @@ function renderReturn() {
     renderVzSummary();
     renderVzKpis();
     renderVzFunnel();
+    renderVzDebtorsList();
     renderVzMap();
     renderVzRegionTable();
     renderVzRanking();
@@ -138,6 +139,33 @@ function renderVzFunnel() {
                 <i style="width:${Math.max(w, 20).toFixed(1)}%"></i>
                 <div class="v">${sub}</div>
             </div></div>`;
+    }).join("");
+}
+
+// ── 3б. Список должников в правой панели ─────────────────────────────────────
+function renderVzDebtorsList() {
+    const box = document.getElementById("vzDebtorsList");
+    if (!box) return;
+    if (!DR.debtors.length) {
+        box.innerHTML = `<div style="color:#3C6B4A;font-size:13px;font-weight:700;padding:8px 0">✓ Все обязательства исполнены</div>`;
+        return;
+    }
+    box.innerHTML = DR.debtors.map(c => {
+        const regShortName = c.reg
+            .replace("Восточно-Казахстанская", "ВКО").replace("Северо-Казахстанская", "СКО")
+            .replace("Западно-Казахстанская", "ЗКО").replace("ская", "ск.");
+        const safeBin = (c.bin || "").replace(/'/g, "\\'");
+        const safeDog = (c.dog_num || "").replace(/'/g, "\\'");
+        return `<div class="vz-debtor-row" onclick="openCpReturnByBin('${safeBin}','${safeDog}')">
+            <div>
+                <div class="vz-debtor-name">${c.name}</div>
+                <div class="vz-debtor-sub">${regShortName} · ${c.dog_num}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+                <div class="num" style="color:#E05A4A;font-weight:800;font-size:13px">${fmtMlrd(c.debt)} ₸</div>
+                ${c.penalty > 0 ? `<div style="font-size:11px;color:#C07030;font-weight:700;margin-top:2px">пеня ${fmtMlrd(c.penalty)} ₸</div>` : ""}
+            </div>
+        </div>`;
     }).join("");
 }
 
@@ -244,7 +272,7 @@ function vzShowTip(e, rg) {
 
 function setVzMetric(m) {
     _vzMetric = m;
-    document.querySelectorAll(".vz-metbtn").forEach(b => b.classList.toggle("act", b.dataset.m === m));
+    document.querySelectorAll("#viewVozvrat [data-m]").forEach(b => b.classList.toggle("act", b.dataset.m === m));
     renderVzMapGeo();
     renderVzMapLegend();
 }

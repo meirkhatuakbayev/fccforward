@@ -161,37 +161,42 @@
                 <!-- 6 KPI плашек -->
                 <div class="kpis vz-kpis6" id="vzKpis"></div>
 
-                <!-- Воронка -->
-                <div class="card" style="margin-top:18px">
-                    <div class="cardhead">
-                        <h2>Воронка возврата</h2>
-                        <button class="refresh" style="font-size:11px;padding:6px 12px" onclick="printDebtors()">📄 Реестр должников</button>
-                    </div>
-                    <div class="hint">Предоплата → зачтено зерном → остаток долга. Суммы в млн ₸.</div>
-                    <div id="vzFunnel"></div>
-                </div>
-
-                <!-- Карта -->
-                <div class="card" style="margin-top:18px">
-                    <div class="cardhead" style="align-items:flex-start;padding-bottom:6px">
-                        <h2>Карта возврата по областям</h2>
-                        <div style="display:flex;gap:6px;padding:10px 0">
-                            <button class="vz-metbtn act" data-m="pct" onclick="setVzMetric('pct')">% исполнения</button>
-                            <button class="vz-metbtn" data-m="debt" onclick="setVzMetric('debt')">Остаток долга</button>
-                            <button class="vz-metbtn" data-m="penalty" onclick="setVzMetric('penalty')">Пеня</button>
+                <!-- Grid: карта (слева) + воронка/должники (справа) -->
+                <div class="grid">
+                    <!-- ЛЕВАЯ: карта -->
+                    <div class="card">
+                        <div class="cardhead">
+                            <h2>География возврата</h2>
+                            <div class="seg">
+                                <button class="segb act" data-m="pct" onclick="setVzMetric('pct')">% исполнения</button>
+                                <button class="segb" data-m="debt" onclick="setVzMetric('debt')">Остаток долга</button>
+                                <button class="segb" data-m="penalty" onclick="setVzMetric('penalty')">Пеня</button>
+                            </div>
+                        </div>
+                        <div class="hint">Цвет — исполнение предоплаты. Нажмите область — список договоров.</div>
+                        <div class="mapwrap" id="vzMapWrap" style="position:relative">
+                            <div class="maptip" id="vzTip"></div>
+                            <svg class="kz" viewBox="0 0 920 480" id="vzMapSvg"></svg>
+                        </div>
+                        <div class="maplegend" id="vzMapLegend">
+                            <div class="lg-scale">
+                                <span>Исполнение:</span>
+                                <i style="background:#9E4A40"></i><span>0%</span>
+                                <i style="background:linear-gradient(90deg,#9E4A40,#3C6B4A)"></i>
+                                <i style="background:#3C6B4A"></i><span>100%</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="hint">Нажмите область — список договоров.</div>
-                    <div class="mapwrap" id="vzMapWrap" style="position:relative">
-                        <div class="maptip" id="vzTip"></div>
-                        <svg class="kz" viewBox="0 0 920 480" id="vzMapSvg"></svg>
-                    </div>
-                    <div class="maplegend" id="vzMapLegend">
-                        <div class="lg-scale">
-                            <span>Исполнение:</span>
-                            <i style="background:#9E4A40"></i><span>0%</span>
-                            <i style="background:linear-gradient(90deg,#9E4A40,#3C6B4A)"></i>
-                            <i style="background:#3C6B4A"></i><span>100%</span>
+
+                    <!-- ПРАВАЯ: воронка + должники -->
+                    <div class="card">
+                        <h2>Воронка возврата</h2>
+                        <div class="hint">Путь предоплаты: выдано → зачтено зерном → остаток.</div>
+                        <div id="vzFunnel"></div>
+                        <h2 style="padding-top:4px">Должники</h2>
+                        <div id="vzDebtorsList" style="padding:0 18px 10px"></div>
+                        <div style="padding:0 18px 16px">
+                            <button class="refresh" style="font-size:11px;width:100%;padding:8px" onclick="printDebtors()">📄 Реестр должников (PDF)</button>
                         </div>
                     </div>
                 </div>
@@ -216,10 +221,10 @@
                             <thead><tr>
                                 <th>Контрагент</th>
                                 <th>Культура</th>
-                                <th class="r">Объём по договору, т</th>
+                                <th class="r">Объём, т</th>
                                 <th class="r">Предоплата, ₸</th>
                                 <th class="r">Поставлено, т</th>
-                                <th class="r">Остаток долга, ₸</th>
+                                <th class="r">Долг, ₸</th>
                             </tr></thead>
                             <tbody id="vzRegRows"></tbody>
                         </table>
