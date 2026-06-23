@@ -780,7 +780,7 @@ function printDebtors() {
     if (!list.length) { alert("СХТП с начисленной пеней нет"); return; }
 
     const f  = n => Math.round(n).toLocaleString("ru-RU");
-    const fm = n => (n / 1e9).toLocaleString("ru-RU", { maximumFractionDigits: 2 }) + " млрд";
+    const fm = n => Math.round(n).toLocaleString("ru-RU");
 
     // Группировка по области
     const byReg = {};
