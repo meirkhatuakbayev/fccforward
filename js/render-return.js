@@ -434,10 +434,9 @@ function renderVzMapGeo() {
     GEO.features.forEach(f => {
         const code = featCode(f);
         const rg = code ? byCode[code] : null;
-        if (!rg) return;
 
-        // Используем ту же функцию colorFor что и в разделе финансирования (map.js)
-        const col = rg.sum_fin > 0 ? colorFor(rg.pct_exec) : "#ECE6D5";
+        // Рисуем ВСЕ регионы (как в форварде) — без программы = светло-серый
+        const col = (rg && rg.sum_fin > 0) ? colorFor(rg.pct_exec) : "#ECE6D5";
 
         const p = document.createElementNS(NS, "path");
         p.setAttribute("d", gp(f));
@@ -445,7 +444,7 @@ function renderVzMapGeo() {
         p.setAttribute("stroke", "#FBFAF5");
         p.setAttribute("stroke-width", "0.8");
         p.setAttribute("class", "geopath");
-        if (rg.sum_fin > 0) {
+        if (rg && rg.sum_fin > 0) {
             p.style.cursor = "pointer";
             p.addEventListener("mousemove", e => vzShowTip(e, rg));
             p.addEventListener("mouseleave", () => { const t=document.getElementById("vzTip"); if(t) t.classList.remove("show"); });
@@ -453,7 +452,7 @@ function renderVzMapGeo() {
         }
         G.appendChild(p);
 
-        if (rg.sum_fin > 0) {
+        if (rg && rg.sum_fin > 0) {
             const c = gp.centroid(f);
             const lab = document.createElementNS(NS, "g");
             lab.setAttribute("class", "glabg");
