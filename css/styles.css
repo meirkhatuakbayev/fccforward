@@ -39,14 +39,14 @@ header.top { background: var(--ink); color: #EDEADD; position: sticky; top: 0; z
 .refresh:disabled, .printbtn:disabled { opacity: 0.5; cursor: not-allowed; }
 .updated { font-size: 11.5px; color: #9FB1A4; font-weight: 600; }
 .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin: 22px 0; }
-.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 15px 16px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
-.kpi .lab { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
-.kpi .big { font-size: 27px; font-weight: 800; margin-top: 7px; letter-spacing: -0.02em; }
-.kpi .big small { font-size: 14px; font-weight: 700; color: var(--muted); }
-.kpi .sub { font-size: 11.5px; color: var(--muted); margin-top: 3px; font-weight: 600; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.kpi .lab { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; line-height: 1.4; }
+.kpi .big { font-size: 26px; font-weight: 800; margin-top: 8px; letter-spacing: -0.02em; line-height: 1.1; }
+.kpi .big small { font-size: 13px; font-weight: 700; color: var(--muted); margin-left: 2px; }
+.kpi .sub { font-size: 11.5px; color: var(--muted); margin-top: 5px; font-weight: 600; line-height: 1.4; }
 .bar { height: 6px; border-radius: 4px; background: #EBE6D8; margin-top: 10px; overflow: hidden; }
 .bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--wheat), var(--gold)); }
-.kpi .tag { position: absolute; top: 0; right: 0; width: 34px; height: 34px; border-bottom-left-radius: 12px; opacity: .12; }
+.kpi .tag { position: absolute; top: 0; right: 0; width: 36px; height: 36px; border-bottom-left-radius: 12px; opacity: .18; }
 .grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 18px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
 .card h2 { font-size: 14px; margin: 0; padding: 15px 18px 0; font-weight: 800; letter-spacing: .2px; }
@@ -296,15 +296,21 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
     .kpi { padding: 12px 13px; }
     .kpi .lab { font-size: 10px; }
     /* Возврат: мобильные правки */
-    .vz-kpis6 { grid-template-columns: repeat(2, 1fr) !important; }
+    .kpis { grid-template-columns: repeat(2, 1fr); }
     .vz-summary { padding: 10px 14px; }
-    .vz-chain { font-size: 12px; gap: 7px; padding: 10px 14px; }
+    .vz-chain { font-size: 12px; gap: 7px; padding: 10px 12px; }
     .vz-chain .num { font-size: 13px; }
     .vz-rank-row { grid-template-columns: 18px 1fr 60px 34px; }
     .vz-rank-debt { display: none; }
     #vzMapSvg { min-height: 220px; }
     .fwd-subtabs { padding: 6px 10px; gap: 3px; }
     .fwd-subtab { font-size: 12px; padding: 7px 13px; }
+    /* Cardhead с кнопками — не выходить за границы */
+    .cardhead { flex-wrap: wrap; gap: 8px; }
+    .cardhead .seg { overflow-x: auto; max-width: 100%; flex-shrink: 0; }
+    #vzTabArea table, #vzCropArea table { font-size: 11px; }
+    #vzTabArea th, #vzCropArea th { font-size: 10px; padding: 5px 7px; }
+    #vzTabArea td, #vzCropArea td { padding: 6px 7px; }
 }
 
 @media (max-width: 420px) {
@@ -393,16 +399,21 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
 .vz-sum-line b { font-weight: 800; color: var(--ink); }
 
 /* Строка-связка */
-.vz-chain { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; font-weight: 700; margin: 12px 0; padding: 12px 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
-.vz-arr { color: var(--muted); font-size: 18px; font-weight: 400; }
-.vz-chain .num { font-size: 16px; font-variant-numeric: tabular-nums; }
+.vz-chain { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; font-weight: 700; margin: 12px 0; padding: 11px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; }
+.vz-arr { color: var(--muted); font-size: 16px; font-weight: 400; flex-shrink: 0; }
+.vz-chain .num { font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* 6-кол KPI-сетка */
-.vz-kpis6 { grid-template-columns: repeat(6, 1fr) !important; }
-@media (max-width: 1100px) { .vz-kpis6 { grid-template-columns: repeat(3, 1fr) !important; } }
-@media (max-width: 600px)  { .vz-kpis6 { grid-template-columns: repeat(2, 1fr) !important; } }
+/* Таблицы внутри левой карточки (исп. по областям / по культурам) */
+#vzTabArea, #vzCropArea { padding: 4px 0 2px; }
+#vzTabArea table, #vzCropArea table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+#vzTabArea th, #vzCropArea th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--muted); padding: 7px 10px; background: #F5F0E6; border-bottom: 1px solid var(--line); white-space: nowrap; }
+#vzTabArea td, #vzCropArea td { padding: 8px 10px; border-bottom: 1px solid #F0EBDC; vertical-align: middle; }
+#vzTabArea tbody tr:hover td, #vzCropArea tbody tr:hover td { background: #F7F3E8; }
+#vzTabArea tfoot td, #vzCropArea tfoot td { font-weight: 800; font-size: 12.5px; background: #F0EBDB; border-top: 2px solid var(--line); }
+#vzTabArea .cpsub, #vzCropArea .cpsub { font-size: 10.5px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+.vz-crop-grp { border-bottom: 1px solid var(--line); text-align: center !important; }
 
-/* Переключатель метрики (использует .seg/.segb из общих стилей) */
+/* Переключатель Карта/Таблица/Культуры (использует .seg/.segb из общих стилей) */
 
 /* Должники в правой панели */
 .vz-debtor-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid #EFEBDD; cursor: pointer; transition: background .1s, padding .1s; border-radius: 0; }
@@ -457,5 +468,5 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
     .print-debtors .card:has(#vzForecast) { display: none !important; }
     .print-debtors .vz-summary,
     .print-debtors .vz-chain { display: none !important; }
-    .print-debtors .vz-kpis6 { grid-template-columns: repeat(6, 1fr) !important; }
+    .print-debtors #vzKpis { grid-template-columns: repeat(5, 1fr) !important; }
 }

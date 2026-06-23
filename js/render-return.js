@@ -39,7 +39,7 @@ function renderReturn() {
     renderVzFunnel();
     renderVzDebtorsList();
     renderVzMap();
-    renderVzRegionTable();
+    setVzView("map");       // инициализация табов
     renderVzRanking();
     renderVzPenaltyForecast();
     const asof = document.getElementById("vzAsof");
@@ -82,22 +82,47 @@ function renderVzSummary() {
     }
 }
 
-// ── 2. KPI-плашки (6 штук) ───────────────────────────────────────────────────
+// ── 2. KPI-плашки (5 штук, цвета как в форварде) ────────────────────────────
 function renderVzKpis() {
     const t = DR.total;
-    const pct = (t.pct_exec * 100).toFixed(1);
-    const pctKsn = t.sum_doplata > 0 ? (t.sum_ksn / t.sum_doplata * 100).toFixed(0) : 0;
-    const penPct = DR.totalPenalty > 0
-        ? (DR.cps.reduce((s, c) => s + (c.paid_money > 0 && c.penalty > 0 ? Math.min(c.paid_money, c.penalty) : 0), 0) / DR.totalPenalty * 100).toFixed(0)
-        : 100;
+    const pctNum = t.pct_exec * 100;
+    const pct = pctNum.toFixed(1);
+    const pctTag = pctNum >= 95 ? "#3C6B4A" : pctNum >= 70 ? "#B97F18" : "#9E4A40";
+    const pctBarClr = pctNum >= 95 ? "linear-gradient(90deg,#2F5D40,#3C6B4A)"
+                    : pctNum >= 70 ? "linear-gradient(90deg,#C99526,#E8A82E)"
+                    : "linear-gradient(90deg,#9E4A40,#C06A5C)";
 
     const items = [
-        { lab: "Профинансировано",         big: fmtMlrd(t.sum_fin),      unit: "₸",    sub: fmtT(t.vol_contr) + " т законтрактовано" },
-        { lab: "Возвращено зерном",         big: fmtT(t.vol_ret),         unit: "тонн", sub: fmtMlrd(t.sum_ret) + " ₸" },
-        { lab: "Исполнение по предоплате",  big: pct,                     unit: "%",    sub: "доплата по КСН: " + pctKsn + "%", pct: +pct },
-        { lab: "Остаток долга",             big: fmtMlrd(t.debt),         unit: "₸",    sub: DR.debtors.length + " СХТП-должников", red: t.debt > 0 },
-        { lab: "Пеня начислено",            big: fmtMlrd(DR.totalPenalty),unit: "₸",    sub: "0,1% / день на остаток", red: DR.totalPenalty > 0 },
-        { lab: "Должников",                 big: DR.debtors.length,       unit: "СХТП", sub: "с остатком > 0", red: DR.debtors.length > 0 },
+        {
+            lab: "Профинансировано",
+            big: fmtMlrd(t.sum_fin), unit: "₸",
+            sub: fmtT(DR.cps.length) + " СХТП · " + fmtT(t.vol_contr) + " т",
+            tag: "#E8A82E"
+        },
+        {
+            lab: "Поставлено зерна",
+            big: fmtT(t.vol_ret), unit: "т",
+            sub: fmtMlrd(t.sum_ret) + " ₸ сумма за зерно",
+            tag: "#3C6B4A"
+        },
+        {
+            lab: "В т.ч. зачтено в предоплату",
+            big: fmtMlrd(t.sum_zachet), unit: "₸",
+            sub: "погашение предоплаты зерном",
+            tag: "#3C6B4A"
+        },
+        {
+            lab: "В т.ч. доплата СХТП",
+            big: fmtMlrd(t.sum_doplata), unit: "₸",
+            sub: "начислено сверх предоплаты",
+            tag: "#E8A82E"
+        },
+        {
+            lab: "% исполнения",
+            big: pct, unit: "%",
+            sub: "на сумму финансирования",
+            tag: pctTag, pct: pctNum, pctBar: pctBarClr
+        },
     ];
 
     const box = document.getElementById("vzKpis");
@@ -105,11 +130,11 @@ function renderVzKpis() {
     box.innerHTML = "";
     items.forEach(it => {
         const c = el("div", "kpi");
-        c.innerHTML = `<div class="tag" style="background:#9E4A40"></div>
+        c.innerHTML = `<div class="tag" style="background:${it.tag}"></div>
             <div class="lab">${it.lab}</div>
-            <div class="big num" style="${it.red ? "color:#E05A4A" : ""}">${it.big}<small>${it.unit}</small></div>
+            <div class="big num">${it.big}<small>${it.unit}</small></div>
             <div class="sub">${it.sub}</div>
-            ${it.pct != null ? `<div class="bar"><i style="width:${Math.min(100, it.pct)}%;background:linear-gradient(90deg,#9E4A40,#C06A5C)"></i></div>` : ""}`;
+            ${it.pct != null ? `<div class="bar"><i style="width:${Math.min(100,it.pct)}%;${it.pctBar ? "background:" + it.pctBar : ""}"></i></div>` : ""}`;
         box.appendChild(c);
     });
 }
@@ -167,6 +192,187 @@ function renderVzDebtorsList() {
             </div>
         </div>`;
     }).join("");
+}
+
+// ── 3в. Переключатель видов в левой карточке ──────────────────────────────────
+function setVzView(v) {
+    const areas = { map: "vzMapArea", tab: "vzTabArea", crop: "vzCropArea" };
+    Object.entries(areas).forEach(([k, id]) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = k === v ? "" : "none";
+    });
+    const btns = { map: "vzBtnMap", tab: "vzBtnTab", crop: "vzBtnCrop" };
+    Object.entries(btns).forEach(([k, id]) => {
+        const b = document.getElementById(id);
+        if (b) b.classList.toggle("act", k === v);
+    });
+    const hint = document.getElementById("vzHint");
+    if (hint) hint.textContent = v === "map"
+        ? "Цвет — исполнение предоплаты. Нажмите область — список договоров."
+        : v === "tab" ? "Исполнение по областям (суммы — млрд ₸, объём — тонн). Нажмите строку — договоры."
+        : "Поставка по культурам: законтрактовано vs фактически сдано. Замена культуры отмечена отдельно.";
+    if (v === "tab") renderVzTabArea();
+    if (v === "crop") renderVzCropTable();
+}
+
+// ── 3г. Таблица по областям в левой карточке ─────────────────────────────────
+function renderVzTabArea() {
+    const box = document.getElementById("vzTabArea");
+    if (!box || box._rendered) return;
+    box._rendered = true;
+
+    const cntByCode = {};
+    DR.cps.forEach(c => {
+        const rg = DR.regions.find(x => x.name === c.reg);
+        if (rg) cntByCode[rg.code] = (cntByCode[rg.code] || 0) + 1;
+    });
+
+    const rows = DR.regions
+        .filter(r => r.sum_fin > 0)
+        .sort((a, b) => b.sum_fin - a.sum_fin)
+        .map(r => {
+            const cnt = cntByCode[r.code] || 0;
+            const p = r.pct_exec * 100;
+            const pc = p >= 95 ? "color:#3C6B4A" : p >= 70 ? "color:#9A6716" : "color:#E05A4A";
+            return `<tr style="cursor:pointer" onclick="vzSelectRegion('${r.code}')">
+                <td class="cpname">${r.name}<div class="cpsub">${cnt} СХТП</div></td>
+                <td class="r num">${fmtMlrd(r.sum_fin)}</td>
+                <td class="r num">${fmtT(r.vol_ret)}</td>
+                <td class="r num">${fmtMlrd(r.sum_ret)}</td>
+                <td class="r num">${r.sum_doplata > 0 ? fmtMlrd(r.sum_doplata) : "—"}</td>
+                <td class="r num">${fmtMlrd(r.sum_zachet)}</td>
+                <td class="r num" style="${pc};font-weight:800">${p.toFixed(1)}%</td>
+            </tr>`;
+        }).join("");
+
+    const t = DR.total;
+    const totP = (t.pct_exec * 100);
+    const totPc = totP >= 95 ? "color:#3C6B4A" : "color:#9A6716";
+    box.innerHTML = `<div class="tablescroll" style="max-height:390px"><table>
+        <thead><tr>
+            <th>Область</th>
+            <th class="r">Профинанс. ₸</th>
+            <th class="r">Объём т</th>
+            <th class="r">Сумма за зерно ₸</th>
+            <th class="r">Доплата ₸</th>
+            <th class="r">Зачтено ₸</th>
+            <th class="r">% исп.</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+            <td class="cpname">Итого по РК<div class="cpsub">${DR.cps.length} СХТП</div></td>
+            <td class="r num">${fmtMlrd(t.sum_fin)}</td>
+            <td class="r num">${fmtT(t.vol_ret)}</td>
+            <td class="r num">${fmtMlrd(t.sum_ret)}</td>
+            <td class="r num">${fmtMlrd(t.sum_doplata)}</td>
+            <td class="r num">${fmtMlrd(t.sum_zachet)}</td>
+            <td class="r num" style="${totPc};font-weight:800">${totP.toFixed(1)}%</td>
+        </tr></tfoot>
+    </table></div>`;
+}
+
+// ── 3д. Таблица по культурам (план vs факт, учёт замены культуры) ─────────────
+function renderVzCropTable() {
+    const box = document.getElementById("vzCropArea");
+    if (!box || box._rendered) return;
+    box._rendered = true;
+
+    const CROPS = [
+        { key: "cl3", label: "Пшеница 3 класс" },
+        { key: "cl4", label: "Пшеница 4 класс" },
+        { key: "cl5", label: "Пшеница 5 класс" },
+        { key: "bar", label: "Ячмень 2 класс"  },
+    ];
+    const KEYS = CROPS.map(c => c.key);
+
+    const agg = CROPS.map(cr => ({
+        label: cr.label, key: cr.key,
+        vol_contr: 0, sum_contr: 0,
+        vol_fact: 0,  sum_fact: 0,
+        vol_subst: 0                // объём, поставленный «не той» культурой
+    }));
+
+    DR.cps.forEach(c => {
+        const cult = (c.cult || "").toLowerCase();
+        // Определяем, под какой культурой законтрактован договор
+        let ci = -1;
+        if (cult.includes("пшениц") && cult.includes("3"))      ci = 0;
+        else if (cult.includes("пшениц") && cult.includes("4")) ci = 1;
+        else if (cult.includes("пшениц") && cult.includes("5")) ci = 2;
+        else if (cult.includes("ячмень"))                        ci = 3;
+        // Прочие культуры (подсолнечник, рапс и т.д.) фиксируем как «замена»
+        else ci = -2; // нет в классификаторе
+
+        if (ci >= 0) {
+            agg[ci].vol_contr += c.vol_fin || 0;
+            agg[ci].sum_contr += c.sum_fin || 0;
+        }
+
+        // Фактически поставлено по классам
+        const delivs = [c.cl3, c.cl4, c.cl5, c.bar];
+        delivs.forEach((d, di) => {
+            if (!d || !d.vol) return;
+            agg[di].vol_fact += d.vol;
+            agg[di].sum_fact += d.sum;
+            // Если договор на одну культуру, а сдали другую — фиксируем замену
+            if (ci >= 0 && ci !== di) agg[di].vol_subst += d.vol;
+        });
+    });
+
+    const active = agg.filter(r => r.vol_contr > 0 || r.vol_fact > 0);
+
+    const rows = active.map(r => {
+        const pct = r.vol_contr > 0 ? r.vol_fact / r.vol_contr * 100 : 0;
+        const pctTxt = r.vol_contr > 0 ? pct.toFixed(1) + "%" : "—";
+        const pc = r.vol_contr === 0 ? "" : pct >= 95 ? "color:#3C6B4A" : pct >= 70 ? "color:#9A6716" : "color:#E05A4A";
+        const substNote = r.vol_subst > 0
+            ? `<div class="cpsub" style="color:#9A6716">в т.ч. ${fmtT(r.vol_subst)} т — замена культуры</div>` : "";
+        const noContr = r.vol_contr === 0 && r.vol_fact > 0
+            ? `<div class="cpsub" style="color:#9A6716">вне контракта (замена)</div>` : "";
+        return `<tr>
+            <td class="cpname">${r.label}${substNote}${noContr}</td>
+            <td class="r num">${r.vol_contr > 0 ? fmtT(r.vol_contr) : "—"}</td>
+            <td class="r num">${r.sum_contr > 0 ? fmtMlrd(r.sum_contr) : "—"}</td>
+            <td class="r num" style="${r.vol_fact > 0 ? "font-weight:700" : "color:var(--muted)"}">${r.vol_fact > 0 ? fmtT(r.vol_fact) : "0"}</td>
+            <td class="r num" style="${r.sum_fact > 0 ? "font-weight:700" : "color:var(--muted)"}">${r.sum_fact > 0 ? fmtMlrd(r.sum_fact) : "—"}</td>
+            <td class="r num" style="${pc};font-weight:800">${pctTxt}</td>
+        </tr>`;
+    }).join("");
+
+    const tv = active.reduce((s,r)=>s+r.vol_contr,0);
+    const ts = active.reduce((s,r)=>s+r.sum_contr,0);
+    const fv = active.reduce((s,r)=>s+r.vol_fact,0);
+    const fs = active.reduce((s,r)=>s+r.sum_fact,0);
+    const totPct = tv > 0 ? (fv/tv*100).toFixed(1)+"%" : "—";
+    const totPc = tv > 0 && fv/tv >= 0.95 ? "color:#3C6B4A" : "color:#9A6716";
+
+    box.innerHTML = `<div class="tablescroll" style="max-height:390px">
+        <table>
+        <thead>
+            <tr>
+                <th rowspan="2">Культура</th>
+                <th class="r vz-crop-grp" colspan="2">По договору</th>
+                <th class="r vz-crop-grp" colspan="2">Фактически поставлено</th>
+                <th class="r" rowspan="2">% выполн.</th>
+            </tr>
+            <tr>
+                <th class="r">Объём, т</th>
+                <th class="r">Сумма, ₸</th>
+                <th class="r">Объём, т</th>
+                <th class="r">Сумма за зерно ₸</th>
+            </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+            <td class="cpname">Итого</td>
+            <td class="r num">${fmtT(tv)}</td>
+            <td class="r num">${fmtMlrd(ts)}</td>
+            <td class="r num">${fmtT(fv)}</td>
+            <td class="r num">${fmtMlrd(fs)}</td>
+            <td class="r num" style="${totPc};font-weight:800">${totPct}</td>
+        </tr></tfoot>
+        </table>
+    </div>`;
 }
 
 // ── 4. Карта ─────────────────────────────────────────────────────────────────
@@ -441,13 +647,6 @@ function openCpReturn(c) {
         const ini = (c.name || "?").replace(/^(ТОО|КХ|ФХ|АО|ИП)\s+/i,"").trim().charAt(0).toUpperCase() || "•";
         const today = new Date(); today.setHours(0,0,0,0);
         const todayFmt = ("0"+today.getDate()).slice(-2)+"."+("0"+(today.getMonth()+1)).slice(-2)+"."+today.getFullYear();
-        const deadline = new Date(2026,10,2); // Nov 2 2026
-        const daysLeft = Math.ceil((deadline - today) / 86400000);
-        const dlCls = daysLeft < 0 ? "over" : daysLeft < 20 ? "soon" : "";
-        const dlTxt = daysLeft >= 0
-            ? `до срока <b>${daysLeft} дн.</b> (02.11.2026)`
-            : `<b style="color:#E05A4A">просрочено ${Math.abs(daysLeft)} дн.</b>`;
-
         // Поставки по классам
         const classes = [
             { label: "Пшеница 3 класс", d: c.cl3 },
@@ -462,43 +661,6 @@ function openCpReturn(c) {
                 return `<div class="ln"><span>${x.label}</span><span class="num">${fmtT(x.d.vol)} т</span><span class="num">${fmtMlrd(x.d.sum)} ₸</span><span class="num" style="color:var(--muted)">${pr} ₸/т</span></div>`;
             }).join("")
             : `<div class="ln"><span style="color:var(--muted)">Поставок нет</span></div>`;
-
-        // Динамика погашения
-        const dogDate = parseRuDate(c.dog_date);
-        const daysElapsed = dogDate ? Math.max(1, Math.ceil((today - dogDate) / 86400000)) : 0;
-        const tempo = (daysElapsed > 0 && c.vol_total > 0) ? c.vol_total / daysElapsed : 0;
-        let dynamicsHTML = "";
-        if (c.debt <= 0) {
-            dynamicsHTML = `<div class="garbox ok2" style="margin:8px 0"><span>Исполнено полностью</span><span>100% ✓</span></div>`;
-        } else {
-            const pctDone = c.vol_fin > 0 ? Math.min(100, c.vol_total / c.vol_fin * 100) : 0;
-            let forecastHTML = "";
-            if (tempo > 0 && c.vol_left > 0) {
-                const daysToFin = Math.ceil(c.vol_left / tempo);
-                const finDate = new Date(today.getTime() + daysToFin * 86400000);
-                const finFmt = ("0"+finDate.getDate()).slice(-2)+"."+("0"+(finDate.getMonth()+1)).slice(-2)+"."+finDate.getFullYear();
-                const isOnTime = finDate <= deadline;
-                const overDays = !isOnTime ? Math.ceil((finDate - deadline) / 86400000) : 0;
-                const badgeCls = isOnTime ? "ok2" : overDays < 30 ? "warn" : "bad";
-                const badgeTxt = isOnTime ? "в графике" : `риск просрочки ${overDays} дн.`;
-                forecastHTML = `<div class="vz-dyn-row">
-                    <span>Темп: <b>${fmtT(Math.round(tempo))} т/день</b></span>
-                    <span>Прогноз закрытия: <b>${finFmt}</b></span>
-                    <span class="badge b-${badgeCls}">${badgeTxt}</span>
-                </div>
-                <div class="dlbar" style="margin:6px 0"><i style="width:${pctDone.toFixed(1)}%;background:linear-gradient(90deg,#9E4A40,#C06A5C)"></i></div>`;
-            } else if (c.vol_total === 0) {
-                forecastHTML = `<div style="font-size:12px;color:var(--muted);font-weight:600">Поставки не начаты · ${dlTxt}</div>`;
-            } else {
-                forecastHTML = `<div class="dlbar" style="margin:6px 0"><i style="width:${pctDone.toFixed(1)}%;background:linear-gradient(90deg,#9E4A40,#C06A5C)"></i></div>`;
-            }
-            dynamicsHTML = `<div class="seclab" style="margin-top:10px">Динамика погашения</div>
-                <div class="dl ${dlCls}" style="margin-bottom:8px">
-                    <div class="dlrow"><span>Поставлено ${pctDone.toFixed(0)}%</span><span>${dlTxt}</span></div>
-                    <div class="dlsub">${fmtT(c.vol_total)} из ${fmtT(c.vol_prog)} т · от ${c.dog_date || "—"}</div>
-                    ${forecastHTML}
-                </div>`;
-        }
 
         // История платежей
         let paymentsHTML = "";
@@ -571,7 +733,6 @@ function openCpReturn(c) {
                 </div>
 
                 ${penHTML}
-                ${dynamicsHTML}
                 ${paymentsHTML}
 
                 <div class="mbtn" style="margin-top:12px">

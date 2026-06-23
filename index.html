@@ -158,34 +158,41 @@
                 <div class="vz-summary" id="vzSummary" style="margin-top:18px"></div>
                 <!-- Строка-связка -->
                 <div class="vz-chain" id="vzChain"></div>
-                <!-- 6 KPI плашек -->
-                <div class="kpis vz-kpis6" id="vzKpis"></div>
+                <!-- 5 KPI плашек -->
+                <div class="kpis" id="vzKpis"></div>
 
-                <!-- Grid: карта (слева) + воронка/должники (справа) -->
+                <!-- Grid: карта/таблицы (слева) + воронка/должники (справа) -->
                 <div class="grid">
-                    <!-- ЛЕВАЯ: карта -->
+                    <!-- ЛЕВАЯ: карта + переключаемые таблицы -->
                     <div class="card">
                         <div class="cardhead">
-                            <h2>География возврата</h2>
+                            <h2>Возврат по программе</h2>
                             <div class="seg">
-                                <button class="segb act" data-m="pct" onclick="setVzMetric('pct')">% исполнения</button>
-                                <button class="segb" data-m="debt" onclick="setVzMetric('debt')">Остаток долга</button>
-                                <button class="segb" data-m="penalty" onclick="setVzMetric('penalty')">Пеня</button>
+                                <button class="segb act" id="vzBtnMap"  onclick="setVzView('map')">Карта</button>
+                                <button class="segb"     id="vzBtnTab"  onclick="setVzView('tab')">Исп. по областям</button>
+                                <button class="segb"     id="vzBtnCrop" onclick="setVzView('crop')">По культурам</button>
                             </div>
                         </div>
-                        <div class="hint">Цвет — исполнение предоплаты. Нажмите область — список договоров.</div>
-                        <div class="mapwrap" id="vzMapWrap" style="position:relative">
-                            <div class="maptip" id="vzTip"></div>
-                            <svg class="kz" viewBox="0 0 920 480" id="vzMapSvg"></svg>
-                        </div>
-                        <div class="maplegend" id="vzMapLegend">
-                            <div class="lg-scale">
-                                <span>Исполнение:</span>
-                                <i style="background:#9E4A40"></i><span>0%</span>
-                                <i style="background:linear-gradient(90deg,#9E4A40,#3C6B4A)"></i>
-                                <i style="background:#3C6B4A"></i><span>100%</span>
+                        <div class="hint" id="vzHint">Цвет — исполнение предоплаты. Нажмите область — список договоров.</div>
+                        <!-- Карта -->
+                        <div id="vzMapArea">
+                            <div class="mapwrap" id="vzMapWrap" style="position:relative">
+                                <div class="maptip" id="vzTip"></div>
+                                <svg class="kz" viewBox="0 0 920 480" id="vzMapSvg"></svg>
+                            </div>
+                            <div class="maplegend" id="vzMapLegend">
+                                <div class="lg-scale">
+                                    <span>Исполнение:</span>
+                                    <i style="background:#9E4A40"></i><span>0%</span>
+                                    <i style="background:linear-gradient(90deg,#9E4A40,#3C6B4A)"></i>
+                                    <i style="background:#3C6B4A"></i><span>100%</span>
+                                </div>
                             </div>
                         </div>
+                        <!-- Таблица по областям -->
+                        <div id="vzTabArea" style="display:none"></div>
+                        <!-- По культурам -->
+                        <div id="vzCropArea" style="display:none"></div>
                     </div>
 
                     <!-- ПРАВАЯ: воронка + должники -->
@@ -199,15 +206,6 @@
                             <button class="refresh" style="font-size:11px;width:100%;padding:8px" onclick="printDebtors()">📄 Реестр должников (PDF)</button>
                         </div>
                     </div>
-                </div>
-
-                <!-- Таблица по областям -->
-                <div class="card" style="margin-top:18px">
-                    <div class="cardhead">
-                        <h2>Исполнение по областям</h2>
-                        <span class="hint" style="margin:0">Нажмите строку — список договоров</span>
-                    </div>
-                    <div id="vzRegTable"></div>
                 </div>
 
                 <!-- Панель области (список договоров) -->
