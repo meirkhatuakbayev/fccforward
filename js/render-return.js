@@ -804,22 +804,22 @@ function printDebtors() {
             rows += `<tr>
                 <td class="c">${num++}</td>
                 <td class="l">${c.name}<div class="s">${c.form} · ${c.dog_num} · ${c.cult || ""}</div></td>
-                <td class="r">${f(c.sum_fin)}</td>
-                <td class="r">${f(c.vol_total)}</td>
-                <td class="r">${f(c.sum_total)}</td>
-                <td class="r">${f(c.sum_zachet)}</td>
-                <td class="r err">${f(c.debt)}</td>
-                <td class="r err">${f(c.penalty)}</td>
+                <td>${f(c.sum_fin)}</td>
+                <td>${f(c.vol_total)}</td>
+                <td>${f(c.sum_total)}</td>
+                <td>${f(c.sum_zachet)}</td>
+                <td class="err">${f(c.debt)}</td>
+                <td class="err">${f(c.penalty)}</td>
             </tr>`;
         });
         rows += `<tr class="sub">
             <td colspan="2">Итого: ${cps.length} СХТП</td>
-            <td class="r">${fm(tSF)}</td>
-            <td class="r">${f(tVT)}</td>
-            <td class="r">${fm(tST)}</td>
-            <td class="r">${fm(tSZ)}</td>
-            <td class="r err">${fm(tDB)}</td>
-            <td class="r err">${fm(tPN)}</td>
+            <td>${fm(tSF)}</td>
+            <td>${f(tVT)}</td>
+            <td>${fm(tST)}</td>
+            <td>${fm(tSZ)}</td>
+            <td class="err">${fm(tDB)}</td>
+            <td class="err">${fm(tPN)}</td>
         </tr>`;
     });
 
@@ -828,12 +828,12 @@ function printDebtors() {
                         gt.sz+=c.sum_zachet; gt.db+=c.debt; gt.pn+=c.penalty; });
     rows += `<tr class="tot">
         <td colspan="2">ИТОГО ПО РК: ${list.length} СХТП</td>
-        <td class="r">${fm(gt.sf)}</td>
-        <td class="r">${f(gt.vt)} т</td>
-        <td class="r">${fm(gt.st)}</td>
-        <td class="r">${fm(gt.sz)}</td>
-        <td class="r terr">${fm(gt.db)}</td>
-        <td class="r terr">${fm(gt.pn)}</td>
+        <td>${fm(gt.sf)}</td>
+        <td>${f(gt.vt)}</td>
+        <td>${fm(gt.st)}</td>
+        <td>${fm(gt.sz)}</td>
+        <td class="terr">${fm(gt.db)}</td>
+        <td class="terr">${fm(gt.pn)}</td>
     </tr>`;
 
     const html = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
@@ -841,20 +841,22 @@ function printDebtors() {
 <style>
 @page { size: A4 landscape; margin: 12mm 10mm; }
 *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
-body{font-size:9px;color:#1a1a1a}
-h1{font-size:12px;font-weight:700;margin-bottom:3px}
-.meta{font-size:8px;color:#666;margin-bottom:8px}
+body{font-size:11px;color:#1a1a1a}
+h1{font-size:14px;font-weight:700;margin-bottom:3px}
+.meta{font-size:10px;color:#666;margin-bottom:9px}
 table{width:100%;border-collapse:collapse}
-th{background:#22402E;color:#F4ECD8;font-size:8.5px;font-weight:700;
-   padding:5px 5px;text-align:center;border:1px solid #1a3020}
-td{padding:3px 5px;border:1px solid #ddd;vertical-align:top}
-.s{font-size:7.5px;color:#666;margin-top:1px}
-.c{text-align:center}.r{text-align:right;font-variant-numeric:tabular-nums}.l{text-align:left}
+th{background:#22402E;color:#F4ECD8;font-size:10px;font-weight:700;
+   padding:6px 6px;text-align:center;border:1px solid #1a3020}
+td{padding:5px 6px;border:1px solid #ddd;vertical-align:middle;text-align:center;font-variant-numeric:tabular-nums}
+.s{font-size:9px;color:#666;margin-top:2px}
+.l{text-align:left}
 .err{color:#B03020;font-weight:700}
-tr.rh td{background:#FDF3DE;font-weight:800;font-size:9.5px;
-         padding:5px 5px;border-top:2px solid #E8A82E;border-bottom:1px solid #E8A82E;color:#3a2a06}
-tr.sub td{background:#F5F0E6;font-weight:700;border-top:1px solid #bbb;border-bottom:2px solid #aaa;font-size:8.5px}
-tr.tot td{background:#22402E;color:#F4ECD8;font-weight:800;font-size:9px}
+tr.rh td{background:#FDF3DE;font-weight:800;font-size:11px;
+         padding:6px 6px;border-top:2px solid #E8A82E;border-bottom:1px solid #E8A82E;color:#3a2a06;text-align:left}
+tr.sub td{background:#F5F0E6;font-weight:700;border-top:1px solid #bbb;border-bottom:2px solid #aaa;font-size:10.5px}
+tr.sub td:first-child{text-align:left}
+tr.tot td{background:#22402E;color:#F4ECD8;font-weight:800;font-size:11px}
+tr.tot td:first-child{text-align:left}
 tr.tot .terr{color:#FFBBAA}
 tr:nth-child(even):not(.rh):not(.sub):not(.tot) td{background:#FAFAF8}
 </style></head><body>
