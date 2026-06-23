@@ -287,20 +287,18 @@ function renderVzDebtTable() {
     let rows = "";
     groups.forEach(g => {
         const regDebt = g.items.reduce((s,c) => s + c.debt, 0);
-        const regCnt  = g.items.length;
         rows += `<tr class="rtab-reg-hdr">
-            <td class="l" colspan="4"><b>${g.reg}</b></td>
-            <td style="color:#E05A4A;font-weight:800">${fmtMlrd(regDebt)} ₸</td>
+            <td class="l" colspan="3"><b>${g.reg}</b></td>
+            <td style="color:#E05A4A;font-weight:800;text-align:right">${fmtMlrd(regDebt)} ₸</td>
             <td></td>
         </tr>`;
-        g.items.forEach((c, i) => {
+        g.items.forEach(c => {
             const safeBin = (c.bin||"").replace(/'/g,"\\'");
             const safeDog = (c.dog_num||"").replace(/'/g,"\\'");
             rows += `<tr onclick="openCpReturnByBin('${safeBin}','${safeDog}')">
-                <td class="l" style="padding-left:22px"><b>${c.name}</b>
-                    <br><span style="font-size:10px;font-weight:600;opacity:.6">${c.cult||"—"} · ${c.dog_num||""}</span>
+                <td class="l" style="padding-left:18px"><b>${c.name}</b>
+                    <div style="font-size:10px;font-weight:600;color:var(--muted);margin-top:1px">${c.cult||"—"} · ${c.dog_num||""}</div>
                 </td>
-                <td>${c.form||"—"}</td>
                 <td>${fmtMlrd(c.sum_fin)} ₸</td>
                 <td>${c.sum_zachet > 0 ? fmtMlrd(c.sum_zachet)+" ₸" : "—"}</td>
                 <td style="color:#E05A4A;font-weight:800">${fmtMlrd(c.debt)} ₸</td>
@@ -314,18 +312,24 @@ function renderVzDebtTable() {
     const totalFin  = DR.debtors.reduce((s,c) => s + (c.sum_fin||0), 0);
     const totalZach = DR.debtors.reduce((s,c) => s + (c.sum_zachet||0), 0);
 
-    box.innerHTML = `<div class="tablescroll" style="max-height:420px"><table class="rtab">
+    box.innerHTML = `<div class="tablescroll" style="max-height:420px;overflow-x:hidden"><table class="rtab" style="table-layout:fixed;width:100%">
+        <colgroup>
+            <col style="width:38%">
+            <col style="width:15%">
+            <col style="width:15%">
+            <col style="width:16%">
+            <col style="width:16%">
+        </colgroup>
         <thead><tr>
             <th class="l">Контрагент</th>
-            <th>Форма</th>
-            <th>Профинанс. ₸</th>
-            <th>Зачтено ₸</th>
-            <th>Остаток долга ₸</th>
-            <th>Пеня ₸</th>
+            <th>Профинанс.</th>
+            <th>Зачтено</th>
+            <th>Остаток долга</th>
+            <th>Пеня</th>
         </tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
-            <td class="l" colspan="2">Итого (${DR.debtors.length} должников)</td>
+            <td class="l">Итого: ${DR.debtors.length} должников</td>
             <td>${fmtMlrd(totalFin)} ₸</td>
             <td>${fmtMlrd(totalZach)} ₸</td>
             <td style="color:#E05A4A;font-weight:800">${fmtMlrd(totalDebt)} ₸</td>
