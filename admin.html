@@ -870,6 +870,8 @@ function editReturn(idx) {
 function openReturnForm(existing, contractorHint) {
   // contractorHint — объект из allContractors когда создаём запись впервые
   const ch = contractorHint || {};
+  // Замораживаем поля контрагента если есть любой контекст (редактирование ИЛИ открыто из кнопки "+")
+  const freezeFields = !!(existing || ch.bin || ch.name);
   const chPrice = (ch.fin_vol > 0) ? Math.round((ch.fin_sum||0) / ch.fin_vol) : '';
   const e  = existing ? { ...existing } : {
     'Область':                 ch.reg     || '',
@@ -907,7 +909,7 @@ function openReturnForm(existing, contractorHint) {
         <div class="aform-grid cols2">
           <div class="field">
             <label>Контрагент (профинансированные) *</label>
-            <select id="rContractor" onchange="onSelectReturnContractor()"${existing?' style="pointer-events:none;background:#F0EBE0;color:#555;border-color:#CCC5AE" tabindex="-1"':''}>
+            <select id="rContractor" onchange="onSelectReturnContractor()"${freezeFields?' style="pointer-events:none;background:#F0EBE0;color:#555;border-color:#CCC5AE" tabindex="-1"':''}>
               <option value="">— выберите контрагента —</option>
               ${ctOpts}
             </select>
@@ -918,15 +920,15 @@ function openReturnForm(existing, contractorHint) {
           </div>
           <div class="field">
             <label>Культура</label>
-            <input type="text" id="rCult" value="${esc(e['Культура']||'')}" placeholder="Пшеница 3 класс"${existing?' readonly class="autofilled"':''}>
+            <input type="text" id="rCult" value="${esc(e['Культура']||'')}" placeholder="Пшеница 3 класс"${freezeFields?' readonly class="autofilled"':''}>
           </div>
           <div class="field">
             <label>№ договора</label>
-            <input type="text" id="rDogNum" value="${esc(e['№ договора']||'')}"${existing?' readonly class="autofilled"':''}>
+            <input type="text" id="rDogNum" value="${esc(e['№ договора']||'')}"${freezeFields?' readonly class="autofilled"':''}>
           </div>
           <div class="field">
             <label>Дата договора</label>
-            <input type="text" id="rDogDate" value="${esc(e['Дата договора']||'')}" placeholder="01.03.2026"${existing?' readonly class="autofilled"':''}>
+            <input type="text" id="rDogDate" value="${esc(e['Дата договора']||'')}" placeholder="01.03.2026"${freezeFields?' readonly class="autofilled"':''}>
           </div>
         </div>
       </div>
