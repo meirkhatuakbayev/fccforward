@@ -68,11 +68,12 @@ function renderVzKpis() {
     const pctBarClr = pctNum >= 95 ? "linear-gradient(90deg,#2F5D40,#3C6B4A)"
                     : pctNum >= 70 ? "linear-gradient(90deg,#C99526,#E8A82E)"
                     : "linear-gradient(90deg,#9E4A40,#C06A5C)";
+    const n = v => (v / 1e9).toLocaleString("ru-RU", {maximumFractionDigits: 2});
 
     const items = [
         {
             lab: "Профинансировано",
-            big: fmtMlrd(t.sum_fin), unit: "₸",
+            big: n(t.sum_fin), unit: "млрд ₸",
             sub: fmtT(DR.cps.length) + " СХТП · " + fmtT(t.vol_contr) + " т",
             tag: "#E8A82E"
         },
@@ -84,13 +85,13 @@ function renderVzKpis() {
         },
         {
             lab: "В т.ч. зачтено в предоплату",
-            big: fmtMlrd(t.sum_zachet), unit: "₸",
+            big: n(t.sum_zachet), unit: "млрд ₸",
             sub: "погашение предоплаты зерном",
             tag: "#3C6B4A"
         },
         {
             lab: "В т.ч. доплата СХТП",
-            big: fmtMlrd(t.sum_doplata), unit: "₸",
+            big: n(t.sum_doplata), unit: "млрд ₸",
             sub: "начислено сверх предоплаты",
             tag: "#E8A82E"
         },
@@ -102,7 +103,7 @@ function renderVzKpis() {
         },
         {
             lab: "Остаток долга",
-            big: fmtMlrd(t.debt), unit: "₸",
+            big: n(t.debt), unit: "млрд ₸",
             sub: DR.debtors.length + " СХТП-должников",
             tag: t.debt > 0 ? "#9E4A40" : "#3C6B4A",
             red: t.debt > 0
