@@ -710,7 +710,8 @@ function renderVzRanking() {
     const best  = regs.filter(r => r.pct_exec >= 1.0);
     const worst = [...regs].sort((a, b) => b.debt - a.debt).filter(r => r.debt > 0).slice(0, 3);
 
-    let html = `<div class="vz-rank-title">Рейтинг исполнения</div>`;
+    let html = `<div class="vz-rank-title">Рейтинг исполнения по областям</div>`;
+    html += `<div class="vz-rank-list">`;
     html += regs.map((r, i) => {
         const pct = (r.pct_exec * 100).toFixed(1);
         const bar = Math.min(100, r.pct_exec * 100);
@@ -723,6 +724,7 @@ function renderVzRanking() {
             ${r.debt > 0 ? `<div class="vz-rank-debt">${fmtMlrd(r.debt)} ₸</div>` : `<div class="vz-rank-debt ok">✓</div>`}
         </div>`;
     }).join("");
+    html += `</div>`;
 
     html += `<div class="vz-rank-analysis">`;
     if (best.length) html += `<div class="vz-ana-item ok2">Полностью исполнили: ${best.map(r=>r.name).join(", ")}.</div>`;
