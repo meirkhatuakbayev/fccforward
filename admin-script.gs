@@ -1,16 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // ПКК Форвард 2026 — Бэкенд Админ-панели
 // ═══════════════════════════════════════════════════════════════════════════
-// ИНСТРУКЦИЯ:
-//   1. Откройте script.google.com → Новый проект
-//   2. Вставьте весь этот код (замените function myFunction(){})
-//   3. Укажите правильный SS_ID (ID вашей таблицы)
-//   4. Нажмите «Выполнить» → setupAdminUsers() один раз
-//   5. Деплой → «Как веб-приложение»:
-//        Исполняет: Я (your email)
-//        Кто имеет доступ: Все
-//   6. Скопируйте URL деплоя в admin.html (константа ADMIN_API)
-// ═══════════════════════════════════════════════════════════════════════════
 
 const SS_ID        = '1C86Fh9p3EW4LwYWi4u2hUnRC1TxfjzN75WQ0iDNZX0Q';
 const SH_DETAIL    = 'РАЗВЕРНУТАЯ_ИНФОРМАЦИЯ';
@@ -18,7 +8,41 @@ const SH_RETURN    = 'ВОЗВРАТ';
 const SH_ADMINS    = 'ADMINS';
 const SH_SESSIONS  = 'СЕССИИ';
 const SH_LOG       = 'ЖУРНАЛ';
-const SESSION_H    = 8; // часов
+const SESSION_H    = 8;
+const CACHE_TTL    = 300; // секунд (5 минут)
+
+// ── Мемоизация SpreadsheetApp внутри одного запроса ──────────────────────────
+// GAS исполняет каждый HTTP-запрос в отдельном процессе, поэтому _ss живёт
+// только в рамках одного doGet/doPost — это законная оптимизация.
+let _ss = null;
+function getSS() {
+  if (!_ss) _ss = SpreadsheetApp.openById(SS_ID);
+  return _ss;
+}
+
+// ── CacheService-обёртки ──────────────────────────────────────────────────────
+function cacheGet(key) {
+  try {
+    const v = CacheService.getScriptCache().get(key);
+    return v ? JSON.parse(v) : null;
+  } catch(_) { return null; }
+}
+
+function cacheSet(key, data) {
+  try {
+    const s = JSON.stringify(data);
+    // Лимит CacheService — 100 КБ на ключ
+    if (s.length <= 99000) CacheService.getScriptCache().put(key, s, CACHE_TTL);
+  } catch(_) {}
+}
+
+function cacheDel() {
+  try {
+    CacheService.getScriptCache().removeAll(
+      ['ctrs', 'ret_list', 'fin_2026', 'fin_2025', 'ret_dash_2026', 'ret_dash_2025']
+    );
+  } catch(_) {}
+}
 
 // ── Точка входа ──────────────────────────────────────────────────────────────
 
@@ -31,42 +55,57 @@ function doGet(e) {
 }
 
 function getFinancingForYear(year) {
+  const ckey = 'fin_' + year;
+  const hit  = cacheGet(ckey);
+  if (hit) return hit;
+
   try {
-    const ss       = SpreadsheetApp.openById(SS_ID);
-    const svodName = year === '2026' ? 'СВОД'              : 'СВОД_'           + year;
-    const detName  = year === '2026' ? SH_DETAIL           : 'РАЗВЕРНУТАЯ_'    + year;
+    const ss       = getSS();
+    const svodName = year === '2026' ? 'СВОД'      : 'СВОД_'        + year;
+    const detName  = year === '2026' ? SH_DETAIL   : 'РАЗВЕРНУТАЯ_' + year;
     const svodSh   = ss.getSheetByName(svodName);
     const detSh    = ss.getSheetByName(detName);
     if (!svodSh) return { ok: false, error: 'Лист "' + svodName + '" не найден' };
     if (!detSh)  return { ok: false, error: 'Лист "' + detName  + '" не найден' };
-    return { ok: true, svod: svodSh.getDataRange().getValues(), detail: detSh.getDataRange().getValues() };
+    const result = { ok: true, svod: svodSh.getDataRange().getValues(), detail: detSh.getDataRange().getValues() };
+    cacheSet(ckey, result);
+    return result;
   } catch(err) { return { ok: false, error: err.message }; }
 }
 
 function getReturnForYear(year) {
   if (year === '2026') return getReturnForDashboard();
+  const ckey = 'ret_dash_' + year;
+  const hit  = cacheGet(ckey);
+  if (hit) return hit;
+
   try {
-    const ss      = SpreadsheetApp.openById(SS_ID);
+    const ss      = getSS();
     const svodSh  = ss.getSheetByName('ВОЗВРАТ_' + year);
     const detSh   = ss.getSheetByName('ВОЗВРАТ_РАЗВЕРНУТАЯ_' + year);
     if (!svodSh) return { ok: false, error: 'Лист "ВОЗВРАТ_' + year + '" не найден' };
     if (!detSh)  return { ok: false, error: 'Лист "ВОЗВРАТ_РАЗВЕРНУТАЯ_' + year + '" не найден' };
-    return { ok: true, svod: svodSh.getDataRange().getValues(), detail: detSh.getDataRange().getValues() };
+    const result = { ok: true, svod: svodSh.getDataRange().getValues(), detail: detSh.getDataRange().getValues() };
+    cacheSet(ckey, result);
+    return result;
   } catch(err) { return { ok: false, error: err.message }; }
 }
 
-// ── Публичная отдача данных возврата для дашборда (без авторизации) ──────────
+// ── Публичная отдача данных возврата для дашборда ─────────────────────────────
 
 function getReturnForDashboard() {
-  try {
-    const ss = SpreadsheetApp.openById(SS_ID);
+  const ckey = 'ret_dash_2026';
+  const hit  = cacheGet(ckey);
+  if (hit) return hit;
 
-    // 1. Читаем профинансированных контрагентов
+  try {
+    const ss = getSS();
+
     const detSheet = ss.getSheetByName(SH_DETAIL);
     if (!detSheet) return { ok: false, error: 'Лист финансирования не найден' };
     const detData = detSheet.getDataRange().getValues();
 
-    const financed = {}; // key = bin || name
+    const financed = {};
     for (let i = DATA_ROW; i < detData.length; i++) {
       const row  = detData[i];
       const name = String(row[C.name] || '').trim();
@@ -90,7 +129,6 @@ function getReturnForDashboard() {
       };
     }
 
-    // 2. Читаем лист ВОЗВРАТ
     const retSheet = ss.getSheetByName(SH_RETURN);
     const retMap   = {};
     if (retSheet && retSheet.getLastRow() > 1) {
@@ -104,7 +142,6 @@ function getReturnForDashboard() {
       }
     }
 
-    // 3. Строим detail-строки (формат для parseDetailReturn)
     const detail = [];
     const regAgg  = {};
 
@@ -125,30 +162,28 @@ function getReturnForDashboard() {
       row[18] = ret ? n(9)  || f.price_fin : f.price_fin;
       row[19] = ret ? n(10) || f.sum_fin   : f.sum_fin;
 
-      // Классы зерна: Пш5кл=col23/24, Пш4кл=col25/26, Пш3кл=col27/28, Ячмень=col29/30
-      row[27] = n(11); row[28] = n(12); // Пш 3 класс
-      row[25] = n(13); row[26] = n(14); // Пш 4 класс
-      row[23] = n(15); row[24] = n(16); // Пш 5 класс
-      row[29] = n(17); row[30] = n(18); // Ячмень
+      row[27] = n(11); row[28] = n(12);
+      row[25] = n(13); row[26] = n(14);
+      row[23] = n(15); row[24] = n(16);
+      row[29] = n(17); row[30] = n(18);
 
-      row[52] = n(19); // vol_total
-      row[53] = n(20); // sum_total
-      row[32] = n(21); // sum_zachet
-      row[56] = ret ? n(22) : Math.max(0, f.sum_fin); // debt
-      row[57] = n(23); // penalty
-      row[58] = n(24); // paid_money
-      row[59] = n(25); // paid_grain
-      row[34] = n(26); // dop_plan
-      row[40] = n(27); // dop_fact
-      row[44] = n(28); // ksn
-      row[61] = n(22); // debt_left = debt
+      row[52] = n(19);
+      row[53] = n(20);
+      row[32] = n(21);
+      row[56] = ret ? n(22) : Math.max(0, f.sum_fin);
+      row[57] = n(23);
+      row[58] = n(24);
+      row[59] = n(25);
+      row[34] = n(26);
+      row[40] = n(27);
+      row[44] = n(28);
+      row[61] = n(22);
 
       try { row.payments = ret ? JSON.parse(ret[29] || '[]') : []; }
       catch(_) { row.payments = []; }
 
       detail.push(row);
 
-      // Агрегация по области
       const reg = f.reg || 'Прочие';
       if (!regAgg[reg]) regAgg[reg] = { name: reg, vol_contr:0, sum_fin:0, vol_ret:0,
         sum_ret:0, sum_zachet:0, sum_doplata:0, sum_ksn:0, debt:0 };
@@ -163,7 +198,6 @@ function getReturnForDashboard() {
       g.debt        += Number(row[56]) || 0;
     });
 
-    // 4. Строим svod-строки (формат для parseSvodReturn)
     const svod = [];
     var totals = { vol_contr:0, sum_fin:0, vol_ret:0, sum_ret:0,
                    sum_zachet:0, sum_doplata:0, sum_ksn:0, debt:0 };
@@ -178,7 +212,6 @@ function getReturnForDashboard() {
       Object.keys(totals).forEach(function(k) { totals[k] += r[k] || 0; });
     });
 
-    // Итого по РК
     const tr = new Array(25).fill(0);
     tr[1]  = 'Итого по РК:'; tr[4] = totals.vol_contr; tr[5] = totals.sum_fin;
     tr[9]  = totals.vol_ret; tr[10] = totals.sum_ret;   tr[11] = totals.sum_zachet;
@@ -187,7 +220,9 @@ function getReturnForDashboard() {
     tr[17] = totals.sum_ksn; tr[20] = totals.debt;
     svod.push(tr);
 
-    return { ok: true, svod: svod, detail: detail };
+    const result = { ok: true, svod: svod, detail: detail };
+    cacheSet(ckey, result);
+    return result;
   } catch(err) {
     return { ok: false, error: err.message };
   }
@@ -241,12 +276,11 @@ function login(body) {
   const { login: lgn, password } = body;
   if (!lgn || !password) return { ok: false, error: 'Введите логин и пароль' };
 
-  const ss    = SpreadsheetApp.openById(SS_ID);
+  const ss    = getSS();
   const sheet = ss.getSheetByName(SH_ADMINS);
   if (!sheet) return { ok: false, error: 'Таблица пользователей не найдена. Запустите setupAdminUsers()' };
 
   const rows = sheet.getDataRange().getValues();
-  // col: 0=login 1=salt 2=hash 3=role 4=name 5=active
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][0] === lgn && rows[i][5] === true) {
       const hash = sha256(rows[i][1] + password);
@@ -264,7 +298,7 @@ function login(body) {
 
 function logout(body) {
   if (!body.token) return { ok: true };
-  const ss    = SpreadsheetApp.openById(SS_ID);
+  const ss    = getSS();
   const sheet = ss.getSheetByName(SH_SESSIONS);
   if (!sheet) return { ok: true };
   const data = sheet.getDataRange().getValues();
@@ -276,7 +310,7 @@ function logout(body) {
 
 function checkToken(token) {
   if (!token) return null;
-  const ss    = SpreadsheetApp.openById(SS_ID);
+  const ss    = getSS();
   const sheet = ss.getSheetByName(SH_SESSIONS);
   if (!sheet) return null;
   const data = sheet.getDataRange().getValues();
@@ -303,17 +337,18 @@ function checkAdmin(user) {
 const C = {
   reg: 2, form: 3, name: 4, rayon: 10, bin: 11,
   nds: 12, date_reg: 13, cult: 14, status: 24,
-  // Заявка
   app_sum: 17, app_price: 18, app_vol: 19, app_hpp: 20, app_gar: 21,
-  // Договор
   dog_num: 49, dog_date: 50, dog_sum: 53, dog_vol: 55,
-  // Профинансировано
   fin_cult: 62, fin_date: 63, fin_sum: 66, fin_price: 67, fin_vol: 68,
 };
-const DATA_ROW = 4; // данные начинаются с 5-й строки (индекс 4)
+const DATA_ROW = 4;
 
 function listContractors() {
-  const sheet = SpreadsheetApp.openById(SS_ID).getSheetByName(SH_DETAIL);
+  const ckey = 'ctrs';
+  const hit  = cacheGet(ckey);
+  if (hit) return hit;
+
+  const sheet = getSS().getSheetByName(SH_DETAIL);
   if (!sheet) return { ok: false, error: 'Лист "' + SH_DETAIL + '" не найден' };
 
   const data  = sheet.getDataRange().getValues();
@@ -345,11 +380,13 @@ function listContractors() {
     });
   }
 
-  return { ok: true, data: list };
+  const result = { ok: true, data: list };
+  cacheSet(ckey, result);
+  return result;
 }
 
 function getContractor(body) {
-  const sheet = SpreadsheetApp.openById(SS_ID).getSheetByName(SH_DETAIL);
+  const sheet = getSS().getSheetByName(SH_DETAIL);
   if (!sheet) return { ok: false, error: 'Лист не найден' };
 
   const data = sheet.getDataRange().getValues();
@@ -374,7 +411,7 @@ function saveFinancing(body, user) {
   const { rowIdx, fields } = body;
   if (!rowIdx || !fields) return { ok: false, error: 'Нет данных для сохранения' };
 
-  const ss    = SpreadsheetApp.openById(SS_ID);
+  const ss    = getSS();
   const sheet = ss.getSheetByName(SH_DETAIL);
   if (!sheet) return { ok: false, error: 'Лист не найден' };
 
@@ -382,6 +419,7 @@ function saveFinancing(body, user) {
     sheet.getRange(rowIdx, parseInt(colIdx) + 1).setValue(val);
   });
 
+  cacheDel(); // сбрасываем кеш после изменения данных
   addLog(ss, user.name, 'Финансирование', rowIdx, fields);
   return { ok: true };
 }
@@ -390,16 +428,16 @@ function addContractor(body, user) {
   const { fields } = body;
   if (!fields) return { ok: false, error: 'Нет данных' };
 
-  const ss    = SpreadsheetApp.openById(SS_ID);
+  const ss    = getSS();
   const sheet = ss.getSheetByName(SH_DETAIL);
   if (!sheet) return { ok: false, error: 'Лист не найден' };
 
-  // Найти первую пустую строку после данных
   const lastRow = sheet.getLastRow();
   const newRow  = new Array(70).fill('');
   Object.entries(fields).forEach(([colIdx, val]) => { newRow[parseInt(colIdx)] = val; });
   sheet.appendRow(newRow);
 
+  cacheDel();
   addLog(ss, user.name, 'Новый контрагент', lastRow + 1, fields);
   return { ok: true, rowIdx: lastRow + 1 };
 }
@@ -418,7 +456,9 @@ const RET_HEADERS = [
   'Зачтено в предоплату, ₸','Остаток долга, ₸',
   'Пеня, ₸','Погашено деньгами, ₸','Погашено зерном, ₸',
   'Доплата план, ₸','Доплата факт, ₸','КСН, ₸',
-  'История платежей (JSON)','Обновлено','Кем обновлено'
+  'Поставлено JSON',
+  '% исполнения',
+  'Обновлено','Кем обновлено'
 ];
 
 function ensureReturnSheet(ss) {
@@ -436,7 +476,11 @@ function ensureReturnSheet(ss) {
 }
 
 function listReturn() {
-  const ss   = SpreadsheetApp.openById(SS_ID);
+  const ckey = 'ret_list';
+  const hit  = cacheGet(ckey);
+  if (hit) return hit;
+
+  const ss   = getSS();
   const sh   = ensureReturnSheet(ss);
   const data = sh.getDataRange().getValues();
   if (data.length <= 1) return { ok: true, data: [] };
@@ -447,14 +491,17 @@ function listReturn() {
     hdrs.forEach((h, j) => { obj[h] = row[j]; });
     return obj;
   });
-  return { ok: true, data: rows };
+
+  const result = { ok: true, data: rows };
+  cacheSet(ckey, result);
+  return result;
 }
 
 function saveReturn(body, user) {
   const { rowIdx, data: rd } = body;
   if (!rd) return { ok: false, error: 'Нет данных' };
 
-  const ss = SpreadsheetApp.openById(SS_ID);
+  const ss = getSS();
   const sh = ensureReturnSheet(ss);
 
   rd['Обновлено']      = new Date().toLocaleString('ru-RU');
@@ -468,6 +515,7 @@ function saveReturn(body, user) {
     sh.appendRow(vals);
   }
 
+  cacheDel();
   addLog(ss, user.name, 'Возврат', rowIdx || 'новая', rd);
   return { ok: true };
 }
@@ -475,9 +523,10 @@ function saveReturn(body, user) {
 function deleteReturn(body, user) {
   const { rowIdx } = body;
   if (!rowIdx) return { ok: false, error: 'Не указан rowIdx' };
-  const ss = SpreadsheetApp.openById(SS_ID);
+  const ss = getSS();
   const sh = ensureReturnSheet(ss);
   sh.deleteRow(rowIdx);
+  cacheDel();
   addLog(ss, user.name, 'Возврат', rowIdx, { действие: 'УДАЛЕНИЕ' });
   return { ok: true };
 }
@@ -485,7 +534,7 @@ function deleteReturn(body, user) {
 // ── Пользователи ──────────────────────────────────────────────────────────────
 
 function listUsers() {
-  const ss = SpreadsheetApp.openById(SS_ID);
+  const ss = getSS();
   const sh = ss.getSheetByName(SH_ADMINS);
   if (!sh) return { ok: true, data: [] };
   const data = sh.getDataRange().getValues();
@@ -501,7 +550,7 @@ function saveUser(body) {
   const { login: lgn, password, role, name, active } = body;
   if (!lgn) return { ok: false, error: 'Укажите логин' };
 
-  const ss = SpreadsheetApp.openById(SS_ID);
+  const ss = getSS();
   const sh = ensureSheet(ss, SH_ADMINS, ['login','salt','hash','role','name','active']);
   const data = sh.getDataRange().getValues();
 
@@ -536,7 +585,7 @@ function changePassword(body, user) {
   if (!oldPassword || !newPassword) return { ok: false, error: 'Заполните оба поля' };
   if (newPassword.length < 6) return { ok: false, error: 'Пароль слишком короткий (мин. 6 символов)' };
 
-  const ss = SpreadsheetApp.openById(SS_ID);
+  const ss = getSS();
   const sh = ss.getSheetByName(SH_ADMINS);
   if (!sh) return { ok: false, error: 'Таблица пользователей не найдена' };
   const data = sh.getDataRange().getValues();
@@ -600,4 +649,10 @@ function setupAdminUsers() {
   users.forEach(u => saveUser(u));
   Logger.log('✅ Пользователи созданы: ' + users.length);
   Logger.log('Логин admin, пароль: Admin2026!');
+}
+
+// ── Ручной сброс кеша (запустить из редактора при необходимости) ──────────────
+function clearAllCache() {
+  cacheDel();
+  Logger.log('✅ Кеш очищен');
 }
