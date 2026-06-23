@@ -128,14 +128,56 @@ function combineReturn(svodRows, detailRows) {
 }
 
 // ─── Загрузка данных ──────────────────────────────────────────────────────────
+// Строит DR из объекта D (финансирование) — работает без Apps Script
+function buildReturnFromD() {
+    if (!D || !D.cps) return false;
+    const financed = D.cps.filter(c => c.sum > 0);
+    if (!financed.length) return false;
+
+    const regMap = {};
+    const detail = financed.map(c => {
+        const row = new Array(65).fill(0);
+        row[2]  = c.reg;
+        row[3]  = c.form;
+        row[4]  = c.name;
+        row[5]  = c.rayon;
+        row[6]  = c.bin;
+        row[9]  = (c.dates && c.dates.dogNum)  || "";
+        row[10] = (c.dates && c.dates.dogDate) || "";
+        row[14] = (c.cults || []).join(", ");
+        row[17] = c.vol  || 0;
+        row[19] = c.sum  || 0;
+        row[56] = c.sum  || 0; // долг = вся сумма финансирования
+        row[61] = c.sum  || 0;
+        row.payments = [];
+
+        const reg = c.reg || "Прочие";
+        if (!regMap[reg]) regMap[reg] = { name: reg, vol_contr: 0, sum_fin: 0, debt: 0 };
+        regMap[reg].vol_contr += c.vol || 0;
+        regMap[reg].sum_fin   += c.sum || 0;
+        regMap[reg].debt      += c.sum || 0;
+        return row;
+    });
+
+    const svod = Object.values(regMap).map(r => {
+        const sr = new Array(25).fill(0);
+        sr[1] = r.name; sr[4] = r.vol_contr; sr[5] = r.sum_fin; sr[20] = r.debt;
+        return sr;
+    });
+    const tots = Object.values(regMap).reduce((a, r) =>
+        ({ vol_contr: a.vol_contr + r.vol_contr, sum_fin: a.sum_fin + r.sum_fin, debt: a.debt + r.debt }),
+        { vol_contr: 0, sum_fin: 0, debt: 0 });
+    const tr = new Array(25).fill(0);
+    tr[1] = "Итого по РК:"; tr[4] = tots.vol_contr; tr[5] = tots.sum_fin; tr[20] = tots.debt;
+    svod.push(tr);
+
+    combineReturn(svod, detail);
+    return true;
+}
+
 async function loadReturn(yearOverride) {
     const year = yearOverride || (document.getElementById("yearSel") || {}).value || "2026";
     try {
-        if (!CONFIG.API_URL_RETURN) {
-            combineReturn(MOCK_RETURN.svod, MOCK_RETURN.detail);
-            renderReturn();
-            return;
-        }
         if (year !== "2026") {
             // Исторические данные — напрямую из листов через GViz CSV
             const [sv, dt] = await Promise.all([
@@ -146,18 +188,29 @@ async function loadReturn(yearOverride) {
             renderReturn();
             return;
         }
-        const url  = CONFIG.API_URL_RETURN;
-        const resp = await fetch(url + "?action=getReturn&year=2026&_=" + Date.now(),
-            { cache: "no-store" });
-        if (!resp.ok) throw new Error("HTTP " + resp.status);
-        const json = await resp.json();
-        if (!json.ok) throw new Error(json.error || "Ошибка API");
-        if (json.svod && json.detail) {
-            combineReturn(json.svod, json.detail);
-            renderReturn();
-            return;
+
+        // 2026: сначала пробуем Apps Script
+        if (CONFIG.API_URL_RETURN) {
+            try {
+                const resp = await fetch(
+                    CONFIG.API_URL_RETURN + "?action=getReturn&year=2026&_=" + Date.now(),
+                    { cache: "no-store" });
+                if (resp.ok) {
+                    const json = await resp.json();
+                    if (json.ok && json.svod && json.detail) {
+                        combineReturn(json.svod, json.detail);
+                        renderReturn();
+                        return;
+                    }
+                }
+            } catch(_) {}
         }
-        throw new Error("Нет данных от API");
+
+        // Фолбэк: строим из уже загруженных данных финансирования
+        if (!D) await new Promise(res => setTimeout(res, 800)); // ждём если D ещё грузится
+        if (buildReturnFromD()) { renderReturn(); return; }
+
+        throw new Error("Нет данных о финансировании для построения раздела возврата");
     } catch (e) {
         console.error("loadReturn:", e);
         const box = document.getElementById("vzErrBox");
