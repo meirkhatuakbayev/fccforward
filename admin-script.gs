@@ -24,8 +24,35 @@ const SESSION_H    = 8; // часов
 
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) || '';
-  if (action === 'getReturn') return ok(getReturnForDashboard());
+  const year   = (e && e.parameter && e.parameter.year)   || '2026';
+  if (action === 'getReturn')    return ok(getReturnForYear(year));
+  if (action === 'getFinancing') return ok(getFinancingForYear(year));
   return ok({ status: 'ПКК Admin API работает' });
+}
+
+function getFinancingForYear(year) {
+  try {
+    const ss       = SpreadsheetApp.openById(SS_ID);
+    const svodName = year === '2026' ? 'СВОД'              : 'СВОД_'           + year;
+    const detName  = year === '2026' ? SH_DETAIL           : 'РАЗВЕРНУТАЯ_'    + year;
+    const svodSh   = ss.getSheetByName(svodName);
+    const detSh    = ss.getSheetByName(detName);
+    if (!svodSh) return { ok: false, error: 'Лист "' + svodName + '" не найден' };
+    if (!detSh)  return { ok: false, error: 'Лист "' + detName  + '" не найден' };
+    return { ok: true, svod: svodSh.getDataRange().getValues(), detail: detSh.getDataRange().getValues() };
+  } catch(err) { return { ok: false, error: err.message }; }
+}
+
+function getReturnForYear(year) {
+  if (year === '2026') return getReturnForDashboard();
+  try {
+    const ss      = SpreadsheetApp.openById(SS_ID);
+    const svodSh  = ss.getSheetByName('ВОЗВРАТ_' + year);
+    const detSh   = ss.getSheetByName('ВОЗВРАТ_РАЗВЕРНУТАЯ_' + year);
+    if (!svodSh) return { ok: false, error: 'Лист "ВОЗВРАТ_' + year + '" не найден' };
+    if (!detSh)  return { ok: false, error: 'Лист "ВОЗВРАТ_РАЗВЕРНУТАЯ_' + year + '" не найден' };
+    return { ok: true, svod: svodSh.getDataRange().getValues(), detail: detSh.getDataRange().getValues() };
+  } catch(err) { return { ok: false, error: err.message }; }
 }
 
 // ── Публичная отдача данных возврата для дашборда (без авторизации) ──────────

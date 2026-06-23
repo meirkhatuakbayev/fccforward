@@ -18,11 +18,13 @@ let _fwdSub = "report";
 
 function onYearChange(yr) {
     const title = document.getElementById("mainTitle");
-    if (!title) return;
-    title.innerHTML = _fwdSub === "vozvrat"
+    if (title) title.innerHTML = _fwdSub === "vozvrat"
         ? `Возврат зерна&nbsp;— форвардный закуп ${yr}`
         : `Форвардный закуп урожая&nbsp;${yr} года`;
-    // TODO: подгружать данные за выбранный год (когда будут файлы FZ24/FZ25)
+    D  = null;
+    DR = null;
+    loadData(yr);
+    if (_fwdSub === "vozvrat") loadReturn(yr);
 }
 
 function switchForwardSub(sub) {

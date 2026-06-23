@@ -118,20 +118,30 @@ function combine(svod, detail) {
         cps: detail.cps, statuses: detail.statuses};
 }
 
-async function loadData() {
-    const dot = document.getElementById("dot"), live = document.getElementById("liveTxt");
+async function loadData(yearOverride) {
+    const year = yearOverride || (document.getElementById("yearSel") || {}).value || "2026";
+    const dot  = document.getElementById("dot"), live = document.getElementById("liveTxt");
     try {
         await loadGeoData();
         live.textContent = "Загрузка отчёта…"; dot.classList.remove("err");
         let svodRows, detRows;
-        if (CONFIG.API_URL) {
+
+        if (year !== "2026" && CONFIG.API_URL_RETURN) {
+            // Исторические данные через admin-script
+            const url = CONFIG.API_URL_RETURN + "?action=getFinancing&year=" + year + "&_=" + Date.now();
+            const r = await fetch(url, {cache: "no-store"});
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            const j = await r.json();
+            if (!j.ok) throw new Error(j.error || "Ошибка API");
+            svodRows = j.svod; detRows = j.detail;
+        } else if (CONFIG.API_URL) {
             const r = await fetch(CONFIG.API_URL, {cache: "no-store"});
             if (!r.ok) throw new Error("API " + r.status);
             const j = await r.json(); svodRows = j.svod; detRows = j.detail;
             if (!svodRows || !detRows) throw new Error("API вернул не {svod, detail}");
         } else {
             const uSvod = CONFIG.SVOD_CSV || gvizURL(CONFIG.SVOD_SHEET),
-                  uDet = CONFIG.DETAIL_CSV || gvizURL(CONFIG.DETAIL_SHEET);
+                  uDet  = CONFIG.DETAIL_CSV || gvizURL(CONFIG.DETAIL_SHEET);
             [svodRows, detRows] = await Promise.all([fetchCSV(uSvod), fetchCSV(uDet)]);
         }
         D = combine(parseSvod(svodRows), parseDetail(detRows));
@@ -140,7 +150,9 @@ async function loadData() {
         live.textContent = "Департамент закупа СХП";
         document.getElementById("banner").classList.remove("show");
     } catch (e) {
-        if (CONFIG.API_URL && !CONFIG._csvTried) { CONFIG._csvTried = true; CONFIG.API_URL = ""; return loadData(); }
+        if (year === "2026" && CONFIG.API_URL && !CONFIG._csvTried) {
+            CONFIG._csvTried = true; CONFIG.API_URL = ""; return loadData(yearOverride);
+        }
         dot.classList.add("err"); live.textContent = "Ошибка загрузки"; hideLoader();
         showBanner("Не удалось загрузить данные (" + e.message + "). Проверьте доступ к таблице/скрипту.");
     }

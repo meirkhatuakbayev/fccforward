@@ -128,41 +128,26 @@ function combineReturn(svodRows, detailRows) {
 }
 
 // ─── Загрузка данных ──────────────────────────────────────────────────────────
-async function loadReturn() {
+async function loadReturn(yearOverride) {
+    const year = yearOverride || (document.getElementById("yearSel") || {}).value || "2026";
     try {
-        // Мок: если URL пуст — используем MOCK_RETURN
         if (!CONFIG.API_URL_RETURN) {
-            if (typeof MOCK_RETURN !== "undefined") {
-                combineReturn(MOCK_RETURN.svod, MOCK_RETURN.detail);
-                renderReturn();
-            } else {
-                throw new Error("MOCK_RETURN не определён");
-            }
+            combineReturn(MOCK_RETURN.svod, MOCK_RETURN.detail);
+            renderReturn();
             return;
         }
-
-        const url = CONFIG.API_URL_RETURN;
-        const resp = await fetch(url + (url.includes("?") ? "&" : "?") + "action=getReturn&_=" + Date.now(),
+        const url  = CONFIG.API_URL_RETURN;
+        const resp = await fetch(url + "?action=getReturn&year=" + year + "&_=" + Date.now(),
             { cache: "no-store" });
         if (!resp.ok) throw new Error("HTTP " + resp.status);
         const json = await resp.json();
-
-        if (json && json.svod && json.detail) {
+        if (!json.ok) throw new Error(json.error || "Ошибка API");
+        if (json.svod && json.detail) {
             combineReturn(json.svod, json.detail);
             renderReturn();
             return;
         }
-        // Фолбэк на CSV
-        if (CONFIG.RETURN_SVOD_CSV && CONFIG.RETURN_DETAIL_CSV) {
-            const [sv, dt] = await Promise.all([
-                fetchCSV(CONFIG.RETURN_SVOD_CSV),
-                fetchCSV(CONFIG.RETURN_DETAIL_CSV)
-            ]);
-            combineReturn(sv, dt);
-            renderReturn();
-            return;
-        }
-        throw new Error("Неверный формат API и нет CSV фолбэка");
+        throw new Error("Нет данных от API");
     } catch (e) {
         console.error("loadReturn:", e);
         const box = document.getElementById("vzErrBox");
