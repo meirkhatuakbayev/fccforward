@@ -49,7 +49,6 @@ $("#zReset").addEventListener("click", mapZoomReset);
 $("#vMap").addEventListener("click", () => setMapView("map"));
 $("#vTab").addEventListener("click", () => setMapView("tab"));
 $("#vWx").addEventListener("click", () => setMapView("weather"));
-$("#vAi").addEventListener("click", () => setMapView("ai"));
 
 // Обновить данные / Скачать PDF
 document.getElementById("btnRefresh").addEventListener("click", loadData);

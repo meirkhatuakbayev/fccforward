@@ -1,22 +1,29 @@
 function setMapView(tab) {
-    const map = tab === "map", wx = tab === "weather", tabv = tab === "tab", ai = tab === "ai";
+    const map = tab === "map", wx = tab === "weather", tabv = tab === "tab";
     $("#mapWrap").style.display = map ? "" : "none";
     $("#mapLegend").style.display = map ? "" : "none";
     $("#regTableWrap").style.display = tabv ? "" : "none";
     $("#wxWrap").style.display = wx ? "" : "none";
-    $("#aiWrap").style.display = ai ? "" : "none";
     $("#mapHint").textContent = map ? "Цвет — освоение лимита, подпись — область и число СХТП. Нажмите область — список контрагентов." :
         tabv ? "Таблица по областям (суммы — млн ₸, объём — тонн). Нажмите строку — список контрагентов." :
-        wx ? "Погода и влагообеспеченность по профинансированным областям — для весенне-полевых работ." : "AI-ассистент";
+        "Погода и влагообеспеченность по профинансированным областям — для весенне-полевых работ.";
     $("#vMap").classList.toggle("act", map);
     $("#vTab").classList.toggle("act", tabv);
     $("#vWx").classList.toggle("act", wx);
-    $("#vAi").classList.toggle("act", ai);
     if (tabv) renderRegionTable();
     if (wx) loadWeather();
 }
 
 let _fwdSub = "report";
+
+function onYearChange(yr) {
+    const title = document.getElementById("mainTitle");
+    if (!title) return;
+    title.innerHTML = _fwdSub === "vozvrat"
+        ? `Возврат зерна&nbsp;— форвардный закуп ${yr}`
+        : `Форвардный закуп урожая&nbsp;${yr} года`;
+    // TODO: подгружать данные за выбранный год (когда будут файлы FZ24/FZ25)
+}
 
 function switchForwardSub(sub) {
     _fwdSub = sub;
@@ -25,9 +32,10 @@ function switchForwardSub(sub) {
     if (vz) vz.style.display = sub === "vozvrat" ? "" : "none";
     document.querySelectorAll(".fwd-subtab").forEach(b => b.classList.toggle("act", b.dataset.sub === sub));
     const title = document.getElementById("mainTitle");
+    const yr = (document.getElementById("yearSel") || {}).value || "2026";
     if (title) title.innerHTML = sub === "vozvrat"
-        ? "Возврат зерна (форвард&nbsp;2025/2026)"
-        : "Форвардный закуп урожая&nbsp;2026 года";
+        ? `Возврат зерна&nbsp;— форвардный закуп ${yr}`
+        : `Форвардный закуп урожая&nbsp;${yr} года`;
     if (sub === "vozvrat") ensureVozvrat();
 }
 
@@ -47,10 +55,11 @@ function switchView(v) {
     document.querySelectorAll(".navb").forEach(b => b.classList.toggle("act", b.dataset.view === v));
 
     const title = document.getElementById("mainTitle");
-    if (isPriamoy) title.innerHTML = "Прямой закуп&nbsp;2026 года";
+    const yr2 = (document.getElementById("yearSel") || {}).value || "2026";
+    if (isPriamoy) title.innerHTML = `Прямой закуп&nbsp;${yr2} года`;
     else if (isForward) {
         title.innerHTML = _fwdSub === "vozvrat"
-            ? "Возврат зерна (форвард&nbsp;2025/2026)"
-            : "Форвардный закуп урожая&nbsp;2026 года";
+            ? `Возврат зерна&nbsp;— форвардный закуп ${yr2}`
+            : `Форвардный закуп урожая&nbsp;${yr2} года`;
     }
 }

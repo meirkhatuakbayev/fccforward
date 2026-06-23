@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Админ-панель — ПКК Форвард 2026</title>
+<title>Управление программами — АО «НК «Продкорпорация»</title>
 <style>
 :root {
   --ink:   #33402F;
@@ -245,7 +245,7 @@ a { color: var(--green); text-decoration: none; }
 <div id="screenApp">
   <header class="ah">
     <div class="ah-logo">ПКК</div>
-    <div class="ah-title">Форвардный закуп 2026 — Админ</div>
+    <div class="ah-title">Отчёт по программам АО «НК «Продкорпорация»</div>
     <span class="ah-user" id="ahUser"></span>
     <button class="ah-btn" onclick="showPassModal()">Сменить пароль</button>
     <button class="ah-btn" onclick="doLogout()">Выход</button>
@@ -360,7 +360,7 @@ a { color: var(--green); text-decoration: none; }
 // ══════════════════════════════════════════════════════════════════════════════
 // НАСТРОЙКА: вставьте URL задеплоенного Apps Script
 // ══════════════════════════════════════════════════════════════════════════════
-const ADMIN_API = '';   // ← сюда URL вида https://script.google.com/macros/s/.../exec
+const ADMIN_API = 'https://script.google.com/macros/s/AKfycbyBi-Hdi-c6Z7z_ddIa1c58l4e_Sv2KhGYCEMPHcTzPxPLZjN63ra9fW0xJ0nmZa0caDg/exec';
 
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -411,7 +411,7 @@ async function doLogout() {
 
 function showApp() {
   q('#screenLogin').style.display = 'none';
-  q('#screenApp').style.display   = '';
+  q('#screenApp').style.display   = 'block';
   q('#ahUser').textContent = session.name + (session.role === 'admin' ? ' · Администратор' : '');
   if (session.role === 'admin') q('#tabUsers').style.display = '';
   loadContractors();
@@ -443,7 +443,13 @@ async function loadContractors() {
 function filterContractors() {
   const q2 = q('#searchInput').value.trim().toLowerCase();
   renderContractorList(q2
-    ? allContractors.filter(c => c.name.toLowerCase().includes(q2) || (c.bin||'').includes(q2) || (c.reg||'').toLowerCase().includes(q2))
+    ? allContractors.filter(c =>
+        c.name.toLowerCase().includes(q2) ||
+        (c.bin||'').includes(q2) ||
+        (c.reg||'').toLowerCase().includes(q2) ||
+        (c.form||'').toLowerCase().includes(q2) ||
+        (c.rayon||'').toLowerCase().includes(q2)
+      )
     : allContractors
   );
 }

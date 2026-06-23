@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Форвардный закуп урожая 2026 — АО «НК «Продкорпорация»</title>
+    <title>Отчёт по программам — АО «НК «Продкорпорация»</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
@@ -30,10 +30,15 @@
             <div class="seal">ПКК</div>
             <div>
                 <h1 style="color:#ffffff" id="mainTitle">Форвардный закуп урожая&nbsp;2026 года</h1>
-                <p>АО «НК «Продкорпорация» · «Азық-түлік келісімшарт корпорациясы»</p>
+                <p>Отчёт по программам АО «НК «Продкорпорация»</p>
             </div>
         </div>
         <div class="spacer"></div>
+        <select id="yearSel" onchange="onYearChange(this.value)" title="Выбрать год программы" style="background:#2A5038;color:#F6C45E;border:1.5px solid #4A7C56;border-radius:8px;padding:5px 10px;font-size:13px;font-weight:700;cursor:pointer;outline:none;">
+            <option value="2026">ФЗ 2026</option>
+            <option value="2025">ФЗ 2025</option>
+            <option value="2024">ФЗ 2024</option>
+        </select>
         <div class="live"><span class="dot" id="dot"></span><span id="liveTxt">Департамент закупа СХП</span></div>
         <button class="refresh" id="btnRefresh">Обновить</button>
         <button class="refresh printbtn" id="btnPrint">📄 PDF</button>
@@ -73,7 +78,6 @@
                                 <button class="segb act" id="vMap">Карта</button>
                                 <button class="segb" id="vTab">Таблица</button>
                                 <button class="segb" id="vWx">Погода</button>
-                                <button class="segb" id="vAi">🤖 AI</button>
                             </div>
                         </div>
                         <div class="hint" id="mapHint">Цвет — освоение лимита, подпись — область и число СХТП. Нажмите область — список контрагентов.</div>
@@ -98,9 +102,6 @@
                         <div id="wxWrap" style="display:none">
                             <div class="wx" id="wxGrid"></div>
                             <div class="an-note">Живой прогноз для весенне-полевых работ по профинансированным областям. Источник: Open-Meteo (open-meteo.com).</div>
-                        </div>
-                        <div id="aiWrap" style="display:none">
-                            <div class="ai-wrap">🤖 AI-ассистент<br><span style="color:var(--muted);">На разработке</span></div>
                         </div>
                     </div>
 
