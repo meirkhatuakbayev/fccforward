@@ -1,8 +1,5 @@
 // Рендеринг раздела «Возврат зерна» (ФЗ 2025/2026)
 
-// Формат денег в тысячах тенге (везде кроме KPI-плашек)
-const fmtTys = v => Math.round((v || 0) / 1000).toLocaleString("ru-RU");
-
 let _returnLoaded = false;
 let _vzMapZoom = null, _vzMapSvgSel = null, _vzMapFit = null;
 
@@ -25,7 +22,6 @@ function renderReturn() {
     const asof = document.getElementById("vzAsof");
     if (asof) asof.textContent = DR.date;
     if (typeof hideYearLoader === "function") hideYearLoader();
-    if (typeof hideVzLoader   === "function") hideVzLoader();
 }
 
 // ── 1. Авто-сводка ───────────────────────────────────────────────────────────
@@ -38,17 +34,17 @@ function renderVzSummary() {
     const topDebtor = DR.debtors[0];
     const deadline = new Date(2026, 10, 2); // Nov 2, 2026
     const daysLeft = Math.ceil((deadline - new Date()) / 86400000);
-    const pct = (t.sum_fin > 0 ? t.sum_zachet / t.sum_fin * 100 : 0).toFixed(1);
+    const pct = (t.pct_exec * 100).toFixed(1);
 
     if (box) {
         const lines = [];
         if (topDebtor) lines.push(
-            `Крупнейший должник — <b>${topDebtor.name}</b>: остаток ${fmtTys(topDebtor.debt)} тыс. ₸`
-            + (topDebtor.penalty > 0 ? `, пеня ${fmtTys(topDebtor.penalty)} тыс. ₸` : "")
+            `Крупнейший должник — <b>${topDebtor.name}</b>: остаток ${fmtMlrd(topDebtor.debt)} ₸`
+            + (topDebtor.penalty > 0 ? `, пеня ${fmtMlrd(topDebtor.penalty)} ₸` : "")
         );
         lines.push(`До срока поставки (02.11.2026) — <b>${daysLeft > 0 ? daysLeft + " дн." : "просрочено " + Math.abs(daysLeft) + " дн."}</b>`);
         if (DR.totalPenalty > 0)
-            lines.push(`Начислено пени по всем договорам: <b>${fmtTys(DR.totalPenalty)} тыс. ₸</b>`);
+            lines.push(`Начислено пени по всем договорам: <b>${fmtMlrd(DR.totalPenalty)} ₸</b>`);
         else
             lines.push(`Исполнение по РК: <b>${pct}%</b> · Должников: <b>${DR.debtors.length}</b>`);
         box.innerHTML = lines.map(l => `<div class="vz-sum-line">${l}</div>`).join("");
@@ -56,50 +52,49 @@ function renderVzSummary() {
 
     if (chain) {
         chain.innerHTML =
-            `<span>Выдано <b class="num">${fmtTys(t.sum_fin)} тыс. ₸</b></span>` +
+            `<span>Выдано <b class="num">${fmtMlrd(t.sum_fin)} ₸</b></span>` +
             `<span class="vz-arr">→</span>` +
-            `<span>Зачтено зерном <b class="num">${fmtTys(t.sum_zachet)} тыс. ₸</b></span>` +
+            `<span>Зачтено зерном <b class="num">${fmtMlrd(t.sum_zachet)} ₸</b></span>` +
             `<span class="vz-arr">→</span>` +
-            `<span>Остаток <b class="num">${fmtTys(t.debt)} тыс. ₸</b></span>`;
+            `<span>Остаток <b class="num" style="color:${t.debt > 0 ? "#E05A4A" : "#3C6B4A"}">${fmtMlrd(t.debt)} ₸</b></span>`;
     }
 }
 
 // ── 2. KPI-плашки (5 штук, цвета как в форварде) ────────────────────────────
 function renderVzKpis() {
     const t = DR.total;
-    const pctNum = t.sum_fin > 0 ? t.sum_zachet / t.sum_fin * 100 : 0;
+    const pctNum = t.pct_exec * 100;
     const pct = pctNum.toFixed(1);
     const pctTag = pctNum >= 95 ? "#3C6B4A" : pctNum >= 70 ? "#B97F18" : "#9E4A40";
     const pctBarClr = pctNum >= 95 ? "linear-gradient(90deg,#2F5D40,#3C6B4A)"
                     : pctNum >= 70 ? "linear-gradient(90deg,#C99526,#E8A82E)"
                     : "linear-gradient(90deg,#9E4A40,#C06A5C)";
     const n = v => (v / 1e9).toLocaleString("ru-RU", {maximumFractionDigits: 2});
-    const tip = v => (v || 0).toLocaleString("ru-RU") + " ₸";
 
     const items = [
         {
             lab: "Профинансировано",
             big: n(t.sum_fin), unit: "млрд ₸",
-            sub: fmtT(DR.cps.length) + " СХТП · " + fmtT(t.vol_contr) + " т",
-            tag: "#E8A82E", tip: tip(t.sum_fin)
+            sub: fmtT(new Set(DR.cps.map(c => c.bin || c.name)).size) + " СХТП · " + fmtT(t.vol_contr) + " т",
+            tag: "#E8A82E"
         },
         {
             lab: "Поставлено зерна",
             big: fmtT(t.vol_ret), unit: "т",
             sub: fmtMlrd(t.sum_ret) + " ₸ сумма за зерно",
-            tag: "#3C6B4A", tip: tip(t.sum_ret)
+            tag: "#3C6B4A"
         },
         {
             lab: "В т.ч. зачтено в предоплату",
             big: n(t.sum_zachet), unit: "млрд ₸",
             sub: "погашение предоплаты зерном",
-            tag: "#3C6B4A", tip: tip(t.sum_zachet)
+            tag: "#3C6B4A"
         },
         {
             lab: "В т.ч. доплата СХТП",
             big: n(t.sum_doplata), unit: "млрд ₸",
-            sub: "начислено сверх предоплаты",
-            tag: "#E8A82E", tip: tip(t.sum_doplata)
+            sub: "доплата за зерно выше форвардной цены",
+            tag: "#E8A82E"
         },
         {
             lab: "% исполнения",
@@ -112,7 +107,7 @@ function renderVzKpis() {
             big: n(t.debt), unit: "млрд ₸",
             sub: DR.debtors.length + " СХТП-должников",
             tag: t.debt > 0 ? "#9E4A40" : "#3C6B4A",
-            red: t.debt > 0, tip: tip(t.debt)
+            red: t.debt > 0
         },
     ];
 
@@ -121,7 +116,6 @@ function renderVzKpis() {
     box.innerHTML = "";
     items.forEach(it => {
         const c = el("div", "kpi");
-        if (it.tip) c.title = it.tip;
         c.innerHTML = `<div class="tag" style="background:${it.tag}"></div>
             <div class="lab">${it.lab}</div>
             <div class="big num" style="${it.red ? "color:#E05A4A" : ""}">${it.big}<small>${it.unit}</small></div>
@@ -156,7 +150,7 @@ function renderVzSpravka() {
         rows += `<div class="vz-sp-row bad">
             <div class="vz-sp-ico">!</div>
             <div><b>Наибольший долг:</b> ${debtReg.map(r =>
-                `<button class="vz-sp-link bad-lnk" onclick="vzSelectRegion('${r.code}')">${r.name}</button> (${fmtTys(r.debt)} тыс. ₸)`
+                `<button class="vz-sp-link bad-lnk" onclick="vzSelectRegion('${r.code}')">${r.name}</button> (${fmtMlrd(r.debt)} ₸)`
             ).join("; ")}.</div>
         </div>`;
     }
@@ -178,9 +172,10 @@ function renderVzFunnel() {
     const box = document.getElementById("vzFunnel");
     if (!box) return;
     const t = DR.total;
-    const totalSchtp = DR.cps.length;
-    const retSchtp   = DR.cps.filter(c => c.vol_total > 0).length;
-    const debtSchtp  = DR.debtors.length;
+    const uniqBins = new Set(DR.cps.map(c => c.bin || c.name));
+    const totalSchtp = uniqBins.size;
+    const retSchtp   = new Set(DR.cps.filter(c => c.vol_total > 0).map(c => c.bin || c.name)).size;
+    const debtSchtp  = new Set(DR.debtors.map(c => c.bin || c.name)).size;
     const maxSum = Math.max(1, t.sum_fin);
 
     const stages = [
@@ -207,8 +202,8 @@ function renderVzFunnel() {
     box.innerHTML = stages.map(s => {
         const w = s.sum > 0 ? Math.max(s.sum / maxSum * 100, 34) : 0;
         const vText = s.vol !== null
-            ? `${fmtT(s.schtp)} СХТП · ${fmtT(s.vol)} тонн · ${fmtTys(s.sum)} тыс. ₸`
-            : s.sum > 0 ? `${fmtT(s.schtp)} СХТП · ${fmtTys(s.sum)} тыс. ₸`
+            ? `${fmtT(s.schtp)} СХТП · ${fmtT(s.vol)} тонн · ${fmtMlrd(s.sum)} ₸`
+            : s.sum > 0 ? `${fmtT(s.schtp)} СХТП · ${fmtMlrd(s.sum)} ₸`
             : "нет долга";
         return `<div class="fstage">
             <div class="ft"><span>${s.k}</span><span class="muted">${s.pct}</span></div>
@@ -238,8 +233,8 @@ function renderVzDebtorsList() {
                 <div class="vz-debtor-sub">${regShortName} · ${c.dog_num}</div>
             </div>
             <div style="text-align:right;flex-shrink:0;padding-left:8px">
-                <div class="num" style="font-weight:800;font-size:13px">${fmtTys(c.debt)} тыс. ₸</div>
-                ${c.penalty > 0 ? `<div style="font-size:11px;color:#C07030;font-weight:700;margin-top:2px">пеня ${fmtTys(c.penalty)} тыс. ₸</div>` : ""}
+                <div class="num" style="color:#E05A4A;font-weight:800;font-size:13px">${fmtMlrd(c.debt)} ₸</div>
+                ${c.penalty > 0 ? `<div style="font-size:11px;color:#C07030;font-weight:700;margin-top:2px">пеня ${fmtMlrd(c.penalty)} ₸</div>` : ""}
             </div>
         </div>`;
     }).join("");
@@ -257,149 +252,100 @@ function setVzView(v) {
         const b = document.getElementById(id);
         if (b) b.classList.toggle("act", k === v);
     });
+    // Debt view: expand left card to full grid width
+    const vzGrid = document.querySelector("#viewVozvrat .grid");
+    if (vzGrid) vzGrid.classList.toggle("vz-debt-mode", v === "debt");
     const hint = document.getElementById("vzHint");
     if (hint) hint.textContent = v === "map"
         ? "Цвет — исполнение предоплаты. Нажмите область — список договоров."
-        : v === "tab"  ? "Исполнение по областям (суммы — тыс. ₸, объём — тонн). Нажмите строку — договоры."
+        : v === "tab"  ? "Исполнение по областям (суммы — млрд ₸, объём — тонн). Нажмите строку — договоры."
         : v === "crop" ? "Поставка по культурам: законтрактовано vs фактически сдано."
         : "Список контрагентов с непогашенной задолженностью по предоплате.";
-    // Воронка скрывается когда открыт раздел должников
-    const fc = document.getElementById("vzFunnelCard");
-    if (fc) fc.style.display = v === "debt" ? "none" : "";
-
     if (v === "tab")  renderVzTabArea();
     if (v === "crop") renderVzCropTable();
     if (v === "debt") renderVzDebtTable();
 }
 
-let _debtRegFilter = "";
-
-let _debtSearchQ = "";
-let _debtSearchDebounce;
-function _onDebtSearch(inp) {
-    _debtSearchQ = inp.value;
-    clearTimeout(_debtSearchDebounce);
-    _debtSearchDebounce = setTimeout(renderVzDebtTable, 200);
-}
-
-function renderVzDebtTable(regFilter, searchQ) {
-    if (regFilter !== undefined) _debtRegFilter = regFilter;
-    if (searchQ  !== undefined) _debtSearchQ   = searchQ;
+function renderVzDebtTable() {
     const box = document.getElementById("vzDebtArea");
     if (!box) return;
-
     if (!DR.debtors.length) {
         box.innerHTML = `<div style="color:#3C6B4A;font-size:14px;font-weight:700;padding:24px;text-align:center">✓ Все обязательства исполнены</div>`;
         return;
     }
 
-    const regs = [...new Set(DR.debtors.map(c => c.reg).filter(Boolean))].sort((a,b) => a.localeCompare(b,"ru"));
-    let list = _debtRegFilter ? DR.debtors.filter(c => c.reg === _debtRegFilter) : DR.debtors;
-    if (_debtSearchQ) {
-        const q = _debtSearchQ.toLowerCase();
-        list = list.filter(c => ((c.name||"")+" "+(c.bin||"")).toLowerCase().includes(q));
-    }
-    const sorted = [...list].sort((a, b) => (b.sum_zachet||0) - (a.sum_zachet||0));
-    const f = v => v > 0 ? fmtTys(v) : "—";
+    // Сортируем: область А→Я, внутри — контрагент А→Я
+    const sorted = [...DR.debtors].sort((a, b) =>
+        (a.reg||"").localeCompare(b.reg||"", "ru") ||
+        (a.name||"").localeCompare(b.name||"", "ru")
+    );
 
-    let num = 0;
-    const rows = sorted.map(c => {
-        num++;
-        const safeBin = (c.bin||"").replace(/'/g,"\\'");
-        const safeDog = (c.dog_num||"").replace(/'/g,"\\'");
-        const pctStr  = c.sum_fin > 0 ? ((c.sum_zachet||0) / c.sum_fin * 100).toFixed(1)+"%" : "—";
-        return `<tr onclick="openCpReturnByBin('${safeBin}','${safeDog}')" style="cursor:pointer">
-            <td class="c" style="color:var(--muted);font-size:11px">${num}</td>
-            <td class="l"><b>${c.name}</b></td>
-            <td class="l" style="font-size:11px;color:var(--muted)">${c.cult||"—"}</td>
-            <td class="r">${c.vol_fin > 0 ? c.vol_fin.toLocaleString("ru-RU",{maximumFractionDigits:1}) : "—"}</td>
-            <td class="r">${f(c.sum_fin)}</td>
-            <td class="r">${c.vol_total > 0 ? c.vol_total.toLocaleString("ru-RU",{maximumFractionDigits:1}) : "—"}</td>
-            <td class="r">${f(c.sum_total)}</td>
-            <td class="r">${f(c.sum_zachet)}</td>
-            <td class="r">${(c.sum_dop_fact||0) > 0 ? f(c.sum_dop_fact) : "—"}</td>
-            <td class="r" style="font-weight:700">${pctStr}</td>
-            <td class="r" style="font-weight:700">${f(c.debt)}</td>
+    // Группируем по области
+    const groups = [];
+    sorted.forEach(c => {
+        const last = groups[groups.length - 1];
+        if (!last || last.reg !== c.reg) groups.push({ reg: c.reg, items: [c] });
+        else last.items.push(c);
+    });
+
+    let rows = "";
+    groups.forEach(g => {
+        const regDebt = g.items.reduce((s,c) => s + c.debt, 0);
+        rows += `<tr class="rtab-reg-hdr">
+            <td class="l" colspan="3"><b>${g.reg}</b></td>
+            <td style="color:#E05A4A;font-weight:800;text-align:right">${fmtMlrd(regDebt)} ₸</td>
+            <td></td>
         </tr>`;
-    }).join("");
+        g.items.forEach(c => {
+            const safeBin = (c.bin||"").replace(/'/g,"\\'");
+            const safeDog = (c.dog_num||"").replace(/'/g,"\\'");
+            rows += `<tr onclick="openCpReturnByBin('${safeBin}','${safeDog}')">
+                <td class="l" style="padding-left:18px"><b>${c.name}</b>
+                    <div style="font-size:10px;font-weight:600;color:var(--muted);margin-top:1px">${c.cult||"—"} · ${c.dog_num||""}</div>
+                </td>
+                <td>${fmtMlrd(c.sum_fin)} ₸</td>
+                <td>${c.sum_zachet > 0 ? fmtMlrd(c.sum_zachet)+" ₸" : "—"}</td>
+                <td style="color:#E05A4A;font-weight:800">${fmtMlrd(c.debt)} ₸</td>
+                <td style="color:#C07030">${c.penalty > 0 ? fmtMlrd(c.penalty)+" ₸" : "—"}</td>
+            </tr>`;
+        });
+    });
 
-    const tFin   = list.reduce((s,c) => s+(c.sum_fin||0),     0);
-    const tZach  = list.reduce((s,c) => s+(c.sum_zachet||0),  0);
-    const tTotal = list.reduce((s,c) => s+(c.sum_total||0),   0);
-    const tVol   = list.reduce((s,c) => s+(c.vol_total||0),   0);
-    const tDop   = list.reduce((s,c) => s+(c.sum_dop_fact||0),0);
-    const tDebt  = list.reduce((s,c) => s+(c.debt||0),        0);
-    const tVolFin= list.reduce((s,c) => s+(c.vol_fin||0),     0);
-    const tPct   = tFin > 0 ? (tZach/tFin*100).toFixed(1)+"%" : "—";
+    const totalDebt = DR.debtors.reduce((s,c) => s + c.debt, 0);
+    const totalPen  = DR.debtors.reduce((s,c) => s + (c.penalty||0), 0);
+    const totalFin  = DR.debtors.reduce((s,c) => s + (c.sum_fin||0), 0);
+    const totalZach = DR.debtors.reduce((s,c) => s + (c.sum_zachet||0), 0);
 
-    // Фильтр-бар с поиском и выбором области
-    const selOpts = `<option value="">Все области (${DR.debtors.length})</option>`
-        + regs.map(r => `<option value="${r}"${_debtRegFilter===r?" selected":""}>${r} (${DR.debtors.filter(c=>c.reg===r).length})</option>`).join("");
-    const filterBar = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-        <div style="position:relative;flex:1;min-width:200px;max-width:300px">
-            <input id="debtSearchInp" type="text" value="${(_debtSearchQ||"").replace(/"/g,"&quot;")}"
-                placeholder="Поиск по названию / БИН…"
-                oninput="_onDebtSearch(this)"
-                style="width:100%;padding:8px 36px 8px 14px;border:1.5px solid var(--line);border-radius:10px;
-                       font-size:13px;font-weight:600;color:var(--ink);background:var(--card);outline:none;
-                       transition:border-color .2s"
-                onfocus="this.style.borderColor='#3C6B4A'"
-                onblur="this.style.borderColor=''">
-            <span style="position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--muted);pointer-events:none">🔍</span>
-        </div>
-        <div style="position:relative;flex:0 0 auto">
-            <select onchange="renderVzDebtTable(this.value)"
-                style="appearance:none;-webkit-appearance:none;background:var(--card);border:1.5px solid var(--line);
-                       border-radius:10px;padding:8px 32px 8px 12px;font-size:13px;font-weight:600;
-                       color:var(--ink);cursor:pointer;min-width:200px;outline:none">
-                ${selOpts}
-            </select>
-            <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:12px;color:var(--muted)">▾</span>
-        </div>
-        <span style="font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap">${list.length} должников · остаток <b>${fmtTys(tDebt)} тыс. ₸</b></span>
-    </div>`;
-
-    const _prevDebtActive = document.activeElement?.id;
-    const _prevDebtCursor = document.activeElement?.selectionStart ?? null;
-
-    box.innerHTML = filterBar + `<div style="overflow-x:auto"><table class="rtab debt-rtab" style="min-width:820px;width:100%">
-        <thead>
-            <tr>
-                <th rowspan="2" style="width:28px">#</th>
-                <th rowspan="2" class="l" style="min-width:150px">Наименование должника</th>
-                <th rowspan="2" class="l" style="min-width:90px">Культура</th>
-                <th rowspan="2" class="r" style="min-width:70px">Объём законтр., т</th>
-                <th rowspan="2" class="r" style="min-width:80px">Сумма финансирования, тыс. ₸</th>
-                <th colspan="4" style="border-bottom:1px solid var(--line)">Погашение</th>
-                <th rowspan="2" class="r" style="min-width:72px">% исп.</th>
-                <th rowspan="2" class="r" style="min-width:80px">Остаток долга, тыс. ₸</th>
-            </tr>
-            <tr>
-                <th class="r" style="min-width:60px;font-weight:600">Объём, т</th>
-                <th class="r" style="min-width:72px;font-weight:600">Сумма за зерно, тыс. ₸</th>
-                <th class="r" style="min-width:72px;font-weight:600">В т.ч. предоплата, тыс. ₸</th>
-                <th class="r" style="min-width:60px;font-weight:600">В т.ч. доплата, тыс. ₸</th>
-            </tr>
-        </thead>
+    box.innerHTML = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0 10px">
+        <span style="font-size:12px;font-weight:700;color:var(--muted)">${DR.debtors.length} должников</span>
+        <div style="flex:1"></div>
+        <button class="segb" style="font-size:11px;padding:5px 11px" onclick="exportDebtorsPdf()">📄 PDF</button>
+        <button class="segb" style="font-size:11px;padding:5px 11px" onclick="exportDebtorsExcel()">📊 Excel</button>
+    </div>
+    <div class="tablescroll" style="max-height:420px;overflow-x:auto"><table class="rtab" id="vzDebtTable" style="table-layout:fixed;width:100%;min-width:420px">
+        <colgroup>
+            <col style="width:38%">
+            <col style="width:15%">
+            <col style="width:15%">
+            <col style="width:16%">
+            <col style="width:16%">
+        </colgroup>
+        <thead><tr>
+            <th class="l">Контрагент</th>
+            <th>Профинанс.</th>
+            <th>Зачтено</th>
+            <th>Остаток долга</th>
+            <th>Пеня</th>
+        </tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
-            <td colspan="2" class="l" style="font-weight:700">Итого: ${list.length} должников</td>
-            <td></td>
-            <td class="r" style="font-weight:700">${tVolFin > 0 ? tVolFin.toLocaleString("ru-RU",{maximumFractionDigits:1}) : "—"}</td>
-            <td class="r" style="font-weight:700">${fmtTys(tFin)}</td>
-            <td class="r" style="font-weight:700">${tVol > 0 ? tVol.toLocaleString("ru-RU",{maximumFractionDigits:1}) : "—"}</td>
-            <td class="r" style="font-weight:700">${fmtTys(tTotal)}</td>
-            <td class="r" style="font-weight:700">${fmtTys(tZach)}</td>
-            <td class="r" style="font-weight:700">${tDop > 0 ? fmtTys(tDop) : "—"}</td>
-            <td class="r" style="font-weight:700">${tPct}</td>
-            <td class="r" style="font-weight:700">${fmtTys(tDebt)}</td>
+            <td class="l">Итого: ${DR.debtors.length} должников</td>
+            <td>${fmtMlrd(totalFin)} ₸</td>
+            <td>${fmtMlrd(totalZach)} ₸</td>
+            <td style="color:#E05A4A;font-weight:800">${fmtMlrd(totalDebt)} ₸</td>
+            <td style="color:#C07030">${totalPen > 0 ? fmtMlrd(totalPen)+" ₸" : "—"}</td>
         </tr></tfoot>
     </table></div>`;
-
-    if (_prevDebtActive === 'debtSearchInp') {
-        const inp = document.getElementById('debtSearchInp');
-        if (inp) { inp.focus(); try { inp.setSelectionRange(_prevDebtCursor, _prevDebtCursor); } catch(_){} }
-    }
 }
 
 // ── 3г. Таблица по областям в левой карточке ─────────────────────────────────
@@ -423,11 +369,11 @@ function renderVzTabArea() {
             const pc = p >= 95 ? "#3C6B4A" : p >= 70 ? "#9A6716" : "#E05A4A";
             return `<tr onclick="vzSelectRegion('${r.code}')">
                 <td class="l">${r.name}<br><span style="font-size:10px;font-weight:600;opacity:.6">${cnt} СХТП</span></td>
-                <td>${fmtTys(r.sum_fin)}</td>
+                <td>${fmtMlrd(r.sum_fin)}</td>
                 <td>${fmtT(r.vol_ret)}</td>
-                <td>${fmtTys(r.sum_ret)}</td>
-                <td>${r.sum_doplata > 0 ? fmtTys(r.sum_doplata) : "—"}</td>
-                <td>${fmtTys(r.sum_zachet)}</td>
+                <td>${fmtMlrd(r.sum_ret)}</td>
+                <td>${r.sum_doplata > 0 ? fmtMlrd(r.sum_doplata) : "—"}</td>
+                <td>${fmtMlrd(r.sum_zachet)}</td>
                 <td style="color:${pc};font-weight:800">${p.toFixed(1)}%</td>
             </tr>`;
         }).join("");
@@ -438,60 +384,54 @@ function renderVzTabArea() {
     box.innerHTML = `<div class="tablescroll" style="max-height:390px"><table class="rtab">
         <thead><tr>
             <th class="l">Область</th>
-            <th>Профинанс., тыс. ₸</th>
+            <th>Профинанс. ₸</th>
             <th>Объём т</th>
-            <th>Сумма за зерно, тыс. ₸</th>
-            <th>Доплата, тыс. ₸</th>
-            <th>Зачтено, тыс. ₸</th>
+            <th>Сумма за зерно ₸</th>
+            <th>Доплата ₸</th>
+            <th>Зачтено ₸</th>
             <th>% исп.</th>
         </tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
             <td class="l">Итого по РК<br><span style="font-size:10px;font-weight:600;opacity:.7">${DR.cps.length} СХТП</span></td>
-            <td>${fmtTys(t.sum_fin)}</td>
+            <td>${fmtMlrd(t.sum_fin)}</td>
             <td>${fmtT(t.vol_ret)}</td>
-            <td>${fmtTys(t.sum_ret)}</td>
-            <td>${fmtTys(t.sum_doplata)}</td>
-            <td>${fmtTys(t.sum_zachet)}</td>
+            <td>${fmtMlrd(t.sum_ret)}</td>
+            <td>${fmtMlrd(t.sum_doplata)}</td>
+            <td>${fmtMlrd(t.sum_zachet)}</td>
             <td style="color:${totPc}">${totP.toFixed(1)}%</td>
         </tr></tfoot>
     </table></div>`;
 }
 
 // ── 3д. Таблица по культурам (план vs факт + законтрактовано из СВОД) ─────────
-// Хранит список замен по культуре для показа в модалке
-let _cropSubstMap = {};
-
 function renderVzCropTable() {
     const box = document.getElementById("vzCropArea");
     if (!box || box._rendered) return;
     box._rendered = true;
 
     const CROPS = [
-        { key: "cl3", label: "Пшеница 3 класс", family: "wheat" },
-        { key: "cl4", label: "Пшеница 4 класс", family: "wheat" },
-        { key: "cl5", label: "Пшеница 5 класс", family: "wheat" },
-        { key: "bar", label: "Ячмень 2 класс",  family: "barley" },
+        { key: "cl3", label: "Пшеница 3 класс" },
+        { key: "cl4", label: "Пшеница 4 класс" },
+        { key: "cl5", label: "Пшеница 5 класс" },
+        { key: "bar", label: "Ячмень 2 класс"  },
     ];
-    const FAMILIES = ["wheat", "wheat", "wheat", "barley"]; // индекс → семейство
 
     const agg = CROPS.map(cr => ({
-        label: cr.label, key: cr.key, family: cr.family,
+        label: cr.label, key: cr.key,
         vol_contr: 0, sum_contr: 0,
         vol_fact: 0,  sum_fact: 0,
-        vol_subst_class: 0,  // замена внутри семейства (пш 3→пш 4)
-        vol_subst_type:  0,  // замена между семействами (вне контракта)
-        subst_cps: []        // контрагенты-заменители для этой культуры
+        vol_subst: 0
     }));
-    _cropSubstMap = {};
 
     DR.cps.forEach(c => {
         const cult = (c.cult || "").toLowerCase();
         let ci = -1;
-        if      (cult.includes("пшениц") && cult.includes("3")) ci = 0;
+        if (cult.includes("пшениц") && cult.includes("3"))      ci = 0;
         else if (cult.includes("пшениц") && cult.includes("4")) ci = 1;
         else if (cult.includes("пшениц") && cult.includes("5")) ci = 2;
         else if (cult.includes("ячмень"))                        ci = 3;
+        else ci = -2;
 
         if (ci >= 0) {
             agg[ci].vol_contr += c.vol_fin || 0;
@@ -503,121 +443,53 @@ function renderVzCropTable() {
             if (!d || !d.vol) return;
             agg[di].vol_fact += d.vol;
             agg[di].sum_fact += d.sum;
-            if (ci >= 0 && ci !== di) {
-                // Одно семейство (пш→пш) → замена класса, не "вне контракта"
-                if (FAMILIES[ci] === FAMILIES[di]) {
-                    agg[di].vol_subst_class += d.vol;
-                } else {
-                    // Разные семейства (пш→ячмень или наоборот) → вне контракта
-                    agg[di].vol_subst_type += d.vol;
-                    agg[di].subst_cps.push(c);
-                }
-            }
+            if (ci >= 0 && ci !== di) agg[di].vol_subst += d.vol;
         });
     });
-
-    // Сохраняем для модалок
-    CROPS.forEach((cr, i) => { _cropSubstMap[cr.key] = agg[i].subst_cps; });
 
     const active = agg.filter(r => r.vol_contr > 0 || r.vol_fact > 0);
 
     const rows = active.map(r => {
-        const pct    = r.vol_contr > 0 ? r.vol_fact / r.vol_contr * 100 : 0;
+        const pct = r.vol_contr > 0 ? r.vol_fact / r.vol_contr * 100 : 0;
         const pctTxt = r.vol_contr > 0 ? pct.toFixed(1) + "%" : "—";
-        const pc     = r.vol_contr === 0 ? "var(--muted)" : pct >= 95 ? "#3C6B4A" : pct >= 70 ? "#9A6716" : "#5A7A65";
-
-        // Замена класса внутри семейства — просто пометка, не "вне контракта"
-        const classNote = r.vol_subst_class > 0
-            ? `<br><span style="font-size:9.5px;color:#9A6716;font-weight:600">в т.ч. замена класса: ${fmtT(r.vol_subst_class)} т</span>` : "";
-        // Замена типа культуры — "вне контракта", кликабельно
-        const typeNote = r.vol_subst_type > 0
-            ? `<br><span class="crop-out-link" onclick="openCropSubstList('${r.key}')" style="font-size:9.5px;color:#C05A20;font-weight:700;text-decoration:underline;cursor:pointer">вне контракта: ${fmtT(r.vol_subst_type)} т ↗</span>` : "";
-        // Если вся строка — вне контракта (нет своих договоров)
-        const noContr = r.vol_contr === 0 && r.vol_fact > 0 && r.vol_subst_type > 0
-            ? `<br><span class="crop-out-link" onclick="openCropSubstList('${r.key}')" style="font-size:9.5px;color:#C05A20;font-weight:700;text-decoration:underline;cursor:pointer">вне контракта — замена типа культуры ↗</span>` : "";
-
+        const pc = r.vol_contr === 0 ? "" : pct >= 95 ? "#3C6B4A" : pct >= 70 ? "#9A6716" : "#E05A4A";
+        const substNote = r.vol_subst > 0
+            ? `<br><span style="font-size:9.5px;color:#9A6716;font-weight:600">в т.ч. ${fmtT(r.vol_subst)} т — замена</span>` : "";
+        const noContr = r.vol_contr === 0 && r.vol_fact > 0
+            ? `<br><span style="font-size:9.5px;color:#9A6716;font-weight:600">вне контракта (замена)</span>` : "";
         return `<tr>
-            <td class="l">${r.label}${classNote}${typeNote}${noContr}</td>
-            <td>${r.vol_contr > 0 ? fmtT(r.vol_contr) : "—"}</td>
-            <td>${r.sum_contr > 0 ? fmtTys(r.sum_contr) : "—"}</td>
+            <td class="l">${r.label}${substNote}${noContr}</td>
             <td style="${r.vol_fact === 0 ? "opacity:.5" : ""}">${r.vol_fact > 0 ? fmtT(r.vol_fact) : "0"}</td>
-            <td style="${r.sum_fact === 0 ? "opacity:.5" : ""}">${r.sum_fact > 0 ? fmtTys(r.sum_fact) : "—"}</td>
+            <td style="${r.sum_fact === 0 ? "opacity:.5" : ""}">${r.sum_fact > 0 ? fmtMlrd(r.sum_fact) : "—"}</td>
             <td style="color:${pc};font-weight:800">${pctTxt}</td>
         </tr>`;
     }).join("");
 
     const tv = active.reduce((s,r)=>s+r.vol_contr,0);
-    const ts = active.reduce((s,r)=>s+r.sum_contr,0);
-    const fv = active.reduce((s,r)=>s+r.vol_fact, 0);
-    const fs = active.reduce((s,r)=>s+r.sum_fact, 0);
+    const fv = active.reduce((s,r)=>s+r.vol_fact,0);
+    const fs = active.reduce((s,r)=>s+r.sum_fact,0);
     const totPct = tv > 0 ? (fv/tv*100).toFixed(1)+"%" : "—";
-    const totPc  = tv > 0 && fv/tv >= 0.95 ? "#3C6B4A" : "#9A6716";
+    const totPc = tv > 0 && fv/tv >= 0.95 ? "#3C6B4A" : "#9A6716";
 
     box.innerHTML = `<div class="tablescroll" style="max-height:390px">
         <table class="rtab">
         <thead>
-            <tr class="grp">
-                <th class="l" rowspan="2">Культура</th>
-                <th colspan="2">По договору</th>
-                <th class="gs" colspan="2">Фактически поставлено</th>
-                <th rowspan="2">% выполн.</th>
-            </tr>
             <tr>
-                <th>Объём, т</th>
-                <th>Сумма, тыс. ₸</th>
-                <th class="gs">Объём, т</th>
-                <th>Сумма за зерно, тыс. ₸</th>
+                <th class="l">Культура</th>
+                <th>Поставлено, т</th>
+                <th>Сумма за зерно, ₸</th>
+                <th>% выполн.</th>
             </tr>
         </thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
             <td class="l">Итого</td>
-            <td>${fmtT(tv)}</td>
-            <td>${fmtTys(ts)}</td>
             <td>${fmtT(fv)}</td>
-            <td>${fmtTys(fs)}</td>
+            <td>${fmtMlrd(fs)}</td>
             <td style="color:${totPc}">${totPct}</td>
         </tr></tfoot>
         </table>
     </div>`;
-}
-
-function openCropSubstList(cropKey) {
-    const cps   = _cropSubstMap[cropKey] || [];
-    const LABEL = { cl3:"Пшеница 3 кл", cl4:"Пшеница 4 кл", cl5:"Пшеница 5 кл", bar:"Ячмень 2 кл" };
-    if (!cps.length) return;
-
-    const rows = cps.map(c => {
-        const d    = c[cropKey] || {};
-        const safe = (c.bin||"").replace(/'/g,"\\'");
-        const dog  = (c.dog_num||"").replace(/'/g,"\\'");
-        return `<div onclick="openCpReturnByBin('${safe}','${dog}')"
-            style="display:flex;align-items:center;justify-content:space-between;
-                   padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer;
-                   background:var(--card);transition:background .1s"
-            onmouseover="this.style.background='#F5F0E8'" onmouseout="this.style.background='var(--card)'">
-            <div>
-                <div style="font-weight:800;font-size:13px">${c.name}</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:2px">${c.reg||""} · договор: ${c.cult||"—"}</div>
-            </div>
-            <div style="text-align:right;flex-shrink:0;padding-left:12px">
-                <div style="font-weight:700;font-size:13px">${fmtT(d.vol||0)} т</div>
-                <div style="font-size:11px;color:var(--muted)">${fmtTys(d.sum||0)} тыс. ₸</div>
-            </div>
-        </div>`;
-    }).join("");
-
-    document.getElementById("modal").innerHTML = `
-        <div class="mhead">
-            <button class="x" onclick="closeOv()">✕</button>
-            <div style="padding:4px 0 2px">
-                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Вне контракта — замена типа культуры</div>
-                <h3 style="color:#F8F3E6;margin:0">${LABEL[cropKey]||cropKey}</h3>
-                <div style="font-size:12px;color:rgba(255,255,255,.65);margin-top:4px">${cps.length} контрагентов — нажмите для просмотра истории погашения</div>
-            </div>
-        </div>
-        <div style="overflow-y:auto;max-height:360px">${rows}</div>`;
-    document.getElementById("ov").style.display = "flex";
 }
 
 // ── 4. Карта ─────────────────────────────────────────────────────────────────
@@ -704,11 +576,11 @@ function vzShowTip(e, rg) {
     const schtpCnt = DR.cps.reduce((s, c) => s + (c.reg === rg.name ? 1 : 0), 0);
     tip.innerHTML = `<b>${rg.name}</b>
         <div class="l"><span>СХТП</span><span>${schtpCnt}</span></div>
-        <div class="l"><span>Предоплата</span><span>${fmtTys(rg.sum_fin)} тыс. ₸</span></div>
+        <div class="l"><span>Предоплата</span><span>${fmtMlrd(rg.sum_fin)} ₸</span></div>
         <div class="l"><span>Поставлено</span><span>${fmtT(rg.vol_ret)} т</span></div>
         <div class="l"><span>Исполнение</span><span>${pct}%</span></div>
-        ${rg.debt > 0 ? `<div class="l"><span>Остаток долга</span><span style="color:#E99">${fmtTys(rg.debt)} тыс. ₸</span></div>` : ""}
-        ${rg.sum_doplata > 0 ? `<div class="l"><span>Доплата</span><span style="color:#C9A030">${fmtTys(rg.sum_doplata)} тыс. ₸</span></div>` : ""}`;
+        ${rg.debt > 0 ? `<div class="l"><span>Остаток долга</span><span style="color:#E99">${fmtMlrd(rg.debt)} ₸</span></div>` : ""}
+        ${rg.sum_doplata > 0 ? `<div class="l"><span>Доплата</span><span style="color:#C9A030">${fmtMlrd(rg.sum_doplata)} ₸</span></div>` : ""}`;
     tip.classList.add("show");
     const wrap = document.getElementById("vzMapWrap").getBoundingClientRect();
     let x = e.clientX - wrap.left + 14, y = e.clientY - wrap.top + 10;
@@ -739,14 +611,14 @@ function renderVzRegionTable() {
                 .reduce((s, c) => s + c.penalty, 0);
             return `<tr style="cursor:pointer" onclick="vzSelectRegion('${r.code}')">
                 <td class="cpname">${r.name}</td>
-                <td class="r num">${fmtTys(r.sum_fin)}</td>
+                <td class="r num">${fmtMlrd(r.sum_fin)}</td>
                 <td class="r num">${fmtT(r.vol_ret)}</td>
-                <td class="r num">${fmtTys(r.sum_zachet)}</td>
+                <td class="r num">${fmtMlrd(r.sum_zachet)}</td>
                 <td class="r num">${pct}%</td>
-                <td class="r num">${r.sum_doplata > 0 ? fmtTys(r.sum_doplata) : "—"}</td>
+                <td class="r num">${r.sum_doplata > 0 ? fmtMlrd(r.sum_doplata) : "—"}</td>
                 <td class="r num">${pctKsn}</td>
-                <td class="r num" style="${r.debt > 0 ? "font-weight:700" : ""}">${r.debt > 0 ? fmtTys(r.debt) : "—"}</td>
-                <td class="r num">${regPenalty > 0 ? fmtTys(regPenalty) : "—"}</td>
+                <td class="r num" style="${r.debt > 0 ? "color:#E05A4A;font-weight:700" : ""}">${r.debt > 0 ? fmtMlrd(r.debt) : "—"}</td>
+                <td class="r num" style="${regPenalty > 0 ? "color:#C07030" : ""}">${regPenalty > 0 ? fmtMlrd(regPenalty) : "—"}</td>
             </tr>`;
         }).join("");
 
@@ -755,26 +627,26 @@ function renderVzRegionTable() {
     box.innerHTML = `<div class="tablescroll"><table>
         <thead><tr>
             <th>Область</th>
-            <th class="r">Предоплата, тыс. ₸</th>
-            <th class="r">Возвращено, т</th>
-            <th class="r">Зачтено, тыс. ₸</th>
+            <th class="r">Предоплата ₸</th>
+            <th class="r">Возвращено т</th>
+            <th class="r">Зачтено ₸</th>
             <th class="r">% исп.</th>
-            <th class="r">Доплата нач., тыс. ₸</th>
+            <th class="r">Доплата нач. ₸</th>
             <th class="r">% исп. (КСН)</th>
-            <th class="r">Остаток долга, тыс. ₸</th>
-            <th class="r">Пеня, тыс. ₸</th>
+            <th class="r">Остаток долга ₸</th>
+            <th class="r">Пеня ₸</th>
         </tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
             <td class="r" style="text-align:left;font-weight:800">Итого по РК</td>
-            <td class="r num">${fmtTys(t.sum_fin)}</td>
+            <td class="r num">${fmtMlrd(t.sum_fin)}</td>
             <td class="r num">${fmtT(t.vol_ret)}</td>
-            <td class="r num">${fmtTys(t.sum_zachet)}</td>
+            <td class="r num">${fmtMlrd(t.sum_zachet)}</td>
             <td class="r num">${(t.pct_exec*100).toFixed(1)}%</td>
-            <td class="r num">${fmtTys(t.sum_doplata)}</td>
+            <td class="r num">${fmtMlrd(t.sum_doplata)}</td>
             <td class="r num">${t.sum_doplata > 0 ? (t.sum_ksn/t.sum_doplata*100).toFixed(0) + "%" : "—"}</td>
-            <td class="r num" style="${t.debt>0?"font-weight:800":""}">${fmtTys(t.debt)}</td>
-            <td class="r num">${totPenalty > 0 ? fmtTys(totPenalty) : "—"}</td>
+            <td class="r num" style="${t.debt>0?"color:#E05A4A;font-weight:800":""}">${fmtMlrd(t.debt)}</td>
+            <td class="r num">${totPenalty > 0 ? fmtMlrd(totPenalty) : "—"}</td>
         </tr></tfoot>
     </table></div>
     <div style="padding:10px 0 4px">
@@ -822,9 +694,9 @@ function vzSelectRegion(code) {
             <td class="l">${c.name}<div class="cpsub">${c.form||""} · ${c.dog_num||""}</div></td>
             <td>${c.cult||"—"}</td>
             <td>${fmtT(c.vol_fin)}</td>
-            <td>${fmtTys(c.sum_fin)}</td>
+            <td>${fmtMlrd(c.sum_fin)}</td>
             <td>${fmtT(c.vol_total)}</td>
-            <td style="${c.debt>0?"font-weight:700":""}">${c.debt>0?fmtTys(c.debt)+" тыс. ₸":"✓"}</td>
+            <td style="${c.debt>0?"color:#E05A4A;font-weight:700":""}">${c.debt>0?fmtMlrd(c.debt)+" ₸":"✓"}</td>
         </tr>`;
     });
 
@@ -841,28 +713,25 @@ function renderVzRanking() {
     const best  = regs.filter(r => r.pct_exec >= 1.0);
     const worst = [...regs].sort((a, b) => b.debt - a.debt).filter(r => r.debt > 0).slice(0, 3);
 
-    let html = `<div class="vz-rank-title">Рейтинг исполнения по областям</div>`;
+    let html = `<div class="vz-rank-title">Рейтинг исполнения — ${regs.length} областей</div>`;
     html += `<div class="vz-rank-list">`;
     html += regs.map((r, i) => {
         const pct = (r.pct_exec * 100).toFixed(1);
         const bar = Math.min(100, r.pct_exec * 100);
         const col = colorFor(r.pct_exec);
-        const debtTxt = r.debt > 0
-            ? `<div class="vz-rank-debt">${fmtTys(r.debt)}<span class="vz-rank-unit"> тыс. ₸</span></div>`
-            : `<div class="vz-rank-debt ok">✓</div>`;
         return `<div class="vz-rank-row">
             <div class="vz-rank-num">${i+1}</div>
             <div class="vz-rank-name">${r.name}</div>
             <div class="vz-rank-bar"><div style="width:${bar}%;background:${col}"></div></div>
             <div class="vz-rank-pct">${pct}%</div>
-            ${debtTxt}
+            ${r.debt > 0 ? `<div class="vz-rank-debt">${fmtMlrd(r.debt)} ₸</div>` : `<div class="vz-rank-debt ok">✓</div>`}
         </div>`;
     }).join("");
     html += `</div>`;
 
     html += `<div class="vz-rank-analysis">`;
     if (best.length) html += `<div class="vz-ana-item ok2">Полностью исполнили: ${best.map(r=>r.name).join(", ")}.</div>`;
-    if (worst.length) html += `<div class="vz-ana-item bad">Наибольший долг: ${worst.map(r=>`${r.name} (${fmtTys(r.debt)} тыс. ₸)`).join("; ")}.</div>`;
+    if (worst.length) html += `<div class="vz-ana-item bad">Наибольший долг: ${worst.map(r=>`${r.name} (${fmtMlrd(r.debt)} ₸)`).join("; ")}.</div>`;
     const tempo = regs.filter(r => r.pct_exec > 0 && r.pct_exec < 1.0);
     if (tempo.length) html += `<div class="vz-ana-item warn">В процессе исполнения: ${tempo.map(r=>r.name).join(", ")} — до срока 02.11.2026.</div>`;
     html += `</div>`;
@@ -882,7 +751,7 @@ function renderVzPenaltyForecast() {
     });
     box.innerHTML = `<div class="garbox ${totalForecast > 0 ? "late" : "ok2"}">
         <span>Прогноз пени к 02.12.2026 (30 дн. просрочки)</span>
-        <span class="num">${totalForecast > 0 ? fmtTys(totalForecast) + " тыс. ₸" : "0 ₸ (срок ещё не наступил)"}</span>
+        <span class="num">${totalForecast > 0 ? fmtMlrd(totalForecast) + " ₸" : "0 ₸ (срок ещё не наступил)"}</span>
     </div>
     <div style="font-size:11px;color:var(--muted);margin-top:4px">Расчёт: 0,1% в день на текущий остаток · пеня начинается с 03.11.2026</div>`;
 }
@@ -914,14 +783,15 @@ function openCpReturn(c) {
         const clHTML = classes.length
             ? classes.map(x => {
                 const pr = x.d.vol > 0 ? fmtT(Math.round(x.d.sum / x.d.vol)) : "—";
-                return `<div class="ln"><span>${x.label}</span><span class="num">${fmtT(x.d.vol)} т</span><span class="num">${fmtTys(x.d.sum)} тыс. ₸</span><span class="num" style="color:var(--muted)">${pr} тыс. ₸/т</span></div>`;
+                return `<div class="ln"><span>${x.label}</span><span class="num">${fmtT(x.d.vol)} т</span><span class="num">${fmtMlrd(x.d.sum)} ₸</span><span class="num" style="color:var(--muted)">${pr} ₸/т</span></div>`;
             }).join("")
             : `<div class="ln"><span style="color:var(--muted)">Поставок нет</span></div>`;
 
         // История платежей — расширенный формат событий
         const fmtSum = v => {
-            if (!v) return "0 тыс. ₸";
-            return Math.round(v / 1000).toLocaleString("ru-RU") + " тыс. ₸";
+            if (!v) return "0 ₸";
+            if (v >= 1e9) return (v/1e9).toLocaleString("ru-RU",{maximumFractionDigits:2}) + " млрд ₸";
+            return (v/1e6).toLocaleString("ru-RU",{maximumFractionDigits:2}) + " млн ₸";
         };
         let paymentsHTML = "";
         if (c.payments && c.payments.length > 0) {
@@ -964,22 +834,16 @@ function openCpReturn(c) {
             </div>`;
         }
 
-        // Срок поставки зависит от культуры: масличные — 16.11, зерновые — 02.11
-        const cultNorm = normCult(c.cult || "");
-        const isOilCrop = OIL.includes(cultNorm);
-        const deadlineTxt = isOilCrop ? "16.11.2026" : "02.11.2026";
-        const penaltyStart = isOilCrop ? "17.11.2026" : "03.11.2026";
-
         // Блок пени
         const penHTML = c.penalty > 0
-            ? `<div class="garbox late" style="margin:6px 0"><span>Пеня начислена (из данных)</span><span class="num">${fmtTys(c.penalty)} тыс. ₸</span></div>
-               <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Срок поставки: ${deadlineTxt} · Пеня с ${penaltyStart} · 0,1% / день</div>`
-            : `<div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px">Пеня не начислена (срок поставки ${deadlineTxt})</div>`;
+            ? `<div class="garbox late" style="margin:6px 0"><span>Пеня начислена (из данных)</span><span class="num">${fmtMlrd(c.penalty)} ₸</span></div>
+               <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Срок поставки: 02.11.2026 · Пеня с 03.11.2026 · 0,1% / день</div>`
+            : `<div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px">Пеня не начислена (срок поставки 02.11.2026)</div>`;
 
-        const debtColor = "font-weight:800";
+        const debtColor = c.debt > 0 ? "color:#E05A4A;font-weight:800" : "color:#3C6B4A;font-weight:800";
         const doplataTxt = c.sum_ksn > 0
-            ? `<div><div class="l">Доплата по КСН (выплачена)</div><div class="v num" style="color:#3C6B4A">${fmtTys(c.sum_ksn)} тыс. ₸</div></div>`
-            : (c.sum_dop_plan > 0 ? `<div><div class="l">К доплате СХТП</div><div class="v num">${fmtTys(c.sum_dop_plan)} тыс. ₸ <span style="color:var(--muted);font-size:11px">(не выплачена)</span></div></div>` : "");
+            ? `<div><div class="l">Доплата по КСН (выплачена)</div><div class="v num" style="color:#3C6B4A">${fmtMlrd(c.sum_ksn)} ₸</div></div>`
+            : (c.sum_dop_plan > 0 ? `<div><div class="l">К доплате СХТП</div><div class="v num">${fmtMlrd(c.sum_dop_plan)} ₸ <span style="color:var(--muted);font-size:11px">(не выплачена)</span></div></div>` : "");
 
         // Прогресс исполнения
         const execPct = c.sum_fin > 0 ? Math.min(100, c.sum_zachet / c.sum_fin * 100) : 0;
@@ -1013,7 +877,7 @@ function openCpReturn(c) {
                     <div class="cp-sec-title">Предоплата</div>
                     <div class="cp-3col">
                         <div class="cp-fig">
-                            <div class="cp-fig-val num">${fmtTys(c.sum_fin)}<small> тыс. ₸</small></div>
+                            <div class="cp-fig-val num">${fmtMlrd(c.sum_fin)}<small> ₸</small></div>
                             <div class="cp-fig-lab">выдано</div>
                         </div>
                         <div class="cp-fig">
@@ -1034,14 +898,14 @@ function openCpReturn(c) {
                         return `<div class="cp-cls-row">
                             <span class="cp-cls-name">${x.label}</span>
                             <span class="num">${fmtT(x.d.vol)} т</span>
-                            <span class="num">${fmtTys(x.d.sum)} тыс. ₸</span>
+                            <span class="num">${fmtMlrd(x.d.sum)} ₸</span>
                             <span class="cp-ml">${pr} ₸/т</span>
                         </div>`;
                     }).join("")}</div>` : `<div class="cp-empty">Поставок нет</div>`}
                     ${c.vol_total > 0 ? `<div class="cp-cls-total">
                         <span>Итого</span>
                         <span class="num">${fmtT(c.vol_total)} т</span>
-                        <span class="num">${fmtTys(c.sum_total)} тыс. ₸</span>
+                        <span class="num">${fmtMlrd(c.sum_total)} ₸</span>
                         <span class="cp-ml">${c.price_avg > 0 ? fmtT(c.price_avg) + " ₸/т" : "—"}</span>
                     </div>` : ""}
                 </div>
@@ -1049,12 +913,12 @@ function openCpReturn(c) {
                 <div class="cp-sec">
                     <div class="cp-sec-title">Взаиморасчёты</div>
                     <div class="cp-pairs">
-                        <div class="cp-pair"><span class="cp-ml">Зачтено в предоплату</span><span class="num">${fmtTys(c.sum_zachet)} тыс. ₸</span></div>
-                        <div class="cp-pair"><span class="cp-ml">Погашено зерном</span><span class="num">${fmtTys(c.paid_grain)} тыс. ₸</span></div>
-                        <div class="cp-pair"><span class="cp-ml">Погашено деньгами</span><span class="num">${fmtTys(c.paid_money)} тыс. ₸</span></div>
-                        ${c.vol_left > 0 ? `<div class="cp-pair"><span class="cp-ml">Остаток объёма</span><span class="num">${fmtT(c.vol_left)} т</span></div>` : ""}
-                        ${c.sum_ksn > 0 ? `<div class="cp-pair"><span class="cp-ml">Доплата по КСН</span><span class="num" style="color:#3C6B4A">${fmtTys(c.sum_ksn)} тыс. ₸ <span style="font-size:11px;font-weight:600;color:var(--muted)">(выплачена)</span></span></div>` : ""}
-                        ${c.sum_dop_plan > 0 && !c.sum_ksn ? `<div class="cp-pair"><span class="cp-ml">К доплате СХТП</span><span class="num">${fmtTys(c.sum_dop_plan)} тыс. ₸ <span style="font-size:11px;color:var(--muted)">(не выплачена)</span></span></div>` : ""}
+                        <div class="cp-pair"><span class="cp-ml">Зачтено в предоплату</span><span class="num">${fmtMlrd(c.sum_zachet)} ₸</span></div>
+                        <div class="cp-pair"><span class="cp-ml">Погашено зерном</span><span class="num">${fmtMlrd(c.paid_grain)} ₸</span></div>
+                        <div class="cp-pair"><span class="cp-ml">Погашено деньгами</span><span class="num">${fmtMlrd(c.paid_money)} ₸</span></div>
+                        ${c.vol_left > 0 ? `<div class="cp-pair"><span class="cp-ml">Остаток объёма</span><span class="num" style="color:#E05A4A">${fmtT(c.vol_left)} т</span></div>` : ""}
+                        ${c.sum_ksn > 0 ? `<div class="cp-pair"><span class="cp-ml">Доплата по КСН</span><span class="num" style="color:#3C6B4A">${fmtMlrd(c.sum_ksn)} ₸ <span style="font-size:11px;font-weight:600;color:var(--muted)">(выплачена)</span></span></div>` : ""}
+                        ${c.sum_dop_plan > 0 && !c.sum_ksn ? `<div class="cp-pair"><span class="cp-ml">К доплате СХТП</span><span class="num">${fmtMlrd(c.sum_dop_plan)} ₸ <span style="font-size:11px;color:var(--muted)">(не выплачена)</span></span></div>` : ""}
                     </div>
                 </div>
 
@@ -1063,19 +927,19 @@ function openCpReturn(c) {
                     <div class="cp-exec-bar"><div style="width:${execPct.toFixed(1)}%;background:${execColor};height:100%;border-radius:5px;transition:width .5s"></div></div>
                 </div>
 
-                <div class="cp-sec" style="border-left-color:#3C6B4A">
+                <div class="cp-sec" style="border-left-color:${c.debt > 0 ? "#E05A4A" : "#3C6B4A"}">
                     <div class="cp-sec-title">Итог</div>
                     <div class="cp-2col">
                         <div class="cp-fig">
-                            <div class="cp-fig-val num">${fmtTys(c.debt)}<small> тыс. ₸</small></div>
+                            <div class="cp-fig-val num" style="color:${c.debt > 0 ? "#E05A4A" : "#3C6B4A"}">${fmtMlrd(c.debt)}<small> ₸</small></div>
                             <div class="cp-fig-lab">остаток долга</div>
                         </div>
                         <div class="cp-fig">
-                            <div class="cp-fig-val num" style="color:var(--muted)">${c.penalty > 0 ? fmtTys(c.penalty) : "0"}<small> тыс. ₸</small></div>
+                            <div class="cp-fig-val num" style="color:${c.penalty > 0 ? "#E05A4A" : "var(--muted)"}">${c.penalty > 0 ? fmtMlrd(c.penalty) : "0"}<small> ₸</small></div>
                             <div class="cp-fig-lab">пеня</div>
                         </div>
                     </div>
-                    <div class="cp-note">${c.penalty > 0 ? `Пеня начислена с ${penaltyStart} · 0,1% в день` : `Срок поставки: ${deadlineTxt} — пеня не начислена`}</div>
+                    <div class="cp-note">${c.penalty > 0 ? "Пеня начислена с 03.11.2026 · 0,1% в день" : "Срок поставки: 02.11.2026 — пеня не начислена"}</div>
                 </div>
 
                 ${paymentsHTML}
@@ -1399,4 +1263,48 @@ tr:nth-child(even):not(.rh):not(.sub):not(.tot) td{background:#FAFAF8}
     w.document.close();
     w.focus();
     setTimeout(() => w.print(), 500);
+}
+
+// ── 12. Экспорт должников PDF ─────────────────────────────────────────────────
+function exportDebtorsPdf() {
+    if (!DR || !DR.debtors.length) { alert("Нет должников для экспорта"); return; }
+    printDebtors();
+}
+
+// ── 13. Экспорт должников Excel ───────────────────────────────────────────────
+function exportDebtorsExcel() {
+    if (!DR || !DR.debtors.length) { alert("Нет должников для экспорта"); return; }
+    const sorted = [...DR.debtors].sort((a, b) =>
+        (a.reg||"").localeCompare(b.reg||"", "ru") || (a.name||"").localeCompare(b.name||"", "ru")
+    );
+    const today = new Date().toLocaleDateString("ru-RU", {day:"2-digit",month:"2-digit",year:"numeric"}).replace(/\./g,"-");
+    const dataRows = sorted.map(c => ({
+        "Область":               c.reg||"",
+        "Наименование СХТП":    c.name||"",
+        "БИН/ИИН":              c.bin||"",
+        "№ договора":           c.dog_num||"",
+        "Культура":             c.cult||"",
+        "Профинансировано, ₸":  Math.round(c.sum_fin||0),
+        "Зачтено, ₸":          Math.round(c.sum_zachet||0),
+        "Остаток долга, ₸":    Math.round(c.debt||0),
+        "Пеня, ₸":             Math.round(c.penalty||0)
+    }));
+
+    if (window.XLSX) {
+        const ws = XLSX.utils.json_to_sheet(dataRows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Должники");
+        XLSX.writeFile(wb, "должники_" + today + ".xlsx");
+    } else {
+        // Fallback: CSV
+        const headers = Object.keys(dataRows[0]);
+        const csv = [headers, ...dataRows.map(r => headers.map(h => r[h]))]
+            .map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n");
+        const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "должники_" + today + ".csv";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
 }

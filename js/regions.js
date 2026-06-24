@@ -54,14 +54,18 @@ function renderRows() {
     const tb = $("#rRows"); tb.innerHTML = "";
     list.forEach(c => {
         const tr = el("tr");
+        const haGa = c.vol > 0 ? Math.round(c.vol * 1.5).toLocaleString("ru-RU") : "—";
         tr.innerHTML = `<td><div class="cpname">${c.name}</div><div class="cpsub">${c.form} · ${c.rayon} · БИН ${c.bin}</div></td>
             <td>${c.cults.map(x => `<span class="cult" style="font-size:10px;padding:2px 6px">${x}</span>`).join(" ")}</td>
-            <td class="r num">${fmtT(c.vol)}</td><td class="r num">${fmtMlrd(c.sum)}</td>
+            <td class="r num">${fmtT(c.vol)}</td><td class="r num">${haGa}</td>
+            <td class="r num">${fmtMlrd(c.sum)}</td>
             <td><span class="badge ${statCls(c.status)}">${c.status}</span></td>`;
         tr.addEventListener("click", () => openCp(c));
         tb.appendChild(tr);
     });
     const tv = list.reduce((a, c) => a + c.vol, 0), ts = list.reduce((a, c) => a + c.sum, 0);
+    const totHa = tv > 0 ? Math.round(tv * 1.5).toLocaleString("ru-RU") : "—";
     $("#rFoot").innerHTML = `<tr><td>Итого: ${list.length}</td><td></td>
-        <td class="r num">${fmtT(tv)} тонн</td><td class="r num">${fmtMlrd(ts)} ₸</td><td></td></tr>`;
+        <td class="r num">${fmtT(tv)} тонн</td><td class="r num">${totHa}</td>
+        <td class="r num">${fmtMlrd(ts)} ₸</td><td></td></tr>`;
 }

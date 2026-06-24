@@ -554,6 +554,10 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
 #vzTabArea, #vzCropArea { padding: 2px 0 0; }
 #vzTabArea .tablescroll, #vzCropArea .tablescroll { border-top: 1px solid var(--line); }
 
+/* Должники — левая карточка на всю ширину сетки */
+.grid.vz-debt-mode { grid-template-columns: 1fr; }
+.grid.vz-debt-mode > .card:last-child { display: none; }
+
 /* Переключатель Карта/Таблица/Культуры (использует .seg/.segb из общих стилей) */
 
 /* Должники в правой панели */
@@ -566,7 +570,7 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
 /* Воронка: вариант остатка долга */
 .ftrack.sdebt i { background: linear-gradient(90deg, #9E4A40, #C06A5C); }
 .ftrack.szachet i { background: linear-gradient(90deg, #2F5D40, #3C6B4A); }
-.ftrack.szachet .v { color: #fff; text-shadow: 0 1px 2px #0004; }
+.ftrack.szachet .v { color: #1a2a1a !important; text-shadow: none !important; }
 
 /* Рейтинг */
 .vz-rank-title { font-size: 10px; font-weight: 800; color: #F4ECD8; text-transform: uppercase; letter-spacing: .4px;

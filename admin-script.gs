@@ -681,11 +681,20 @@ function saveFinancing(body, user) {
   const sheet = ss.getSheetByName(SH_DETAIL);
   if (!sheet) return { ok: false, error: 'Лист не найден' };
 
-  Object.entries(fields).forEach(([colIdx, val]) => {
-    sheet.getRange(rowIdx, parseInt(colIdx) + 1).setValue(val);
-  });
+  // Batch write: read existing row, patch changed columns, write back in one call
+  const entries = Object.entries(fields).map(([ci, val]) => ({ col: parseInt(ci), val }));
+  if (entries.length > 0) {
+    const cols = entries.map(e => e.col);
+    const minCol = Math.min(...cols);
+    const maxCol = Math.max(...cols);
+    const width  = maxCol - minCol + 1;
+    const range  = sheet.getRange(rowIdx, minCol + 1, 1, width);
+    const row    = range.getValues()[0];
+    entries.forEach(e => { row[e.col - minCol] = e.val; });
+    range.setValues([row]);
+  }
 
-  cacheDel(); // сбрасываем кеш после изменения данных
+  cacheDel();
   addLog(ss, user.name, 'Финансирование', rowIdx, fields);
   return { ok: true };
 }
