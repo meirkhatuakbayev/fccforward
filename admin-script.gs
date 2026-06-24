@@ -735,9 +735,65 @@ function saveAppCard(body, user) {
   // Один setValues() вместо N setValue() — главная оптимизация
   rowRange.setValues([rowValues]);
 
+  // Пересчитать СВОД (СХТП/заявки/суммы по регионам) если изменился fin_sum или статус
+  if (body.fin_sum !== undefined || body.status !== undefined) {
+    _recalcSvodProfin(ss);
+  }
+
   cacheDel();
   addLog(ss, user.name, 'Карточка заявки', rowIdx, { status: body.status });
   return { ok: true };
+}
+
+// ── Пересчёт СВОД: колонки "Профинансировано" (СХТП, заявки, сумма, объём) ──
+function _recalcSvodProfin(ss) {
+  const svodSh = ss.getSheetByName('СВОД');
+  const detSh  = ss.getSheetByName(SH_DETAIL);
+  if (!svodSh || !detSh) return;
+
+  // 1. Читаем РАЗВЕРНУТАЯ — агрегируем профинансированных по регионам
+  const detData = detSh.getDataRange().getValues();
+  const regMap  = {}; // нормализованное имя региона → {bins: Set, apps, sum, vol}
+
+  for (var i = DATA_ROW; i < detData.length; i++) {
+    var row  = detData[i];
+    var name = String(row[C.name] || '').trim();
+    if (!name || name.includes('Итого') || name === 'Наименование поставщика') continue;
+    var finSum = Number(row[C.fin_sum]) || 0;
+    if (finSum <= 0) continue;
+    var reg = String(row[C.reg] || '').trim();
+    if (!reg) continue;
+    var normReg = reg.toLowerCase().replace('область', '').trim();
+    if (!regMap[normReg]) regMap[normReg] = { label: reg, bins: {}, apps: 0, sum: 0, vol: 0 };
+    var bin = String(row[C.bin] || '').trim() || name; // ключ СХТП — БИН или имя
+    regMap[normReg].bins[bin] = 1;
+    regMap[normReg].apps += 1;
+    regMap[normReg].sum  += finSum;
+    regMap[normReg].vol  += Number(row[C.fin_vol]) || Number(row[C.dog_vol]) || 0;
+  }
+
+  // 2. Читаем СВОД — находим строки регионов
+  var svodData = svodSh.getDataRange().getValues();
+  var itogoRow = -1;
+  var totSchtp = 0, totApps = 0, totSum = 0, totVol = 0;
+
+  for (var j = 0; j < svodData.length; j++) {
+    var nm = String(svodData[j][1] || '').trim();
+    if (!nm) continue;
+    if (nm.includes('Итого по РК')) { itogoRow = j + 1; continue; }
+    var normNm = nm.toLowerCase().replace('область', '').trim();
+    var rd = regMap[normNm];
+    if (!rd) continue;
+    var schtp = Object.keys(rd.bins).length;
+    // Колонка 20 (1-indexed) = индекс 19 = СХТП профинансировано
+    svodSh.getRange(j + 1, 20, 1, 4).setValues([[schtp, rd.apps, rd.sum, rd.vol]]);
+    totSchtp += schtp; totApps += rd.apps; totSum += rd.sum; totVol += rd.vol;
+  }
+
+  // 3. Обновляем строку "Итого по РК"
+  if (itogoRow > 0) {
+    svodSh.getRange(itogoRow, 20, 1, 4).setValues([[totSchtp, totApps, totSum, totVol]]);
+  }
 }
 
 function getContractor(body) {
