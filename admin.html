@@ -664,6 +664,15 @@ a { color: var(--green); text-decoration: none; }
 // ══════════════════════════════════════════════════════════════════════════════
 const ADMIN_API = 'https://script.google.com/macros/s/AKfycbyBi-Hdi-c6Z7z_ddIa1c58l4e_Sv2KhGYCEMPHcTzPxPLZjN63ra9fW0xJ0nmZa0caDg/exec';
 
+// Уникальный ключ контрагента (аналог utils.js)
+function cpKey(c) {
+  const bin = String(c.bin || '').trim().replace(/\s+/g, '');
+  if (bin) return 'bin:' + bin;
+  const name = String(c.name || '').trim().replace(/[«»"'`]/g,'').replace(/\s+/g,' ').toLowerCase();
+  return 'nm:' + name;
+}
+function uniqSchtp(arr) { return new Set(arr.map(cpKey)).size; }
+
 // ══════════════════════════════════════════════════════════════════════════════
 
 let session       = null;
@@ -814,7 +823,7 @@ function renderContractorList(list, activeCult) {
   groups.forEach(g => {
     const regSum = g.items.reduce((s,c)=>s+(c.fin_sum||0),0);
     const regVol = g.items.reduce((s,c)=>s+(c.fin_vol||0),0);
-    const regCnt = g.items.length;
+    const regCnt = uniqSchtp(g.items);
     tbody += `<tr style="background:#E4EDE7;cursor:default">
       <td colspan="4" style="padding:7px 14px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--ink)">${esc(g.reg)}</td>
     </tr>`;
@@ -845,7 +854,7 @@ function renderContractorList(list, activeCult) {
     </tr></thead>
     <tbody>${tbody}</tbody>
     <tfoot><tr style="background:#F1E8D0;font-weight:800">
-      <td colspan="2" style="padding:10px 14px">Итого: ${list.length} контрагентов</td>
+      <td colspan="2" style="padding:10px 14px">Итого: ${uniqSchtp(list)} СХТП · ${list.length} договоров</td>
       <td style="text-align:right;padding:10px 14px">${fmtNum(totalVol)} т</td>
       <td style="text-align:right;padding:10px 14px">${fmtShort(totalSum)}</td>
     </tr></tfoot>
@@ -1594,7 +1603,7 @@ function renderReturnMerged(filter, region) {
     });
 
     tbody += `<tr style="background:#F0EBD8;cursor:default">
-      <td style="padding:8px 14px 8px 24px;font-weight:700;color:var(--ink);font-size:12px" colspan="3">Итого по ${esc(reg)}: ${items.length} СХТП</td>
+      <td style="padding:8px 14px 8px 24px;font-weight:700;color:var(--ink);font-size:12px" colspan="3">Итого по ${esc(reg)}: ${uniqSchtp(items.map(m=>m.contractor))} СХТП · ${items.length} договоров</td>
       <td style="text-align:right;font-weight:700;font-size:12px">${fmtNum(regVol)} т</td>
       <td style="text-align:right;font-weight:700;font-size:12px">${fmtShort(regSum)}</td>
       <td colspan="2"></td>
@@ -1619,7 +1628,7 @@ function renderReturnMerged(filter, region) {
     </tr></thead>
     <tbody>${tbody}</tbody>
     <tfoot><tr style="background:#F1E8D0;font-weight:800">
-      <td colspan="3" style="padding:10px 14px">Итого: ${list.length} контрагентов</td>
+      <td colspan="3" style="padding:10px 14px">Итого: ${uniqSchtp(list.map(m=>m.contractor))} СХТП · ${list.length} договоров</td>
       <td style="text-align:right;padding:10px 14px">${fmtNum(totalVol)} т</td>
       <td style="text-align:right;padding:10px 14px">${fmtShort(totalSum)}</td>
       <td colspan="2"></td>

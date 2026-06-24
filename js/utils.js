@@ -34,8 +34,8 @@ function cpKey(c) {
     const bin = String(c.bin || "").trim().replace(/\s+/g, "");
     if (bin) return "bin:" + bin;
     const name = String(c.name || "").trim()
-        .replace(/[«»"'`]/g, "")   // убираем любые кавычки
-        .replace(/\s+/g, " ")       // нормализуем пробелы
+        .replace(/[«»"'`]/g, "")
+        .replace(/\s+/g, " ")
         .toLowerCase();
     return "nm:" + name;
 }

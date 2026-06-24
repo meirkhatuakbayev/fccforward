@@ -26,6 +26,7 @@ function renderReturn() {
     const asof = document.getElementById("vzAsof");
     if (asof) asof.textContent = DR.date;
     if (typeof hideYearLoader === "function") hideYearLoader();
+    if (typeof hideVzLoader   === "function") hideVzLoader();
 }
 
 // ── 1. Авто-сводка ───────────────────────────────────────────────────────────
@@ -50,7 +51,7 @@ function renderVzSummary() {
         if (DR.totalPenalty > 0)
             lines.push(`Начислено пени по всем договорам: <b>${fmtMlrd(DR.totalPenalty)} ₸</b>`);
         else
-            lines.push(`Исполнение по РК: <b>${pct}%</b> · Должников: <b>${uniqSchtp(DR.debtors)} СХТП</b>`);
+            lines.push(`Исполнение по РК: <b>${pct}%</b> · Должников: <b>${DR.total.schtp} СХТП</b>`);
         box.innerHTML = lines.map(l => `<div class="vz-sum-line">${l}</div>`).join("");
     }
 
@@ -79,7 +80,7 @@ function renderVzKpis() {
         {
             lab: "Профинансировано",
             big: n(t.sum_fin), unit: "млрд ₸",
-            sub: fmtT(DR.total.schtp || uniqSchtp(DR.cps.filter(c=>c.sum_fin>0))) + " СХТП · " + fmtT(t.vol_contr) + " т",
+            sub: fmtT(DR.total.schtp) + " СХТП · " + fmtT(t.vol_contr) + " т",
             tag: "#E8A82E"
         },
         {
@@ -91,7 +92,7 @@ function renderVzKpis() {
         {
             lab: "Сумма предварительной оплаты",
             big: n(t.sum_zachet), unit: "млрд ₸",
-            sub: fmtT(t.vol_ret > 0 ? t.vol_ret * (t.sum_zachet / (t.sum_ret || t.sum_zachet || 1)) : 0) + " т · " + (DR.total.schtp || uniqSchtp(DR.cps.filter(c=>c.sum_fin>0))) + " СХТП",
+            sub: fmtT(t.vol_ret > 0 ? t.vol_ret * (t.sum_zachet / (t.sum_ret || t.sum_zachet || 1)) : 0) + " т · " + DR.total.schtp + " СХТП",
             tag: "#3C6B4A"
         },
         {
@@ -109,7 +110,7 @@ function renderVzKpis() {
         {
             lab: "Остаток долга",
             big: n(t.debt), unit: "млрд ₸",
-            sub: uniqSchtp(DR.debtors) + " СХТП-должников",
+            sub: DR.total.schtp + " СХТП-должников",
             tag: t.debt > 0 ? "#9E4A40" : "#3C6B4A",
             red: t.debt > 0
         },
@@ -176,9 +177,9 @@ function renderVzFunnel() {
     const box = document.getElementById("vzFunnel");
     if (!box) return;
     const t = DR.total;
-    const totalSchtp = DR.total.schtp || uniqSchtp(DR.cps.filter(c => c.sum_fin > 0));
+    const totalSchtp = DR.total.schtp;
     const retSchtp   = uniqSchtp(DR.cps.filter(c => c.vol_total > 0));
-    const debtSchtp  = uniqSchtp(DR.debtors);
+    const debtSchtp  = DR.total.schtp;
     const maxSum = Math.max(1, t.sum_fin);
 
     const stages = [
@@ -291,7 +292,7 @@ function renderVzDebtTable() {
         else last.items.push(c);
     });
 
-    const uniqDebtors = uniqSchtp(DR.debtors);
+    const uniqDebtors = DR.total.schtp;
     const hasPenalty  = DR.debtors.some(c => c.penalty > 0);
 
     let rows = "";
@@ -399,7 +400,7 @@ function renderVzTabArea() {
         </tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
-            <td class="l">Итого по РК<br><span style="font-size:10px;font-weight:600;opacity:.7">${DR.total.schtp || uniqSchtp(DR.cps.filter(c=>c.sum_fin>0))} СХТП</span></td>
+            <td class="l">Итого по РК<br><span style="font-size:10px;font-weight:600;opacity:.7">${DR.total.schtp} СХТП</span></td>
             <td>${fmtMlrd(t.sum_fin)}</td>
             <td>${fmtT(t.vol_ret)}</td>
             <td>${fmtMlrd(t.sum_ret)}</td>
@@ -1090,7 +1091,7 @@ function printReturnSection() {
     cropRows += `<tr class="tot"><td>Итого</td><td>${f(ctv)}</td><td>${f(cts)}</td><td>${f(cfv)}</td><td>${f(cfs)}</td>
         <td>${ctv > 0 ? (cfv/ctv*100).toFixed(1)+"%" : "—"}</td></tr>`;
 
-    const debtorCount = DR.debtors ? uniqSchtp(DR.debtors) : 0;
+    const debtorCount = DR.total.schtp || 0;
 
     const html = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
 <title>Отчёт — Возврат зерна ФЗ</title>
@@ -1132,8 +1133,8 @@ tr:nth-child(even):not(.tot) td{background:#FAFAF8}
     <div class="org">АО «НК «Продкорпорация» · Департамент закупа СХП</div>
     <div class="badges">
       <span class="badge">ФЗ 2026</span>
-      <span class="badge">${uniqSchtp(DR.cps)} СХТП · ${DR.cps.length} договоров</span>
-      ${debtorCount > 0 ? `<span class="badge warn">${uniqSchtp(DR.debtors)} СХТП-должников</span>` : '<span class="badge">Долгов нет</span>'}
+      <span class="badge">${DR.total.schtp} СХТП · ${DR.cps.length} договоров</span>
+      ${debtorCount > 0 ? `<span class="badge warn">${DR.total.schtp} СХТП-должников</span>` : '<span class="badge">Долгов нет</span>'}
     </div>
   </div>
   <div class="dt">Сформировано:<br><b>${today}</b></div>
@@ -1143,7 +1144,7 @@ tr:nth-child(even):not(.tot) td{background:#FAFAF8}
   <div class="kpi-box"><div class="kpi-lab">Профинансировано</div><div class="kpi-val">${fm(t.sum_fin)}</div><div class="kpi-sub">${f(t.vol_contr)} т</div></div>
   <div class="kpi-box"><div class="kpi-lab">Поставлено (зачтено)</div><div class="kpi-val">${fm(t.sum_zachet)}</div><div class="kpi-sub">${f(t.vol_ret)} т</div></div>
   <div class="kpi-box"><div class="kpi-lab">Остаток долга</div><div class="kpi-val" style="color:${t.debt>0?'#B03020':'#2F5D40'}">${fm(t.debt)}</div><div class="kpi-sub">${t.sum_fin>0?(t.sum_zachet/t.sum_fin*100).toFixed(1)+"% исп.":"—"}</div></div>
-  <div class="kpi-box"><div class="kpi-lab">СХТП</div><div class="kpi-val">${uniqSchtp(DR.cps)}</div><div class="kpi-sub">из них должников: ${uniqSchtp(DR.debtors)}</div></div>
+  <div class="kpi-box"><div class="kpi-lab">СХТП</div><div class="kpi-val">${DR.total.schtp}</div><div class="kpi-sub">из них должников: ${DR.total.schtp}</div></div>
 </div>
 
 <h2>Исполнение по областям</h2>
