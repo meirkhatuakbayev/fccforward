@@ -45,7 +45,11 @@ function renderFunnel() {
 
 function renderStatuses() {
     const box = $("#statuses"); box.innerHTML = "";
-    D.statuses.forEach(([name, n, cls]) => {
+    const norm = s => (s || "").toLowerCase().replace(/\s+/g, " ");
+    D.statuses.forEach(([name, , cls]) => {
+        // Считаем уникальных СХТП по D.cps (сгруппированные строки, не сырые)
+        const list = D.cps.filter(c => norm(c.status) === norm(name) || (c.sts && c.sts.some(s => norm(s) === norm(name))));
+        const n = uniqSchtp(list);
         const c = el("div", "chip " + cls); c.dataset.st = name;
         c.innerHTML = `<i></i>${name}<b>${n}</b>`;
         c.addEventListener("click", () => openStatus(name));
