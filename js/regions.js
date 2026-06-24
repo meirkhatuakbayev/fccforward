@@ -22,9 +22,10 @@ function openCulture(name) {
     const list = D.cps.filter(c => (c.cults || []).map(normCult).includes(name));
     let tv = 0, ts = 0;
     list.forEach(c => (c.lines || []).forEach(l => { if (normCult(l.cult) === name) { tv += l.vol || 0; ts += l.sum || 0; } }));
-    const p = $("#regionPanel"); p.style.display = ""; $("#rName").textContent = "Культура: " + name; $("#rPill").textContent = list.length + " контрагентов";
-    const k = [["Контрагентов", list.length], ["Объём по культуре, тонн", fmtT(tv)],
-        ["Сумма по культуре, ₸", fmtMlrd(ts) + " ₸"], ["Профинансировано", list.filter(c => isProfin(c.status)).length]];
+    const schtp = uniqSchtp(list);
+    const p = $("#regionPanel"); p.style.display = ""; $("#rName").textContent = "Культура: " + name; $("#rPill").textContent = schtp + " СХТП";
+    const k = [["СХТП", schtp], ["Объём по культуре, тонн", fmtT(tv)],
+        ["Сумма по культуре, ₸", fmtMlrd(ts) + " ₸"], ["Профинансировано", uniqSchtp(list.filter(c => isProfin(c.status)))]];
     $("#rKpis").innerHTML = k.map(x => `<div><div class="l">${x[0]}</div><div class="n num">${x[1]}</div></div>`).join("");
     renderRows(); p.scrollIntoView({behavior: "smooth", block: "start"});
 }
@@ -35,8 +36,9 @@ function openStatus(name) {
     const norm = s => (s || "").toLowerCase().replace(/\s+/g, " ");
     const list = D.cps.filter(c => norm(c.status) === norm(name) || (c.sts && c.sts.some(s => norm(s) === norm(name))));
     const tv = list.reduce((a, c) => a + c.vol, 0), ts = list.reduce((a, c) => a + c.sum, 0), ta = list.reduce((a, c) => a + c.apps, 0);
-    const p = $("#regionPanel"); p.style.display = ""; $("#rName").textContent = "Статус: " + name; $("#rPill").textContent = list.length + " контрагентов";
-    const k = [["Контрагентов", list.length], ["Заявок", ta], ["Объём, тонн", fmtT(tv)], ["Сумма, ₸", fmtMlrd(ts) + " ₸"]];
+    const schtp = uniqSchtp(list);
+    const p = $("#regionPanel"); p.style.display = ""; $("#rName").textContent = "Статус: " + name; $("#rPill").textContent = schtp + " СХТП · " + list.length + " договоров";
+    const k = [["СХТП", schtp], ["Договоров", list.length], ["Объём, тонн", fmtT(tv)], ["Сумма, ₸", fmtMlrd(ts) + " ₸"]];
     $("#rKpis").innerHTML = k.map(x => `<div><div class="l">${x[0]}</div><div class="n num">${x[1]}</div></div>`).join("");
     renderRows(); p.scrollIntoView({behavior: "smooth", block: "start"});
 }

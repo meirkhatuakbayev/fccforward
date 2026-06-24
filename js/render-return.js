@@ -75,7 +75,7 @@ function renderVzKpis() {
         {
             lab: "Профинансировано",
             big: n(t.sum_fin), unit: "млрд ₸",
-            sub: fmtT(DR.total.schtp || new Set(DR.cps.filter(c=>c.sum_fin>0).map(c=>c.bin||c.name)).size) + " СХТП · " + fmtT(t.vol_contr) + " т",
+            sub: fmtT(DR.total.schtp || uniqSchtp(DR.cps.filter(c=>c.sum_fin>0))) + " СХТП · " + fmtT(t.vol_contr) + " т",
             tag: "#E8A82E"
         },
         {
@@ -87,7 +87,7 @@ function renderVzKpis() {
         {
             lab: "Сумма предварительной оплаты",
             big: n(t.sum_zachet), unit: "млрд ₸",
-            sub: fmtT(t.vol_ret > 0 ? t.vol_ret * (t.sum_zachet / (t.sum_ret || t.sum_zachet || 1)) : 0) + " т · " + (DR.total.schtp || new Set(DR.cps.filter(c=>c.sum_fin>0).map(c=>c.bin||c.name)).size) + " СХТП",
+            sub: fmtT(t.vol_ret > 0 ? t.vol_ret * (t.sum_zachet / (t.sum_ret || t.sum_zachet || 1)) : 0) + " т · " + (DR.total.schtp || uniqSchtp(DR.cps.filter(c=>c.sum_fin>0))) + " СХТП",
             tag: "#3C6B4A"
         },
         {
@@ -172,9 +172,9 @@ function renderVzFunnel() {
     const box = document.getElementById("vzFunnel");
     if (!box) return;
     const t = DR.total;
-    const totalSchtp = DR.total.schtp || new Set(DR.cps.filter(c => c.sum_fin > 0).map(c => c.bin || c.name)).size;
-    const retSchtp   = new Set(DR.cps.filter(c => c.vol_total > 0).map(c => c.bin || c.name)).size;
-    const debtSchtp  = new Set(DR.debtors.map(c => c.bin || c.name)).size;
+    const totalSchtp = DR.total.schtp || uniqSchtp(DR.cps.filter(c => c.sum_fin > 0));
+    const retSchtp   = uniqSchtp(DR.cps.filter(c => c.vol_total > 0));
+    const debtSchtp  = uniqSchtp(DR.debtors);
     const maxSum = Math.max(1, t.sum_fin);
 
     const stages = [
@@ -315,7 +315,7 @@ function renderVzDebtTable() {
     const totalFin  = DR.debtors.reduce((s,c) => s + (c.sum_fin||0), 0);
     const totalZach = DR.debtors.reduce((s,c) => s + (c.sum_zachet||0), 0);
 
-    const uniqDebtors = new Set(DR.debtors.map(c => c.bin || c.name)).size;
+    const uniqDebtors = uniqSchtp(DR.debtors);
     const hasPenalty  = DR.debtors.some(c => c.penalty > 0);
     box.innerHTML = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0 10px">
         <span style="font-size:12px;font-weight:700;color:var(--muted)">${uniqDebtors} СХТП-должников · ${DR.debtors.length} договоров</span>
@@ -394,7 +394,7 @@ function renderVzTabArea() {
         </tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
-            <td class="l">Итого по РК<br><span style="font-size:10px;font-weight:600;opacity:.7">${DR.total.schtp || new Set(DR.cps.filter(c=>c.sum_fin>0).map(c=>c.bin||c.name)).size} СХТП</span></td>
+            <td class="l">Итого по РК<br><span style="font-size:10px;font-weight:600;opacity:.7">${DR.total.schtp || uniqSchtp(DR.cps.filter(c=>c.sum_fin>0))} СХТП</span></td>
             <td>${fmtMlrd(t.sum_fin)}</td>
             <td>${fmtT(t.vol_ret)}</td>
             <td>${fmtMlrd(t.sum_ret)}</td>
@@ -1127,8 +1127,8 @@ tr:nth-child(even):not(.tot) td{background:#FAFAF8}
     <div class="org">АО «НК «Продкорпорация» · Департамент закупа СХП</div>
     <div class="badges">
       <span class="badge">ФЗ 2026</span>
-      <span class="badge">${DR.cps.length} контрагентов</span>
-      ${debtorCount > 0 ? `<span class="badge warn">${debtorCount} должников</span>` : '<span class="badge">Долгов нет</span>'}
+      <span class="badge">${uniqSchtp(DR.cps)} СХТП · ${DR.cps.length} договоров</span>
+      ${debtorCount > 0 ? `<span class="badge warn">${uniqSchtp(DR.debtors)} СХТП-должников</span>` : '<span class="badge">Долгов нет</span>'}
     </div>
   </div>
   <div class="dt">Сформировано:<br><b>${today}</b></div>
@@ -1138,7 +1138,7 @@ tr:nth-child(even):not(.tot) td{background:#FAFAF8}
   <div class="kpi-box"><div class="kpi-lab">Профинансировано</div><div class="kpi-val">${fm(t.sum_fin)}</div><div class="kpi-sub">${f(t.vol_contr)} т</div></div>
   <div class="kpi-box"><div class="kpi-lab">Поставлено (зачтено)</div><div class="kpi-val">${fm(t.sum_zachet)}</div><div class="kpi-sub">${f(t.vol_ret)} т</div></div>
   <div class="kpi-box"><div class="kpi-lab">Остаток долга</div><div class="kpi-val" style="color:${t.debt>0?'#B03020':'#2F5D40'}">${fm(t.debt)}</div><div class="kpi-sub">${t.sum_fin>0?(t.sum_zachet/t.sum_fin*100).toFixed(1)+"% исп.":"—"}</div></div>
-  <div class="kpi-box"><div class="kpi-lab">Контрагенты</div><div class="kpi-val">${DR.cps.length}</div><div class="kpi-sub">из них должников: ${debtorCount}</div></div>
+  <div class="kpi-box"><div class="kpi-lab">СХТП</div><div class="kpi-val">${uniqSchtp(DR.cps)}</div><div class="kpi-sub">из них должников: ${uniqSchtp(DR.debtors)}</div></div>
 </div>
 
 <h2>Исполнение по областям</h2>
@@ -1189,7 +1189,7 @@ function printDebtors() {
     const sum6 = arr => arr.reduce((s, c) => s + c, 0);
 
     Object.entries(byReg).forEach(([reg, cps]) => {
-        const uniqReg = new Set(cps.map(c => c.bin||c.name)).size;
+        const uniqReg = uniqSchtp(cps);
         rows += `<tr class="rh"><td colspan="${hasPen?10:9}">${reg} область — ${uniqReg} СХТП · ${cps.length} договоров</td></tr>`;
 
         let tSF = 0, tVT = 0, tST = 0, tSZ = 0, tDP = 0, tDB = 0, tPN = 0;
@@ -1226,7 +1226,7 @@ function printDebtors() {
     const gt = { sf:0, vt:0, st:0, sz:0, dp:0, db:0, pn:0 };
     list.forEach(c => { gt.sf+=c.sum_fin; gt.vt+=c.vol_total; gt.st+=c.sum_total;
                         gt.sz+=c.sum_zachet; gt.dp+=(c.sum_dop_fact||0); gt.db+=c.debt; gt.pn+=(c.penalty||0); });
-    const uniqTotal = new Set(list.map(c => c.bin||c.name)).size;
+    const uniqTotal = uniqSchtp(list);
     rows += `<tr class="tot">
         <td colspan="2">ИТОГО ПО РК: ${uniqTotal} СХТП · ${list.length} договоров</td>
         <td>${fm(gt.sf)}</td>
@@ -1286,7 +1286,7 @@ tr:nth-child(even):not(.rh):not(.sub):not(.tot) td{background:#FAFAF8}
     <div class="org">АО «НК «Продкорпорация» · Департамент закупа СХП</div>
     <div class="badges">
       <span class="badge">Форвардный закуп 2025/2026</span>
-      <span class="badge">${new Set(list.map(c=>c.bin||c.name)).size} СХТП-должников · ${list.length} договоров</span>
+      <span class="badge">${uniqSchtp(list)} СХТП-должников · ${list.length} договоров</span>
       <span class="badge">${Object.keys(byReg).length} областей</span>
     </div>
   </div>

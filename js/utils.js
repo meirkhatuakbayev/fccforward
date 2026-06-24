@@ -28,6 +28,21 @@ function normCult(s) {
     return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// Уникальный ключ контрагента: БИН (если есть) или нормализованное имя.
+// Кавычки «», "", '' считаются одинаковыми — убираются при сравнении.
+function cpKey(c) {
+    const bin = String(c.bin || "").trim().replace(/\s+/g, "");
+    if (bin) return "bin:" + bin;
+    const name = String(c.name || "").trim()
+        .replace(/[«»"'`]/g, "")   // убираем любые кавычки
+        .replace(/\s+/g, " ")       // нормализуем пробелы
+        .toLowerCase();
+    return "nm:" + name;
+}
+
+// Количество уникальных СХТП в массиве (по БИН / нормализованному имени)
+function uniqSchtp(arr) { return new Set(arr.map(cpKey)).size; }
+
 function isProfin(s) { return String(s).trim().toLowerCase().startsWith("профин"); }
 
 function statCls(s) {
