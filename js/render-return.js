@@ -13,9 +13,10 @@ function ensureVozvrat() {
 // ── Основной рендер ──────────────────────────────────────────────────────────
 function renderReturn() {
     if (!DR) return;
-    // Авторитетный источник СХТП — СВОД финансирования (D.total.fin[0] = 169)
+    // Авторитетный источник СХТП и заявок — итого по регионам из СВОД финансирования
     if (typeof D !== 'undefined' && D && D.total && D.total.fin && D.total.fin[0] > 0) {
-        DR.total.schtp = D.total.fin[0];
+        DR.total.schtp = D.total.fin[0];  // 169
+        DR.total.apps  = D.total.fin[1];  // 307
     }
     renderVzKpis();
     renderVzFunnel();
@@ -324,7 +325,7 @@ function renderVzDebtTable() {
     const totalZach = DR.debtors.reduce((s,c) => s + (c.sum_zachet||0), 0);
 
     box.innerHTML = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0 10px">
-        <span style="font-size:12px;font-weight:700;color:var(--muted)">${uniqDebtors} СХТП-должников · ${DR.debtors.length} договоров</span>
+        <span style="font-size:12px;font-weight:700;color:var(--muted)">${uniqDebtors} СХТП-должников · ${DR.total.apps || DR.debtors.length} договоров</span>
         <div style="flex:1"></div>
         <button class="segb" style="font-size:11px;padding:5px 11px" onclick="exportDebtorsPdf()">📄 PDF</button>
         <button class="segb" style="font-size:11px;padding:5px 11px" onclick="exportDebtorsExcel()">📊 Excel</button>
@@ -1133,7 +1134,7 @@ tr:nth-child(even):not(.tot) td{background:#FAFAF8}
     <div class="org">АО «НК «Продкорпорация» · Департамент закупа СХП</div>
     <div class="badges">
       <span class="badge">ФЗ 2026</span>
-      <span class="badge">${DR.total.schtp} СХТП · ${DR.cps.length} договоров</span>
+      <span class="badge">${DR.total.schtp} СХТП · ${DR.total.apps || DR.cps.length} договоров</span>
       ${debtorCount > 0 ? `<span class="badge warn">${DR.total.schtp} СХТП-должников</span>` : '<span class="badge">Долгов нет</span>'}
     </div>
   </div>
@@ -1232,9 +1233,8 @@ function printDebtors() {
     const gt = { sf:0, vt:0, st:0, sz:0, dp:0, db:0, pn:0 };
     list.forEach(c => { gt.sf+=c.sum_fin; gt.vt+=c.vol_total; gt.st+=c.sum_total;
                         gt.sz+=c.sum_zachet; gt.dp+=(c.sum_dop_fact||0); gt.db+=c.debt; gt.pn+=(c.penalty||0); });
-    const uniqTotal = uniqSchtp(list);
     rows += `<tr class="tot">
-        <td colspan="2">ИТОГО ПО РК: ${uniqTotal} СХТП · ${list.length} договоров</td>
+        <td colspan="2">ИТОГО ПО РК: ${DR.total.schtp} СХТП · ${DR.total.apps || list.length} договоров</td>
         <td>${fm(gt.sf)}</td>
         <td>${f(gt.vt)}</td>
         <td>${fm(gt.st)}</td>
@@ -1292,7 +1292,7 @@ tr:nth-child(even):not(.rh):not(.sub):not(.tot) td{background:#FAFAF8}
     <div class="org">АО «НК «Продкорпорация» · Департамент закупа СХП</div>
     <div class="badges">
       <span class="badge">Форвардный закуп 2025/2026</span>
-      <span class="badge">${uniqSchtp(list)} СХТП-должников · ${list.length} договоров</span>
+      <span class="badge">${DR.total.schtp} СХТП-должников · ${DR.total.apps || list.length} договоров</span>
       <span class="badge">${Object.keys(byReg).length} областей</span>
     </div>
   </div>
