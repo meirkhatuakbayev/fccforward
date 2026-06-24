@@ -617,7 +617,7 @@ function renderFinancingForm(rows) {
       </div>
 
       <div class="aform-section">
-        <div class="aform-section-label">Заявка</div>
+        <div class="aform-section-label">Поступившие заявки и доп. финансирование</div>
         <div class="aform-grid cols3">
           ${field('Сумма предоплаты, ₸',  'fAppSum',   r.app_sum,   false, 17, 'number')}
           ${field('Цена, ₸/тонна',        'fAppPrice', r.app_price, false, 18, 'number')}
@@ -710,7 +710,7 @@ function showAddContractorForm() {
         </div>
       </div>
       <div class="aform-section">
-        <div class="aform-section-label">Заявка</div>
+        <div class="aform-section-label">Поступившие заявки и доп. финансирование</div>
         <div class="aform-grid cols3">
           ${fieldReq('Сумма предоплаты, ₸', 'nAppSum',   17, 'number')}
           ${fieldReq('Цена, ₸/тонна',       'nAppPrice', 18, 'number')}

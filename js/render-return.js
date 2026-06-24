@@ -75,7 +75,7 @@ function renderVzKpis() {
         {
             lab: "Профинансировано",
             big: n(t.sum_fin), unit: "млрд ₸",
-            sub: fmtT(DR.cps.length) + " СХТП · " + fmtT(t.vol_contr) + " т",
+            sub: fmtT(new Set(DR.cps.map(c => c.bin || c.name)).size) + " СХТП · " + fmtT(t.vol_contr) + " т",
             tag: "#E8A82E"
         },
         {
@@ -93,7 +93,7 @@ function renderVzKpis() {
         {
             lab: "В т.ч. доплата СХТП",
             big: n(t.sum_doplata), unit: "млрд ₸",
-            sub: "начислено сверх предоплаты",
+            sub: "доплата за зерно выше форвардной цены",
             tag: "#E8A82E"
         },
         {
@@ -172,9 +172,10 @@ function renderVzFunnel() {
     const box = document.getElementById("vzFunnel");
     if (!box) return;
     const t = DR.total;
-    const totalSchtp = DR.cps.length;
-    const retSchtp   = DR.cps.filter(c => c.vol_total > 0).length;
-    const debtSchtp  = DR.debtors.length;
+    const uniqBins = new Set(DR.cps.map(c => c.bin || c.name));
+    const totalSchtp = uniqBins.size;
+    const retSchtp   = new Set(DR.cps.filter(c => c.vol_total > 0).map(c => c.bin || c.name)).size;
+    const debtSchtp  = new Set(DR.debtors.map(c => c.bin || c.name)).size;
     const maxSum = Math.max(1, t.sum_fin);
 
     const stages = [
@@ -251,6 +252,9 @@ function setVzView(v) {
         const b = document.getElementById(id);
         if (b) b.classList.toggle("act", k === v);
     });
+    // Debt view: expand left card to full grid width
+    const vzGrid = document.querySelector("#viewVozvrat .grid");
+    if (vzGrid) vzGrid.classList.toggle("vz-debt-mode", v === "debt");
     const hint = document.getElementById("vzHint");
     if (hint) hint.textContent = v === "map"
         ? "Цвет — исполнение предоплаты. Нажмите область — список договоров."
@@ -312,7 +316,13 @@ function renderVzDebtTable() {
     const totalFin  = DR.debtors.reduce((s,c) => s + (c.sum_fin||0), 0);
     const totalZach = DR.debtors.reduce((s,c) => s + (c.sum_zachet||0), 0);
 
-    box.innerHTML = `<div class="tablescroll" style="max-height:420px;overflow-x:auto"><table class="rtab" style="table-layout:fixed;width:100%;min-width:420px">
+    box.innerHTML = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0 10px">
+        <span style="font-size:12px;font-weight:700;color:var(--muted)">${DR.debtors.length} должников</span>
+        <div style="flex:1"></div>
+        <button class="segb" style="font-size:11px;padding:5px 11px" onclick="exportDebtorsPdf()">📄 PDF</button>
+        <button class="segb" style="font-size:11px;padding:5px 11px" onclick="exportDebtorsExcel()">📊 Excel</button>
+    </div>
+    <div class="tablescroll" style="max-height:420px;overflow-x:auto"><table class="rtab" id="vzDebtTable" style="table-layout:fixed;width:100%;min-width:420px">
         <colgroup>
             <col style="width:38%">
             <col style="width:15%">
@@ -449,8 +459,6 @@ function renderVzCropTable() {
             ? `<br><span style="font-size:9.5px;color:#9A6716;font-weight:600">вне контракта (замена)</span>` : "";
         return `<tr>
             <td class="l">${r.label}${substNote}${noContr}</td>
-            <td>${r.vol_contr > 0 ? fmtT(r.vol_contr) : "—"}</td>
-            <td>${r.sum_contr > 0 ? fmtMlrd(r.sum_contr) : "—"}</td>
             <td style="${r.vol_fact === 0 ? "opacity:.5" : ""}">${r.vol_fact > 0 ? fmtT(r.vol_fact) : "0"}</td>
             <td style="${r.sum_fact === 0 ? "opacity:.5" : ""}">${r.sum_fact > 0 ? fmtMlrd(r.sum_fact) : "—"}</td>
             <td style="color:${pc};font-weight:800">${pctTxt}</td>
@@ -458,7 +466,6 @@ function renderVzCropTable() {
     }).join("");
 
     const tv = active.reduce((s,r)=>s+r.vol_contr,0);
-    const ts = active.reduce((s,r)=>s+r.sum_contr,0);
     const fv = active.reduce((s,r)=>s+r.vol_fact,0);
     const fs = active.reduce((s,r)=>s+r.sum_fact,0);
     const totPct = tv > 0 ? (fv/tv*100).toFixed(1)+"%" : "—";
@@ -467,24 +474,16 @@ function renderVzCropTable() {
     box.innerHTML = `<div class="tablescroll" style="max-height:390px">
         <table class="rtab">
         <thead>
-            <tr class="grp">
-                <th class="l" rowspan="2">Культура</th>
-                <th colspan="2">По договору</th>
-                <th class="gs" colspan="2">Фактически поставлено</th>
-                <th rowspan="2">% выполн.</th>
-            </tr>
             <tr>
-                <th>Объём, т</th>
-                <th>Сумма, ₸</th>
-                <th class="gs">Объём, т</th>
-                <th>Сумма за зерно ₸</th>
+                <th class="l">Культура</th>
+                <th>Поставлено, т</th>
+                <th>Сумма за зерно, ₸</th>
+                <th>% выполн.</th>
             </tr>
         </thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
             <td class="l">Итого</td>
-            <td>${fmtT(tv)}</td>
-            <td>${fmtMlrd(ts)}</td>
             <td>${fmtT(fv)}</td>
             <td>${fmtMlrd(fs)}</td>
             <td style="color:${totPc}">${totPct}</td>
@@ -714,7 +713,7 @@ function renderVzRanking() {
     const best  = regs.filter(r => r.pct_exec >= 1.0);
     const worst = [...regs].sort((a, b) => b.debt - a.debt).filter(r => r.debt > 0).slice(0, 3);
 
-    let html = `<div class="vz-rank-title">Рейтинг исполнения по областям</div>`;
+    let html = `<div class="vz-rank-title">Рейтинг исполнения — ${regs.length} областей</div>`;
     html += `<div class="vz-rank-list">`;
     html += regs.map((r, i) => {
         const pct = (r.pct_exec * 100).toFixed(1);
@@ -1264,4 +1263,48 @@ tr:nth-child(even):not(.rh):not(.sub):not(.tot) td{background:#FAFAF8}
     w.document.close();
     w.focus();
     setTimeout(() => w.print(), 500);
+}
+
+// ── 12. Экспорт должников PDF ─────────────────────────────────────────────────
+function exportDebtorsPdf() {
+    if (!DR || !DR.debtors.length) { alert("Нет должников для экспорта"); return; }
+    printDebtors();
+}
+
+// ── 13. Экспорт должников Excel ───────────────────────────────────────────────
+function exportDebtorsExcel() {
+    if (!DR || !DR.debtors.length) { alert("Нет должников для экспорта"); return; }
+    const sorted = [...DR.debtors].sort((a, b) =>
+        (a.reg||"").localeCompare(b.reg||"", "ru") || (a.name||"").localeCompare(b.name||"", "ru")
+    );
+    const today = new Date().toLocaleDateString("ru-RU", {day:"2-digit",month:"2-digit",year:"numeric"}).replace(/\./g,"-");
+    const dataRows = sorted.map(c => ({
+        "Область":               c.reg||"",
+        "Наименование СХТП":    c.name||"",
+        "БИН/ИИН":              c.bin||"",
+        "№ договора":           c.dog_num||"",
+        "Культура":             c.cult||"",
+        "Профинансировано, ₸":  Math.round(c.sum_fin||0),
+        "Зачтено, ₸":          Math.round(c.sum_zachet||0),
+        "Остаток долга, ₸":    Math.round(c.debt||0),
+        "Пеня, ₸":             Math.round(c.penalty||0)
+    }));
+
+    if (window.XLSX) {
+        const ws = XLSX.utils.json_to_sheet(dataRows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Должники");
+        XLSX.writeFile(wb, "должники_" + today + ".xlsx");
+    } else {
+        // Fallback: CSV
+        const headers = Object.keys(dataRows[0]);
+        const csv = [headers, ...dataRows.map(r => headers.map(h => r[h]))]
+            .map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n");
+        const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "должники_" + today + ".csv";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
 }
