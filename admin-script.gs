@@ -112,6 +112,13 @@ function doGet(e) {
   const year   = (e && e.parameter && e.parameter.year)   || '2026';
   if (action === 'getReturn')    return ok(_t('getReturn',    () => getReturnForYear(year)));
   if (action === 'getFinancing') return ok(_t('getFinancing', () => getFinancingForYear(year)));
+  // Диагностика: показывает что именно recalc нашёл и записал
+  if (action === 'debugRecalc') {
+    const ss  = getSS();
+    const res = _recalcSvodProfin(ss);
+    cacheDel();
+    return ok(res);
+  }
   return ok({ status: 'ПКК Admin API работает' });
 }
 
@@ -358,6 +365,7 @@ function doPost(e) {
       case 'listApplications': return ok(_t('listApplications', () => listApplications()));
       case 'saveAppStatus':    return ok(_t('saveAppStatus',    () => saveAppStatus(body, user)));
       case 'saveAppCard':      return ok(_t('saveAppCard',      () => saveAppCard(body, user)));
+      case 'recalcSvod':       return ok(_t('recalcSvod', () => { const r = _recalcSvodProfin(getSS()); cacheDel(); return r; }));
       case 'listUsers':        checkAdmin(user); return ok(_t('listUsers', () => listUsers()));
       case 'saveUser':         checkAdmin(user); return ok(_t('saveUser',  () => saveUser(body)));
       case 'changePassword':   return ok(_t('changePassword',  () => changePassword(body, user)));
@@ -735,25 +743,45 @@ function saveAppCard(body, user) {
   // Один setValues() вместо N setValue() — главная оптимизация
   rowRange.setValues([rowValues]);
 
-  // Пересчитать СВОД (СХТП/заявки/суммы по регионам) если изменился fin_sum или статус
+  // Пересчитать СВОД если изменился fin_sum или статус
+  var recalcResult = null;
   if (body.fin_sum !== undefined || body.status !== undefined) {
-    _recalcSvodProfin(ss);
+    try { recalcResult = _recalcSvodProfin(ss); }
+    catch(e) { recalcResult = { error: e.message }; }
   }
 
   cacheDel();
   addLog(ss, user.name, 'Карточка заявки', rowIdx, { status: body.status });
-  return { ok: true };
+  return { ok: true, recalc: recalcResult };
 }
 
 // ── Пересчёт СВОД: колонки "Профинансировано" (СХТП, заявки, сумма, объём) ──
+// Возвращает диагностику: что нашлось в РАЗВЕРНУТАЯ и что записано в СВОД.
 function _recalcSvodProfin(ss) {
   const svodSh = ss.getSheetByName('СВОД');
   const detSh  = ss.getSheetByName(SH_DETAIL);
-  if (!svodSh || !detSh) return;
+  if (!svodSh) return { error: 'Лист СВОД не найден' };
+  if (!detSh)  return { error: 'Лист ' + SH_DETAIL + ' не найден' };
 
-  // 1. Читаем РАЗВЕРНУТАЯ — агрегируем профинансированных по регионам
-  const detData = detSh.getDataRange().getValues();
-  const regMap  = {}; // нормализованное имя региона → {bins: Set, apps, sum, vol}
+  // Шаг 1: читаем СВОД — ищем строку "Итого по РК" и колонку СХТП Профинансировано
+  var svodData = svodSh.getDataRange().getValues();
+  var itogoRow = -1;
+  // Определяем колонку СХТП по заголовочным строкам СВОД (ищем слово "СХТП" рядом с "профин")
+  var schodCol = 19; // default: 0-indexed = колонка 20 (1-indexed)
+  for (var hi = 0; hi < Math.min(5, svodData.length); hi++) {
+    var hrow = svodData[hi];
+    for (var hc = 0; hc < hrow.length; hc++) {
+      var hval = String(hrow[hc] || '').toLowerCase();
+      if ((hval.includes('схтп') || hval.includes('кол') && hval.includes('схтп')) &&
+          (hval.includes('профин') || (hc > 0 && String(hrow[hc-1]||'').toLowerCase().includes('профин')))) {
+        schodCol = hc; break;
+      }
+    }
+  }
+
+  // Шаг 2: собираем данные из РАЗВЕРНУТАЯ по регионам
+  var detData = detSh.getDataRange().getValues();
+  var regMap  = {};
 
   for (var i = DATA_ROW; i < detData.length; i++) {
     var row  = detData[i];
@@ -763,37 +791,51 @@ function _recalcSvodProfin(ss) {
     if (finSum <= 0) continue;
     var reg = String(row[C.reg] || '').trim();
     if (!reg) continue;
-    var normReg = reg.toLowerCase().replace('область', '').trim();
+    var normReg = reg.toLowerCase().replace(/область/g, '').trim();
     if (!regMap[normReg]) regMap[normReg] = { label: reg, bins: {}, apps: 0, sum: 0, vol: 0 };
-    var bin = String(row[C.bin] || '').trim() || name; // ключ СХТП — БИН или имя
+    var bin = String(row[C.bin] || '').trim() || name;
     regMap[normReg].bins[bin] = 1;
     regMap[normReg].apps += 1;
     regMap[normReg].sum  += finSum;
     regMap[normReg].vol  += Number(row[C.fin_vol]) || Number(row[C.dog_vol]) || 0;
   }
 
-  // 2. Читаем СВОД — находим строки регионов
-  var svodData = svodSh.getDataRange().getValues();
-  var itogoRow = -1;
+  // Шаг 3: обходим СВОД и обновляем найденные регионы
   var totSchtp = 0, totApps = 0, totSum = 0, totVol = 0;
+  var matched = [], unmatched = [];
 
   for (var j = 0; j < svodData.length; j++) {
     var nm = String(svodData[j][1] || '').trim();
     if (!nm) continue;
-    if (nm.includes('Итого по РК')) { itogoRow = j + 1; continue; }
-    var normNm = nm.toLowerCase().replace('область', '').trim();
+    if (nm.toLowerCase().includes('итого по рк') || nm.toLowerCase().includes('итого по ркm')) {
+      itogoRow = j + 1; continue;
+    }
+    var normNm = nm.toLowerCase().replace(/область/g, '').trim();
     var rd = regMap[normNm];
-    if (!rd) continue;
+    if (!rd) { if (nm.length > 2) unmatched.push(nm); continue; }
     var schtp = Object.keys(rd.bins).length;
-    // Колонка 20 (1-indexed) = индекс 19 = СХТП профинансировано
-    svodSh.getRange(j + 1, 20, 1, 4).setValues([[schtp, rd.apps, rd.sum, rd.vol]]);
+    // Пишем в sheet-колонку schodCol+1 (1-indexed), 4 колонки: СХТП, заявки, сумма, объём
+    svodSh.getRange(j + 1, schodCol + 1, 1, 4).setValues([[schtp, rd.apps, rd.sum, rd.vol]]);
     totSchtp += schtp; totApps += rd.apps; totSum += rd.sum; totVol += rd.vol;
+    matched.push({ reg: nm, schtp: schtp, apps: rd.apps });
   }
 
-  // 3. Обновляем строку "Итого по РК"
+  // Шаг 4: обновляем строку "Итого по РК"
   if (itogoRow > 0) {
-    svodSh.getRange(itogoRow, 20, 1, 4).setValues([[totSchtp, totApps, totSum, totVol]]);
+    svodSh.getRange(itogoRow, schodCol + 1, 1, 4).setValues([[totSchtp, totApps, totSum, totVol]]);
   }
+
+  SpreadsheetApp.flush();  // гарантируем запись до следующего чтения
+
+  return {
+    ok: true,
+    schodCol: schodCol,         // какую колонку нашли для СХТП (0-indexed)
+    itogoRow: itogoRow,         // строка "Итого по РК" в СВОД
+    regFound: Object.keys(regMap).length,   // регионов в РАЗВЕРНУТАЯ
+    matched: matched,           // регионы, которые обновили в СВОД
+    unmatched: unmatched,       // строки СВОД, которые не нашли в РАЗВЕРНУТАЯ
+    totals: { schtp: totSchtp, apps: totApps }
+  };
 }
 
 function getContractor(body) {

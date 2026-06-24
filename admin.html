@@ -527,6 +527,8 @@ a { color: var(--green); text-decoration: none; }
     <button class="anav-btn"     data-tab="financing" onclick="switchTab('financing')">Финансирование</button>
     <button class="anav-btn"     data-tab="return"    onclick="switchTab('return')">Возврат зерна</button>
     <button class="anav-btn"     data-tab="users"     onclick="switchTab('users')" id="tabUsers" style="display:none">Пользователи</button>
+    <div style="flex:1"></div>
+    <button class="anav-btn" id="btnRecalcSvod" onclick="recalcSvod()" title="Пересчитать СХТП/заявки в листе СВОД из РАЗВЕРНУТАЯ">↻ Пересчёт СВОД</button>
   </nav>
 
   <div class="acontent">
@@ -691,6 +693,36 @@ async function api(action, data = {}) {
   const json = await r.json();
   if (!json.ok) throw new Error(json.error || 'Ошибка сервера');
   return json;
+}
+
+// ── Пересчёт СВОД ────────────────────────────────────────────────────────────
+
+async function recalcSvod() {
+  const btn = document.getElementById('btnRecalcSvod');
+  if (btn) btn.textContent = '↻ Пересчёт…';
+  try {
+    const r = await api('recalcSvod');
+    const d = r; // диагностика
+    let msg = `✓ СВОД пересчитан.\n`;
+    msg += `Колонка СХТП в СВОД: ${d.schodCol !== undefined ? d.schodCol + 1 : '?'} (1-indexed)\n`;
+    msg += `Строка "Итого по РК": ${d.itogoRow || 'не найдена'}\n`;
+    msg += `Регионов в РАЗВЕРНУТАЯ: ${d.regFound || 0}\n`;
+    msg += `Совпало с СВОД: ${(d.matched||[]).length}\n`;
+    if ((d.matched||[]).length) {
+      msg += `\nОбновлено:\n`;
+      (d.matched||[]).forEach(m => { msg += `  ${m.reg}: ${m.schtp} СХТП · ${m.apps} заявок\n`; });
+    }
+    if ((d.unmatched||[]).length) {
+      msg += `\nНе совпало (строки СВОД без данных РАЗВЕРНУТАЯ):\n`;
+      (d.unmatched||[]).forEach(u => { msg += `  "${u}"\n`; });
+    }
+    msg += `\nИтого: ${d.totals?.schtp || 0} СХТП · ${d.totals?.apps || 0} заявок`;
+    alert(msg);
+  } catch(e) {
+    alert('Ошибка пересчёта: ' + e.message);
+  } finally {
+    if (btn) btn.textContent = '↻ Пересчёт СВОД';
+  }
 }
 
 // ── Авторизация ────────────────────────────────────────────────────────────
