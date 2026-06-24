@@ -18,6 +18,20 @@ let _fwdSub = "report";
 
 let _ylTimer = null;
 
+function showVzLoader() {
+    const ldr  = document.getElementById("vzLoader");
+    const body = document.getElementById("vzBody");
+    if (ldr)  ldr.style.display  = "flex";
+    if (body) body.style.display = "none";
+}
+
+function hideVzLoader() {
+    const ldr  = document.getElementById("vzLoader");
+    const body = document.getElementById("vzBody");
+    if (ldr)  ldr.style.display  = "none";
+    if (body) body.style.display = "";
+}
+
 function showYearLoader(text) {
     const yl = document.getElementById("yearLoader");
     const t  = document.getElementById("ylTitle");
@@ -70,8 +84,8 @@ function switchForwardSub(sub) {
     if (sub === "vozvrat") {
         if (!DR) {
             const vkEl = document.getElementById("vzKpis");
-            if (vkEl) vkEl.innerHTML = blockLoader("Загрузка данных возврата");
-            showYearLoader("Загрузка возврата");
+            if (vkEl) vkEl.innerHTML = "";
+            showVzLoader();
         }
         ensureVozvrat();
     }

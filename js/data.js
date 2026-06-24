@@ -10,6 +10,7 @@ async function fetchCSV(url) {
 async function loadGeoData() {
     if (GEO) return;
     if (window.am5geodata_kazakhstanLow) { GEO = window.am5geodata_kazakhstanLow; return; }
+    if (window.KAZ_GEO && window.KAZ_GEO.features && window.KAZ_GEO.features.length) { GEO = window.KAZ_GEO; return; }
     for (const u of [CONFIG.GEO_URL, CONFIG.GEO_URL_FALLBACK]) {
         try { const r = await fetch(u, {cache: "force-cache"}); if (r.ok) { GEO = await r.json(); return; } } catch (e) {}
     }
@@ -66,30 +67,62 @@ function parseSvod(rows) {
 }
 
 function parseDetail(rows) {
-    const gmap = {}, smap = {};
+    // Каждая профинансированная строка — отдельная запись.
+    // Ключ: БИН + договор + культура. Дубли (та же заявка и культура) — суммируются.
+    const gmap = {};
     const setIf = (g, f, idx, r) => { const v = String(r[idx] || "").trim(); if (!g[f] && v) g[f] = v; };
     for (let i = 0; i < rows.length; i++) {
-        const r = rows[i];
-        const regRaw = String(r[2] || "").trim();
-        const name = String(r[4] || "").trim();
-        const reg = DETAIL_TO_FULL[regRaw];
+        const r      = rows[i];
+        const regRaw = String(r[2]  || "").trim();
+        const name   = String(r[4]  || "").trim();
+        const reg    = DETAIL_TO_FULL[regRaw];
         if (!reg || !name || name.includes("Итого") || name === "Наименование поставщика") continue;
-        const status = String(r[24] || "").trim(), cult = String(r[14] || "").trim();
-        const sum = toNum(r[17] || 0), vol = toNum(r[19] || 0), bin = String(r[11] || "").trim();
-        const k = reg + "|" + (bin || name);
-        if (!gmap[k]) gmap[k] = {reg, name, bin, form: String(r[3] || "").trim(), rayon: String(r[10] || "").trim(),
-            nds: String(r[12] || "").trim(), garant: String(r[21] || "").trim(), cults: [],
-            apps: 0, sum: 0, vol: 0, statuses: [], lines: [],
-            regDate: "", ksSent: "", ksDate: "", pravlDate: "", dogNum: "", dogDate: "", garDate: "", finDate: ""};
+
+        // Фильтр: только строки со статусом "профин..."
+        const status = String(r[24] || "").trim();
+        if (!status.toLowerCase().startsWith("профин")) continue;
+
+        const cult   = String(r[14] || "").trim();
+        const bin    = String(r[11] || "").trim();
+        const dogNum = String(r[49] || "").trim();
+        // Сумма из раздела "Профинансировано" (66), фолбэк — заявленная (17)
+        const finSum = toNum(r[66] || 0) || toNum(r[17] || 0);
+        const finVol = toNum(r[68] || 0) || toNum(r[19] || 0);
+        const appSum = toNum(r[17] || 0);
+        const appVol = toNum(r[19] || 0);
+
+        // Ключ: уникален на уровне заявки + культура
+        const k = (bin || name) + "|" + (dogNum || i) + "|" + cult;
+
+        if (!gmap[k]) {
+            gmap[k] = {
+                reg, name, bin,
+                form:  String(r[3]  || "").trim(),
+                rayon: String(r[10] || "").trim(),
+                nds:   String(r[12] || "").trim(),
+                garant: String(r[21] || "").trim(),
+                cults: cult ? [cult] : [],
+                sum: finSum, vol: finVol, appSum, appVol,
+                statuses: [status], lines: [],
+                regDate: "", ksSent: "", ksDate: "", pravlDate: "",
+                dogNum, dogDate: "", garDate: "", finDate: ""
+            };
+        } else {
+            const g = gmap[k];
+            g.sum    += finSum;
+            g.vol    += finVol;
+            g.appSum += appSum;
+            g.appVol += appVol;
+            if (cult   && !g.cults.includes(cult))     g.cults.push(cult);
+            if (status && !g.statuses.includes(status)) g.statuses.push(status);
+        }
+
         const g = gmap[k];
-        g.apps++; g.sum += sum; g.vol += vol;
-        if (cult && !g.cults.includes(cult)) g.cults.push(cult);
-        if (status) { g.statuses.push(status); smap[status] = (smap[status] || 0) + 1; }
         if (!g.garant && String(r[21] || "").trim()) g.garant = String(r[21] || "").trim();
-        setIf(g, "regDate", 13, r); setIf(g, "ksSent", 30, r); setIf(g, "ksDate", 36, r);
-        setIf(g, "pravlDate", 43, r); setIf(g, "dogNum", 49, r); setIf(g, "dogDate", 50, r);
-        setIf(g, "garDate", 56, r); setIf(g, "finDate", 63, r);
-        if (cult || vol || sum) g.lines.push({cult, vol, sum, status});
+        setIf(g, "regDate",   13, r); setIf(g, "ksSent",  30, r); setIf(g, "ksDate",  36, r);
+        setIf(g, "pravlDate", 43, r); setIf(g, "dogDate", 50, r);
+        setIf(g, "garDate",   56, r); setIf(g, "finDate", 63, r);
+        g.lines.push({cult, vol: appVol, sum: appSum, status});
     }
     const pick = sts => {
         for (const p of ["профин.", "гарантия", "на кс", "сп", "расторжение кусп", "отозван", "отказ кусп"]) {
@@ -97,16 +130,22 @@ function parseDetail(rows) {
         }
         return sts[0] || "—";
     };
-    const cps = Object.values(gmap).map(g => ({reg: g.reg, name: g.name, bin: g.bin, form: g.form, rayon: g.rayon,
-        nds: g.nds, garant: g.garant, cults: g.cults, apps: g.apps,
-        sum: Math.round(g.sum), vol: Math.round(g.vol * 10) / 10,
+    const cps = Object.values(gmap).map(g => ({
+        reg: g.reg, name: g.name, bin: g.bin, form: g.form, rayon: g.rayon,
+        nds: g.nds, garant: g.garant, cults: g.cults, apps: 1,
+        sum:    Math.round(g.sum),
+        vol:    Math.round(g.vol * 10) / 10,
         status: pick(g.statuses),
-        sts: [...new Set(g.statuses.map(s => s.trim()).filter(Boolean))],
-        lines: g.lines,
-        dates: {reg: g.regDate, ksSent: g.ksSent, ks: g.ksDate, pravl: g.pravlDate, dogNum: g.dogNum, dogDate: g.dogDate, gar: g.garDate, fin: g.finDate}
+        sts:    [...new Set(g.statuses.map(s => s.trim()).filter(Boolean))],
+        lines:  g.lines,
+        dates:  {reg: g.regDate, ksSent: g.ksSent, ks: g.ksDate, pravl: g.pravlDate,
+                 dogNum: g.dogNum, dogDate: g.dogDate, gar: g.garDate, fin: g.finDate}
     })).sort((a, b) => b.sum - a.sum);
     const stMap = {};
-    cps.forEach(c => { const set = c.sts.length ? c.sts : [c.status]; set.forEach(s => { if (s && s !== "—") stMap[s] = (stMap[s] || 0) + 1; }); });
+    cps.forEach(c => {
+        const set = c.sts.length ? c.sts : [c.status];
+        set.forEach(s => { if (s && s !== "—") stMap[s] = (stMap[s] || 0) + 1; });
+    });
     const statuses = Object.entries(stMap).sort((a, b) => b[1] - a[1]).map(([n, c]) => [n, c, statCls(n)]);
     return {cps, statuses};
 }
@@ -132,11 +171,26 @@ async function loadData(yearOverride) {
             live.textContent = "Департамент закупа СХП";
             showBanner(`Данные за ${year} год будут добавлены позже.`);
             return;
-        } else if (CONFIG.API_URL) {
-            const r = await fetch(CONFIG.API_URL, {cache: "no-store"});
-            if (!r.ok) throw new Error("API " + r.status);
-            const j = await r.json(); svodRows = j.svod; detRows = j.detail;
-            if (!svodRows || !detRows) throw new Error("API вернул не {svod, detail}");
+        } else if (CONFIG.API_URL_RETURN || CONFIG.API_URL) {
+            // Приоритет — admin GAS (?action=getFinancing), т.к. его кэш сбрасывается
+            // при каждом сохранении в админке → кнопка «Обновить» работает мгновенно
+            const ts = Date.now();
+            const adminUrl = CONFIG.API_URL_RETURN
+                ? CONFIG.API_URL_RETURN + "?action=getFinancing&_=" + ts
+                : null;
+            const fallbackUrl = CONFIG.API_URL ? CONFIG.API_URL + "?_=" + ts : null;
+
+            let j = null;
+            for (const url of [adminUrl, fallbackUrl].filter(Boolean)) {
+                try {
+                    const r = await fetch(url, {cache: "no-store"});
+                    if (!r.ok) continue;
+                    const d = await r.json();
+                    if (d.ok && d.svod && d.detail) { j = d; break; }
+                } catch(_) {}
+            }
+            if (!j) throw new Error("API недоступен");
+            svodRows = j.svod; detRows = j.detail;
         } else {
             const uSvod = CONFIG.SVOD_CSV || gvizURL(CONFIG.SVOD_SHEET),
                   uDet  = CONFIG.DETAIL_CSV || gvizURL(CONFIG.DETAIL_SHEET);

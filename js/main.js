@@ -59,6 +59,7 @@ document.getElementById("btnRefresh").addEventListener("click", () => {
             const el = document.getElementById(id);
             if (el) el._rendered = false;
         });
+        if (typeof showVzLoader === "function") showVzLoader();
         loadReturn();
     }
     loadData();
@@ -67,6 +68,25 @@ document.getElementById("btnPrint").addEventListener("click", () => {
     if (_fwdSub === "vozvrat") printReturnSection();
     else printPDF();
 });
+
+// Тултип при наведении на KPI-плашку
+(function() {
+  const tip = document.getElementById('kpiTooltip');
+  if (!tip) return;
+  document.addEventListener('mouseover', e => {
+    const kpi = e.target.closest('.kpi[title]');
+    if (!kpi) { tip.style.opacity = '0'; return; }
+    tip.textContent = kpi.title;
+    tip.style.opacity = '1';
+  });
+  document.addEventListener('mousemove', e => {
+    tip.style.left = (e.clientX + 14) + 'px';
+    tip.style.top  = (e.clientY - 32) + 'px';
+  });
+  document.addEventListener('mouseout', e => {
+    if (!e.target.closest('.kpi[title]')) tip.style.opacity = '0';
+  });
+})();
 
 // Загрузка данных
 loadGeoData().then(() => { loadData(); });

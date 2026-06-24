@@ -44,9 +44,9 @@ function openCp(c) {
             const cultN = cultRows.map(x => x[0]);
             const grain = cultN.filter(c => !OIL.includes(c)), oil = cultN.filter(c => OIL.includes(c));
             const groups = [];
-            if (grain.length) groups.push({label: grain.join(", "), d: new Date(2026, 10, 1), txt: "1 ноября 2026"});
-            if (oil.length)   groups.push({label: oil.join(", "),   d: new Date(2026, 10, 15), txt: "15 ноября 2026"});
-            if (!groups.length) groups.push({label: "Все культуры", d: new Date(2026, 10, 1), txt: "1 ноября 2026"});
+            if (grain.length) groups.push({label: grain.join(", "), d: new Date(2026, 10, 2), txt: "2 ноября 2026"});
+            if (oil.length)   groups.push({label: oil.join(", "),   d: new Date(2026, 10, 16), txt: "16 ноября 2026"});
+            if (!groups.length) groups.push({label: "Все культуры", d: new Date(2026, 10, 2), txt: "2 ноября 2026"});
             const startReal = parseRuDate(d.dogDate) || parseRuDate(d.fin);
             const start = startReal || new Date(2026, 1, 1);
             const blocks = groups.map(g => {

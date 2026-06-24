@@ -39,7 +39,7 @@ function cacheSet(key, data) {
 function cacheDel() {
   try {
     CacheService.getScriptCache().removeAll(
-      ['ctrs', 'ret_list', 'fin_2026', 'fin_2025', 'ret_dash_2026', 'ret_dash_2025']
+      ['ctrs', 'ret_list', 'fin_2026', 'fin_2025', 'ret_dash_2026', 'ret_dash_2025', 'apps_list']
     );
   } catch(_) {}
 }
@@ -105,49 +105,79 @@ function getReturnForDashboard() {
     if (!detSheet) return { ok: false, error: 'Лист финансирования не найден' };
     const detData = detSheet.getDataRange().getValues();
 
+    // Каждая строка с финансированием — отдельная запись (не объединяем по БИН)
+    // Ключ: БИН + номер договора + культура — уникален на уровне заявки/культуры
     const financed = {};
     for (let i = DATA_ROW; i < detData.length; i++) {
       const row  = detData[i];
       const name = String(row[C.name] || '').trim();
       const bin  = String(row[C.bin]  || '').trim();
       if (!name || name.includes('Итого') || name === 'Наименование поставщика') continue;
-      const finSum = Number(row[C.fin_sum]) || 0;
+      const status = String(row[C.status] || '').trim().toLowerCase();
+      if (!status.startsWith('профин')) continue;
+      const finSum = Number(row[C.fin_sum]) || Number(row[C.dog_sum]) || 0;
       if (finSum <= 0) continue;
-      const key = bin || name;
-      if (financed[key]) continue;
+      const cult   = String(row[C.cult]    || '').trim();
+      const dogNum = String(row[C.dog_num] || '').trim();
+      // Уникальный ключ на уровне заявки: БИН + договор + культура
+      const key = (bin || name) + '|' + dogNum + '|' + cult;
+      if (financed[key]) {
+        // Крайне редкий случай — две строки с одним договором и культурой, накапливаем
+        financed[key].sum_fin += finSum;
+        financed[key].vol_fin += Number(row[C.fin_vol]) || Number(row[C.dog_vol]) || 0;
+        continue;
+      }
       financed[key] = {
-        reg:       String(row[C.reg]    || '').trim(),
-        form:      String(row[C.form]   || '').trim(),
+        reg:       String(row[C.reg]     || '').trim(),
+        form:      String(row[C.form]    || '').trim(),
         name, bin,
-        rayon:     String(row[C.rayon]  || '').trim(),
-        dog_num:   String(row[C.dog_num] || '').trim(),
+        rayon:     String(row[C.rayon]   || '').trim(),
+        dog_num:   dogNum,
         dog_date:  String(row[C.dog_date] || '').trim(),
-        cult:      String(row[C.cult]   || '').trim(),
-        vol_fin:   Number(row[C.fin_vol])  || 0,
-        price_fin: Number(row[C.fin_price] || row[C.app_price] || 0),
+        cult,
+        vol_fin:   Number(row[C.fin_vol]) || Number(row[C.dog_vol]) || 0,
+        price_fin: Number(row[C.fin_price]) || Number(row[C.app_price]) || 0,
         sum_fin:   finSum,
       };
     }
 
     const retSheet = ss.getSheetByName(SH_RETURN);
     const retMap   = {};
+    var retHIdx    = {};  // маппинг: заголовок → индекс колонки (защита от смены порядка)
     if (retSheet && retSheet.getLastRow() > 1) {
       const retData = retSheet.getDataRange().getValues();
+      // Строим индекс по заголовочной строке листа
+      var retHeaderRow = retData[0] || [];
+      retHeaderRow.forEach(function(h, i) { retHIdx[String(h).trim()] = i; });
+      // Если заголовок пустой — fallback на RET_HEADERS
+      if (Object.keys(retHIdx).length < 5) {
+        RET_HEADERS.forEach(function(h, i) { retHIdx[h] = i; });
+      }
+      // Индексы ключевых колонок для retMap (BIN/name)
+      var riName = retHIdx['Наименование поставщика'] !== undefined ? retHIdx['Наименование поставщика'] : 2;
+      var riBin  = retHIdx['БИН/ИИН']                !== undefined ? retHIdx['БИН/ИИН']                : 4;
       for (let i = 1; i < retData.length; i++) {
         const row  = retData[i];
-        const name = String(row[2] || '').trim();
-        const bin  = String(row[4] || '').trim();
+        const name = String(row[riName] || '').trim();
+        const bin  = String(row[riBin]  || '').trim();
         if (!name) continue;
         retMap[bin || name] = row;
       }
+    } else {
+      // Нет листа — используем RET_HEADERS как эталон
+      RET_HEADERS.forEach(function(h, i) { retHIdx[h] = i; });
     }
 
     const detail = [];
     const regAgg  = {};
 
     Object.values(financed).forEach(function(f) {
-      const ret = retMap[f.bin || f.name] || null;
-      const n   = function(idx) { return ret ? (Number(ret[idx]) || 0) : 0; };
+      const ret = retMap[f.bin || f.name] || retMap[f.name] || null;
+      // Читаем по имени колонки — не зависим от порядка колонок в листе
+      const nh = function(name) {
+        const idx = retHIdx[name];
+        return (ret && idx !== undefined) ? (Number(ret[idx]) || 0) : 0;
+      };
 
       const row = new Array(65).fill(0);
       row[2]  = f.reg;
@@ -155,31 +185,46 @@ function getReturnForDashboard() {
       row[4]  = f.name;
       row[5]  = f.rayon;
       row[6]  = f.bin;
-      row[9]  = ret ? String(ret[5] || f.dog_num)  : f.dog_num;
-      row[10] = ret ? String(ret[6] || f.dog_date) : f.dog_date;
-      row[14] = ret ? String(ret[7] || f.cult)     : f.cult;
-      row[17] = ret ? n(8)  || f.vol_fin   : f.vol_fin;
-      row[18] = ret ? n(9)  || f.price_fin : f.price_fin;
-      row[19] = ret ? n(10) || f.sum_fin   : f.sum_fin;
+      var riDogNum  = retHIdx['№ договора']   !== undefined ? retHIdx['№ договора']   : 5;
+      var riDogDate = retHIdx['Дата договора'] !== undefined ? retHIdx['Дата договора'] : 6;
+      var riCult    = retHIdx['Культура']      !== undefined ? retHIdx['Культура']      : 7;
+      row[9]  = ret ? String(ret[riDogNum]  || f.dog_num)  : f.dog_num;
+      row[10] = ret ? String(ret[riDogDate] || f.dog_date) : f.dog_date;
+      row[14] = ret ? String(ret[riCult]    || f.cult)     : f.cult;
+      // Данные договора — всегда из РАЗВЕРНУТАЯ (финансирование нельзя трогать)
+      row[17] = f.vol_fin;
+      row[18] = f.price_fin;
+      row[19] = f.sum_fin;
 
-      row[27] = n(11); row[28] = n(12);
-      row[25] = n(13); row[26] = n(14);
-      row[23] = n(15); row[24] = n(16);
-      row[29] = n(17); row[30] = n(18);
+      row[27] = nh('Пш 3кл объём, т');    row[28] = nh('Пш 3кл сумма, ₸');
+      row[25] = nh('Пш 4кл объём, т');    row[26] = nh('Пш 4кл сумма, ₸');
+      row[23] = nh('Пш 5кл объём, т');    row[24] = nh('Пш 5кл сумма, ₸');
+      row[29] = nh('Ячмень 2кл объём, т'); row[30] = nh('Ячмень 2кл сумма, ₸');
 
-      row[52] = n(19);
-      row[53] = n(20);
-      row[32] = n(21);
-      row[56] = ret ? n(22) : Math.max(0, f.sum_fin);
-      row[57] = n(23);
-      row[58] = n(24);
-      row[59] = n(25);
-      row[34] = n(26);
-      row[40] = n(27);
-      row[44] = n(28);
-      row[61] = n(22);
+      row[52] = nh('Всего поставлено, т');
+      row[53] = nh('Всего сумма за зерно, ₸');
 
-      try { row.payments = ret ? JSON.parse(ret[29] || '[]') : []; }
+      // Пересчёт зачтено и долга напрямую (не читаем сохранённые значения)
+      var grainSumRet  = nh('Всего сумма за зерно, ₸');
+      var paidMoneyRet = nh('Погашено деньгами, ₸');
+      var zachetRet    = ret ? Math.min(grainSumRet + paidMoneyRet, f.sum_fin) : 0;
+      var debtRet      = Math.max(0, f.sum_fin - zachetRet);
+      // Доплата: зерно сверх финансирования (только если разница >= 200 000 ₸)
+      var excessRet    = Math.max(0, grainSumRet - f.sum_fin);
+      var doplatRet    = (f.sum_fin > 0 && excessRet >= 200000) ? excessRet : 0;
+
+      row[32] = zachetRet;
+      row[56] = debtRet;
+      row[57] = nh('Пеня, ₸');
+      row[58] = paidMoneyRet;
+      row[59] = nh('Погашено зерном, ₸');
+      row[34] = doplatRet > 0 ? doplatRet : nh('Доплата план, ₸');
+      row[40] = nh('Доплата факт, ₸');
+      row[44] = nh('КСН, ₸');
+      row[61] = debtRet;
+
+      var riJson = retHIdx['Поставлено JSON'] !== undefined ? retHIdx['Поставлено JSON'] : 29;
+      try { row.payments = ret ? JSON.parse(ret[riJson] || '[]') : []; }
       catch(_) { row.payments = []; }
 
       detail.push(row);
@@ -247,6 +292,9 @@ function doPost(e) {
       case 'listReturn':       return ok(listReturn());
       case 'saveReturn':       return ok(saveReturn(body, user));
       case 'deleteReturn':     return ok(deleteReturn(body, user));
+      case 'listApplications': return ok(listApplications());
+      case 'saveAppStatus':    return ok(saveAppStatus(body, user));
+      case 'saveAppCard':      return ok(saveAppCard(body, user));
       case 'listUsers':        checkAdmin(user); return ok(listUsers());
       case 'saveUser':         checkAdmin(user); return ok(saveUser(body));
       case 'changePassword':   return ok(changePassword(body, user));
@@ -351,38 +399,256 @@ function listContractors() {
   const sheet = getSS().getSheetByName(SH_DETAIL);
   if (!sheet) return { ok: false, error: 'Лист "' + SH_DETAIL + '" не найден' };
 
-  const data  = sheet.getDataRange().getValues();
-  const seen  = {};
-  const list  = [];
+  const data = sheet.getDataRange().getValues();
+  const list = [];
 
-  for (let i = DATA_ROW; i < data.length; i++) {
-    const row  = data[i];
-    const name = String(row[C.name] || '').trim();
-    const bin  = String(row[C.bin]  || '').trim();
-    const reg  = String(row[C.reg]  || '').trim();
+  for (var i = DATA_ROW; i < data.length; i++) {
+    var row  = data[i];
+    var name = String(row[C.name] || '').trim();
+    var bin  = String(row[C.bin]  || '').trim();
+    var reg  = String(row[C.reg]  || '').trim();
     if (!name || !reg || name.includes('Итого') || name === 'Наименование поставщика') continue;
-    const key = bin || name;
-    if (seen[key]) continue;
-    seen[key] = true;
+
+    // Берём фактическое финансирование; если не заполнено — договорную сумму
+    var finSum = Number(row[C.fin_sum]) || Number(row[C.dog_sum]) || 0;
+    var finVol = Number(row[C.fin_vol]) || Number(row[C.dog_vol]) || 0;
+    // Показываем только строки у которых есть данные по финансированию
+    if (finSum <= 0 && finVol <= 0) continue;
+
     list.push({
       rowIdx:   i + 1,
       bin, name,
-      reg:      String(row[C.reg]    || '').trim(),
-      form:     String(row[C.form]   || '').trim(),
-      rayon:    String(row[C.rayon]  || '').trim(),
-      cult:     String(row[C.cult]   || '').trim(),
-      hpp:      String(row[C.app_hpp] || '').trim(),
-      status:   String(row[C.status] || '').trim(),
-      fin_sum:  Number(row[C.fin_sum])  || 0,
-      fin_vol:  Number(row[C.fin_vol])  || 0,
+      reg,
+      form:     String(row[C.form]     || '').trim(),
+      rayon:    String(row[C.rayon]    || '').trim(),
+      cult:     String(row[C.cult]     || '').trim(),
+      hpp:      String(row[C.app_hpp]  || '').trim(),
+      status:   String(row[C.status]   || '').trim(),
+      fin_sum:  finSum,
+      fin_vol:  finVol,
       fin_date: String(row[C.fin_date] || '').trim(),
       dog_num:  String(row[C.dog_num]  || '').trim(),
     });
   }
 
-  const result = { ok: true, data: list };
+  // Сортируем: регион → имя → культура
+  list.sort(function(a, b) {
+    var rv = a.reg.localeCompare(b.reg, 'ru');
+    if (rv !== 0) return rv;
+    var nv = a.name.localeCompare(b.name, 'ru');
+    if (nv !== 0) return nv;
+    return a.cult.localeCompare(b.cult, 'ru');
+  });
+
+  var result = { ok: true, data: list };
   cacheSet(ckey, result);
   return result;
+}
+
+// ── Поступившие заявки ────────────────────────────────────────────────────────
+// Возвращает ВСЕ строки листа (не только профинансированные).
+// Динамически ищет колонки КС и КУСП по заголовочной строке.
+
+function listApplications() {
+  const ckey = 'apps_list';
+  const hit  = cacheGet(ckey);
+  if (hit) return hit;
+
+  const sheet = getSS().getSheetByName(SH_DETAIL);
+  if (!sheet) return { ok: false, error: 'Лист "' + SH_DETAIL + '" не найден' };
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= DATA_ROW) return { ok: true, data: [], dopfin: [] };
+
+  // Используем общую функцию определения колонок по заголовку
+  var dyn = detectDynamicCols(sheet);
+  var ksSum = dyn.ks_sum, ksVol = dyn.ks_vol, ksSent = dyn.ks_sent, ksDate = dyn.ks_date;
+  var kuspSum = dyn.kusp_sum, kuspVol = dyn.kusp_vol, kuspDate = dyn.kusp_date;
+  var pravlSum = dyn.pravl_sum, pravlDate = dyn.pravl_date;
+
+  const g = function(row, idx) { return idx >= 0 ? row[idx] : ''; };
+  const n = function(row, idx) { return idx >= 0 ? (Number(row[idx]) || 0) : 0; };
+
+  var list    = [];  // обычные заявки (первичные)
+  var dopfin  = [];  // дополнительное финансирование (строки с меткой "доп")
+
+  // Строим набор первичных БИН→dogNum пар (профинансированных) для выявления дополнительного
+  var finSet = {};
+  for (var i = DATA_ROW; i < data.length; i++) {
+    var row = data[i];
+    if ((Number(row[C.fin_sum]) || 0) > 0) {
+      var key = String(row[C.bin] || row[C.name] || '').trim();
+      if (!finSet[key]) finSet[key] = [];
+      finSet[key].push(String(row[C.dog_num] || '').trim());
+    }
+  }
+
+  for (var i = DATA_ROW; i < data.length; i++) {
+    var row  = data[i];
+    var name = String(row[C.name] || '').trim();
+    var reg  = String(row[C.reg]  || '').trim();
+    if (!name || !reg || name.includes('Итого') || name === 'Наименование поставщика') continue;
+
+    var appSum  = Number(row[C.app_sum])  || 0;
+    var appVol  = Number(row[C.app_vol])  || 0;
+    if (appSum <= 0 && appVol <= 0) continue; // строки без заявки пропускаем
+
+    var bin    = String(row[C.bin]      || '').trim();
+    var dogNum = String(row[C.dog_num]  || '').trim();
+    var status = String(row[C.status]   || '').trim();
+    var finSum = Number(row[C.fin_sum]) || 0;
+    var dogSum = Number(row[C.dog_sum]) || 0;
+
+    var statusLo = status.toLowerCase();
+
+    // Отозванные — пропускаем везде
+    if (statusLo.includes('отозван')) continue;
+
+    // Является ли строка "доп. финансированием"?
+    // Признак: реестровый столбец (col 1) содержит "доп"
+    var binKey  = bin || name;
+    var reestNo = String(row[1] || '').toLowerCase();
+    var isDop   = reestNo.includes('доп') || statusLo.includes('доп');
+
+    // Профинансирована ли строка?
+    var isFinanced = finSum > 0 || statusLo.startsWith('профин');
+
+    var obj = {
+      rowIdx:     i + 1,
+      name, bin, reg,
+      form:       String(row[C.form]     || '').trim(),
+      rayon:      String(row[C.rayon]    || '').trim(),
+      cult:       String(row[C.cult]     || '').trim(),
+      status,
+      is_dop:     isDop,
+      reg_date:   String(row[C.date_reg] || '').trim(),
+      app_sum:    appSum,
+      app_vol:    appVol,
+      ks_sent:    String(g(row, ksSent)  || '').trim(),
+      ks_date:    String(g(row, ksDate)  || '').trim(),
+      ks_sum:     n(row, ksSum),
+      ks_vol:     n(row, ksVol),
+      kusp_sum:   n(row, kuspSum),
+      kusp_vol:   n(row, kuspVol),
+      kusp_date:  String(g(row, kuspDate) || '').trim(),
+      pravl_date: String(g(row, pravlDate) || '').trim(),
+      pravl_sum:  n(row, pravlSum),
+      dog_num:    dogNum,
+      dog_date:   String(row[C.dog_date] || '').trim(),
+      dog_sum:    dogSum,
+      dog_vol:    Number(row[C.dog_vol]) || 0,
+      fin_date:   String(row[C.fin_date] || '').trim(),
+      fin_sum:    finSum,
+      fin_vol:    Number(row[C.fin_vol]) || 0,
+    };
+
+    if (isDop && isFinanced) dopfin.push(obj);   // доп и профинансирован → Доп. финансирование
+    else                     list.push(obj);      // всё остальное → Поступившие заявки
+  }
+
+  // Сортировка: регион → имя → культура
+  var cmp = function(a, b) {
+    return a.reg.localeCompare(b.reg,'ru') || a.name.localeCompare(b.name,'ru') || a.cult.localeCompare(b.cult,'ru');
+  };
+  list.sort(cmp);
+  dopfin.sort(cmp);
+
+  var result = { ok: true, data: list, dopfin: dopfin };
+  cacheSet(ckey, result);
+  return result;
+}
+
+// Сохранение статуса одной строки в листе (из вкладок заявок/допфин)
+function saveAppStatus(body, user) {
+  var { rowIdx, status } = body;
+  if (!rowIdx || status == null) return { ok: false, error: 'Нет данных' };
+  const ss    = getSS();
+  const sheet = ss.getSheetByName(SH_DETAIL);
+  if (!sheet) return { ok: false, error: 'Лист не найден' };
+  sheet.getRange(rowIdx, C.status + 1).setValue(status);
+  cacheDel();
+  addLog(ss, user.name, 'Статус заявки', rowIdx, { status });
+  return { ok: true };
+}
+
+// Находит индексы колонок КС/КУСП/Правление по заголовочной строке листа
+function detectDynamicCols(sheet) {
+  var hdrRow = sheet.getRange(1, 1, Math.min(4, sheet.getLastRow()), sheet.getLastColumn()).getValues();
+  var hdr = [];
+  // Ищем строку, содержащую "Наименование поставщика"
+  for (var hi = 0; hi < hdrRow.length; hi++) {
+    if (String(hdrRow[hi][C.name] || '').includes('Наименование')) { hdr = hdrRow[hi]; break; }
+  }
+  if (!hdr.length) hdr = hdrRow[0] || [];
+  hdr = hdr.map(function(h) { return String(h || '').trim().toLowerCase(); });
+
+  var cols = { ks_sum: -1, ks_vol: -1, ks_sent: 30, ks_date: 36,
+               kusp_sum: -1, kusp_vol: -1, kusp_date: -1,
+               pravl_sum: -1, pravl_date: 43 };
+  hdr.forEach(function(h, i) {
+    if ((h.includes('кс') || h.includes('коорд')) && !h.includes('кусп')) {
+      if ((h.includes('сумм') || h.includes('одобр')) && cols.ks_sum  < 0) cols.ks_sum  = i;
+      if  (h.includes('объ')                          && cols.ks_vol  < 0) cols.ks_vol  = i;
+      if  (h.includes('направл') || h.includes('отпр')) cols.ks_sent = i;
+      if  (h.includes('дат') && !h.includes('направл')) cols.ks_date = i;
+    }
+    if (h.includes('кусп')) {
+      if ((h.includes('сумм') || h.includes('одобр')) && cols.kusp_sum  < 0) cols.kusp_sum  = i;
+      if  (h.includes('объ')                          && cols.kusp_vol  < 0) cols.kusp_vol  = i;
+      if  (h.includes('дат')                          && cols.kusp_date < 0) cols.kusp_date = i;
+    }
+    if (h.includes('правл')) {
+      if (h.includes('сумм') && cols.pravl_sum  < 0) cols.pravl_sum  = i;
+      if (h.includes('дат')  && cols.pravl_date < 0) cols.pravl_date = i;
+    }
+  });
+  return cols;
+}
+
+// Сохраняет карточку заявки: статус + все числовые/текстовые колонки
+function saveAppCard(body, user) {
+  var rowIdx = body.rowIdx;
+  if (!rowIdx) return { ok: false, error: 'Нет rowIdx' };
+  const ss    = getSS();
+  const sheet = ss.getSheetByName(SH_DETAIL);
+  if (!sheet) return { ok: false, error: 'Лист не найден' };
+
+  // Находим динамические колонки КС/КУСП/Правление по заголовку
+  var dyn = detectDynamicCols(sheet);
+
+  // Маппинг поле тела запроса → 0-based колонка в РАЗВЕРНУТАЯ
+  var map = {
+    status:     C.status,
+    app_sum:    C.app_sum,
+    app_vol:    C.app_vol,
+    reg_date:   C.date_reg,
+    ks_sent:    dyn.ks_sent,
+    ks_date:    dyn.ks_date,
+    ks_sum:     dyn.ks_sum,
+    ks_vol:     dyn.ks_vol,
+    kusp_date:  dyn.kusp_date,
+    kusp_sum:   dyn.kusp_sum,
+    kusp_vol:   dyn.kusp_vol,
+    pravl_date: dyn.pravl_date,
+    pravl_sum:  dyn.pravl_sum,
+    dog_num:    C.dog_num,
+    dog_date:   C.dog_date,
+    dog_sum:    C.dog_sum,
+    dog_vol:    C.dog_vol,
+    fin_date:   C.fin_date,
+    fin_sum:    C.fin_sum,
+    fin_vol:    C.fin_vol,
+  };
+
+  Object.keys(map).forEach(function(key) {
+    var col = map[key];
+    if (col < 0 || body[key] === undefined) return;
+    sheet.getRange(rowIdx, col + 1).setValue(body[key]);
+  });
+
+  cacheDel();
+  addLog(ss, user.name, 'Карточка заявки', rowIdx, { status: body.status });
+  return { ok: true };
 }
 
 function getContractor(body) {
@@ -485,10 +751,10 @@ function listReturn() {
   const data = sh.getDataRange().getValues();
   if (data.length <= 1) return { ok: true, data: [] };
 
-  const hdrs = data[0];
   const rows = data.slice(1).map((row, i) => {
     const obj = { rowIdx: i + 2 };
-    hdrs.forEach((h, j) => { obj[h] = row[j]; });
+    // Маппим по позиции через RET_HEADERS (не зависим от заголовков листа)
+    RET_HEADERS.forEach(function(h, j) { obj[h] = row[j]; });
     return obj;
   });
 

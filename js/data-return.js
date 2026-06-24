@@ -116,9 +116,37 @@ function combineReturn(svodRows, detailRows) {
     const debtors = cps.filter(c => c.debt > 0).sort((a, b) => b.debt - a.debt);
     const totalPenalty = cps.reduce((s, c) => s + (c.penalty || 0), 0);
 
+    // Пересчёт из детализации если СВОД даёт нули (старый GAS или незадеплоенная версия)
+    const t = svod.total;
+
+    // 1й уровень: суммируем напрямую из cps.sum_zachet
+    if (t.sum_zachet === 0 && cps.length > 0) {
+        t.sum_zachet = cps.reduce((s, c) => s + (c.sum_zachet || 0), 0);
+    }
+    // 2й уровень fallback: если cps.sum_zachet тоже нулевые — считаем из суммы зерна
+    // (cl5+cl4+cl3+bar) + деньги, ограничиваем финансированием
+    if (t.sum_zachet === 0 && cps.length > 0) {
+        t.sum_zachet = cps.reduce((s, c) => {
+            const grainSum = (c.cl5 ? c.cl5.sum : 0) + (c.cl4 ? c.cl4.sum : 0)
+                           + (c.cl3 ? c.cl3.sum : 0) + (c.bar ? c.bar.sum : 0)
+                           + (c.paid_money || 0);
+            return s + (c.sum_fin > 0 ? Math.min(grainSum, c.sum_fin) : grainSum);
+        }, 0);
+    }
+
+    if (t.vol_ret === 0 && cps.length > 0) {
+        t.vol_ret = cps.reduce((s, c) => s + (c.vol_ret || 0), 0);
+    }
+    if (t.sum_ret === 0 && cps.length > 0) {
+        t.sum_ret = cps.reduce((s, c) => s + (c.sum_ret || 0), 0);
+    }
+    if (t.debt === 0 && t.sum_fin > 0) {
+        t.debt = Math.max(0, t.sum_fin - t.sum_zachet);
+    }
+
     DR = {
         regions: svod.regions,
-        total:   svod.total,
+        total:   t,
         cps, debtors, totalPenalty,
         date: new Date().toLocaleString("ru-RU", {
             day:"2-digit", month:"2-digit", year:"numeric",
@@ -224,5 +252,6 @@ async function loadReturn(yearOverride) {
         const box = document.getElementById("vzErrBox");
         if (box) box.textContent = "Не удалось загрузить данные: " + e.message;
         if (typeof hideYearLoader === "function") hideYearLoader();
+        if (typeof hideVzLoader   === "function") hideVzLoader();
     }
 }
