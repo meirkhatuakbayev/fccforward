@@ -70,6 +70,7 @@ function parseDetail(rows) {
     // Каждая профинансированная строка — отдельная запись.
     // Ключ: БИН + договор + культура. Дубли (та же заявка и культура) — суммируются.
     const gmap = {};
+    const allStMap = {};  // статусы из ВСЕХ строк (для блока "Статусы заявок")
     const setIf = (g, f, idx, r) => { const v = String(r[idx] || "").trim(); if (!g[f] && v) g[f] = v; };
     for (let i = 0; i < rows.length; i++) {
         const r      = rows[i];
@@ -78,8 +79,11 @@ function parseDetail(rows) {
         const reg    = DETAIL_TO_FULL[regRaw];
         if (!reg || !name || name.includes("Итого") || name === "Наименование поставщика") continue;
 
-        // Фильтр: только строки со статусом "профин..."
+        // Собираем статусы ДО фильтра (для блока "Статусы заявок")
         const status = String(r[24] || "").trim();
+        if (status && status !== "—") allStMap[status] = (allStMap[status] || 0) + 1;
+
+        // Для детализации контрагентов — только профинансированные
         if (!status.toLowerCase().startsWith("профин")) continue;
 
         const cult   = String(r[14] || "").trim();
@@ -141,12 +145,7 @@ function parseDetail(rows) {
         dates:  {reg: g.regDate, ksSent: g.ksSent, ks: g.ksDate, pravl: g.pravlDate,
                  dogNum: g.dogNum, dogDate: g.dogDate, gar: g.garDate, fin: g.finDate}
     })).sort((a, b) => b.sum - a.sum);
-    const stMap = {};
-    cps.forEach(c => {
-        const set = c.sts.length ? c.sts : [c.status];
-        set.forEach(s => { if (s && s !== "—") stMap[s] = (stMap[s] || 0) + 1; });
-    });
-    const statuses = Object.entries(stMap).sort((a, b) => b[1] - a[1]).map(([n, c]) => [n, c, statCls(n)]);
+    const statuses = Object.entries(allStMap).sort((a, b) => b[1] - a[1]).map(([n, c]) => [n, c, statCls(n)]);
     return {cps, statuses};
 }
 

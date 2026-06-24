@@ -209,13 +209,10 @@
                     </div>
 
                     <!-- ПРАВАЯ: воронка -->
-                    <div class="card">
-                        <h2>Реестр должников с иными долгами</h2>
+                    <div class="card" id="vzFunnelCard">
+                        <h2>Воронка возврата</h2>
                         <div class="hint">Путь предоплаты: выдано → зачтено зерном → остаток.</div>
                         <div id="vzFunnel" class="funnel"></div>
-                        <div style="padding:0 18px 16px">
-                            <button class="refresh" style="font-size:11px;width:100%;padding:8px" onclick="printDebtors()">📄 Реестр должников (PDF)</button>
-                        </div>
                     </div>
                 </div>
 
@@ -225,20 +222,7 @@
                         <h2 id="vzRegName">Исполнение по договорам</h2>
                         <button class="close" onclick="document.getElementById('vzRegPanel').style.display='none'">Закрыть ✕</button>
                     </div>
-                    <div class="tablescroll" style="max-height:520px">
-                        <table class="rtab">
-                            <thead><tr>
-                                <th class="l">Область</th>
-                                <th class="l">Контрагент</th>
-                                <th>Культура</th>
-                                <th>Объём, т</th>
-                                <th>Предоплата, ₸</th>
-                                <th>Поставлено, т</th>
-                                <th>Долг, ₸</th>
-                            </tr></thead>
-                            <tbody id="vzRegRows"></tbody>
-                        </table>
-                    </div>
+                    <div id="vzRegTableBox" class="tablescroll" style="max-height:520px"></div>
                 </div>
 
                 <!-- Рейтинг по исполнению -->

@@ -75,7 +75,7 @@ function renderVzKpis() {
         {
             lab: "Профинансировано",
             big: n(t.sum_fin), unit: "млрд ₸",
-            sub: fmtT(new Set(DR.cps.map(c => c.bin || c.name)).size) + " СХТП · " + fmtT(t.vol_contr) + " т",
+            sub: fmtT(DR.total.schtp || new Set(DR.cps.filter(c=>c.sum_fin>0).map(c=>c.bin||c.name)).size) + " СХТП · " + fmtT(t.vol_contr) + " т",
             tag: "#E8A82E"
         },
         {
@@ -85,15 +85,15 @@ function renderVzKpis() {
             tag: "#3C6B4A"
         },
         {
-            lab: "В т.ч. зачтено в предоплату",
+            lab: "Сумма предварительной оплаты",
             big: n(t.sum_zachet), unit: "млрд ₸",
-            sub: "погашение предоплаты зерном",
+            sub: fmtT(t.vol_ret > 0 ? t.vol_ret * (t.sum_zachet / (t.sum_ret || t.sum_zachet || 1)) : 0) + " т · " + (DR.total.schtp || new Set(DR.cps.filter(c=>c.sum_fin>0).map(c=>c.bin||c.name)).size) + " СХТП",
             tag: "#3C6B4A"
         },
         {
-            lab: "В т.ч. доплата СХТП",
+            lab: "Сумма доплаты",
             big: n(t.sum_doplata), unit: "млрд ₸",
-            sub: "доплата за зерно выше форвардной цены",
+            sub: fmtT(t.vol_ret > 0 && t.sum_ret > 0 ? t.vol_ret * (t.sum_doplata / t.sum_ret) : 0) + " т",
             tag: "#E8A82E"
         },
         {
@@ -172,8 +172,7 @@ function renderVzFunnel() {
     const box = document.getElementById("vzFunnel");
     if (!box) return;
     const t = DR.total;
-    const uniqBins = new Set(DR.cps.map(c => c.bin || c.name));
-    const totalSchtp = uniqBins.size;
+    const totalSchtp = DR.total.schtp || new Set(DR.cps.filter(c => c.sum_fin > 0).map(c => c.bin || c.name)).size;
     const retSchtp   = new Set(DR.cps.filter(c => c.vol_total > 0).map(c => c.bin || c.name)).size;
     const debtSchtp  = new Set(DR.debtors.map(c => c.bin || c.name)).size;
     const maxSum = Math.max(1, t.sum_fin);
@@ -393,7 +392,7 @@ function renderVzTabArea() {
         </tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
-            <td class="l">Итого по РК<br><span style="font-size:10px;font-weight:600;opacity:.7">${DR.cps.length} СХТП</span></td>
+            <td class="l">Итого по РК<br><span style="font-size:10px;font-weight:600;opacity:.7">${DR.total.schtp || new Set(DR.cps.filter(c=>c.sum_fin>0).map(c=>c.bin||c.name)).size} СХТП</span></td>
             <td>${fmtMlrd(t.sum_fin)}</td>
             <td>${fmtT(t.vol_ret)}</td>
             <td>${fmtMlrd(t.sum_ret)}</td>
@@ -680,27 +679,62 @@ function vzSelectRegion(code) {
     // Строим строки с группировкой по области если показываем все
     let rows = "";
     let lastReg = null;
+    const COLS = code === "all" ? 10 : 9;
     cps.forEach(c => {
-        const safeBin = c.bin.replace(/'/g,"\\'");
-        const safeDog = c.dog_num.replace(/'/g,"\\'");
+        const safeBin = (c.bin||"").replace(/'/g,"\\'");
+        const safeDog = (c.dog_num||"").replace(/'/g,"\\'");
         if (code === "all" && c.reg !== lastReg) {
             lastReg = c.reg;
-            rows += `<tr class="rtab-reg-hdr">
-                <td class="l" colspan="7"><b>${c.reg}</b></td>
-            </tr>`;
+            rows += `<tr class="rtab-reg-hdr"><td class="l" colspan="${COLS}"><b>${c.reg}</b></td></tr>`;
         }
+        // Расчёт фактической поставки
+        const volTotal  = c.vol_total || 0;
+        const sumRet    = c.sum_ret   || 0;
+        const sumZachet = c.sum_zachet|| 0;
+        const sumFin    = c.sum_fin   || 0;
+        const sumDop    = c.sum_doplata || Math.max(0, sumRet - sumFin);
+        const volPre    = sumRet > 0 ? volTotal * (sumZachet / sumRet) : (volTotal > 0 && sumFin > 0 ? Math.min(volTotal, sumFin / (sumFin / (c.vol_fin||1)||1)) : 0);
+        const volDop    = Math.max(0, volTotal - volPre);
+        const pct       = sumFin > 0 ? (sumZachet / sumFin * 100) : 0;
+        const pctColor  = pct >= 95 ? "#3C6B4A" : pct >= 70 ? "#9A6716" : "#E05A4A";
+        const regionTd  = code === "all" ? "" : "";  // no area column when specific region
         rows += `<tr style="cursor:pointer" onclick="openCpReturnByBin('${safeBin}','${safeDog}')">
-            <td class="l">${code === "all" ? "" : c.reg}</td>
+            ${code === "all" ? "" : ""}
             <td class="l">${c.name}<div class="cpsub">${c.form||""} · ${c.dog_num||""}</div></td>
-            <td>${c.cult||"—"}</td>
-            <td>${fmtT(c.vol_fin)}</td>
-            <td>${fmtMlrd(c.sum_fin)}</td>
-            <td>${fmtT(c.vol_total)}</td>
-            <td style="${c.debt>0?"color:#E05A4A;font-weight:700":""}">${c.debt>0?fmtMlrd(c.debt)+" ₸":"✓"}</td>
+            <td style="font-size:11px">${c.cult||"—"}</td>
+            <td class="r num">${sumFin > 0 ? fmtMlrd(sumFin) : "—"}</td>
+            <td class="r num">${volTotal > 0 ? fmtT(volTotal) : "—"}</td>
+            <td class="r num">${sumRet > 0 ? fmtMlrd(sumRet) : "—"}</td>
+            <td class="r num">${volPre > 0 ? fmtT(volPre) : "—"}</td>
+            <td class="r num">${sumZachet > 0 ? fmtMlrd(sumZachet) : "—"}</td>
+            <td class="r num" style="color:${pctColor};font-weight:700">${pct > 0 ? pct.toFixed(1) + "%" : "—"}</td>
+            <td class="r num">${volDop > 0.01 ? fmtT(volDop) : "—"}</td>
+            <td class="r num">${sumDop > 0 ? fmtMlrd(sumDop) : "—"}</td>
         </tr>`;
     });
 
-    document.getElementById("vzRegRows").innerHTML = rows;
+    const box = document.getElementById("vzRegTableBox");
+    const showReg = code === "all";
+    box.innerHTML = `<table class="rtab" style="min-width:900px">
+        <thead>
+            <tr class="grp">
+                <th class="l" rowspan="2">Контрагент</th>
+                <th rowspan="2">Культура</th>
+                <th rowspan="2">Аванс выданный, ₸</th>
+                <th class="gs" colspan="7">Фактическая поставка</th>
+            </tr>
+            <tr>
+                <th class="gs">Объём, т</th>
+                <th>Сумма за зерно, ₸</th>
+                <th>В т.ч. на предоплату, т</th>
+                <th>В т.ч. на предоплату, ₸</th>
+                <th>% исп.</th>
+                <th>Объём доплаты, т</th>
+                <th>Сумма доплаты, ₸</th>
+            </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+    </table>`;
     panel.style.display = "";
     panel.scrollIntoView({ behavior: "smooth", block: "start" });
 }

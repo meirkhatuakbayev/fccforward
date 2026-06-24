@@ -144,6 +144,10 @@ function combineReturn(svodRows, detailRows) {
         t.debt = Math.max(0, t.sum_fin - t.sum_zachet);
     }
 
+    // Уникальные СХТП: считаем по БИН (как в финансировании)
+    const _finBins = new Set(cps.filter(c => c.sum_fin > 0).map(c => c.bin || c.name));
+    t.schtp = _finBins.size;
+
     DR = {
         regions: svod.regions,
         total:   t,
