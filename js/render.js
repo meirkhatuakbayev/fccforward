@@ -47,9 +47,14 @@ function renderStatuses() {
     const box = $("#statuses"); box.innerHTML = "";
     const norm = s => (s || "").toLowerCase().replace(/\s+/g, " ");
     D.statuses.forEach(([name, , cls]) => {
-        // Считаем уникальных СХТП по D.cps (сгруппированные строки, не сырые)
-        const list = D.cps.filter(c => norm(c.status) === norm(name) || (c.sts && c.sts.some(s => norm(s) === norm(name))));
-        const n = uniqSchtp(list);
+        let n;
+        if (isProfin(name)) {
+            // Для "Профинансировано" берём данные из СВОД (сумма по строкам регионов)
+            n = D.total.fin[0];
+        } else {
+            const list = D.cps.filter(c => norm(c.status) === norm(name) || (c.sts && c.sts.some(s => norm(s) === norm(name))));
+            n = uniqSchtp(list);
+        }
         const c = el("div", "chip " + cls); c.dataset.st = name;
         c.innerHTML = `<i></i>${name}<b>${n}</b>`;
         c.addEventListener("click", () => openStatus(name));
