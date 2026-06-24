@@ -162,6 +162,13 @@
 
         <!-- Возврат зерна -->
         <div id="viewVozvrat" style="display:none">
+            <!-- Лоадер возврата (пока DR не загружен) -->
+            <div id="vzLoader" style="display:none;flex-direction:column;align-items:center;justify-content:center;padding:80px 24px;gap:16px">
+                <div class="seal-big" style="width:64px;height:64px;border-radius:16px;background:linear-gradient(150deg,#F6C45E,#D69A1E);display:grid;place-items:center;color:#3a2a06;font-weight:800;font-size:20px">ПКК</div>
+                <div style="font-size:15px;font-weight:700;color:var(--muted)">Загрузка данных возврата…</div>
+                <div class="lbar" style="width:200px"><i></i></div>
+            </div>
+            <div id="vzBody">
             <div class="wrap">
                 <!-- 6 KPI плашек -->
                 <div class="kpis vz-kpis6" id="vzKpis" style="margin-top:22px"></div>
@@ -235,6 +242,7 @@
                 <p class="foot">Обновлено: <b id="vzAsof">—</b></p>
                 <p class="footer-contact">При обнаружении ошибок обращаться к Уакбаев М.М. (Гл. менеджер Департамента закупа СХП)</p>
             </div>
+            </div><!-- /vzBody -->
         </div>
 
         <!-- Прямой закуп -->

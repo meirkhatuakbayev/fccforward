@@ -68,6 +68,7 @@ function parseDetailReturn(rows) {
         const r = rows[i];
         const name = String(r[4] || "").trim();
         if (!name) continue;
+        if (name.includes("Итого") || name.includes("Наименование")) continue;
 
         const cl5 = { vol: toNum(r[23]||0), sum: toNum(r[24]||0) };
         const cl4 = { vol: toNum(r[25]||0), sum: toNum(r[26]||0) };
@@ -146,8 +147,13 @@ function combineReturn(svodRows, detailRows) {
         t.debt = Math.max(0, t.sum_fin - t.sum_zachet);
     }
 
-    // Уникальные СХТП: по cpKey (БИН или нормализованное имя без кавычек)
-    t.schtp = uniqSchtp(cps.filter(c => c.sum_fin > 0));
+    // Уникальные СХТП: сначала из СВОД (r[2]), потом из D.total.fin[0] (финансирование), потом по cpKey
+    if (!t.schtp && typeof D !== 'undefined' && D && D.total && D.total.fin && D.total.fin[0] > 0) {
+        t.schtp = D.total.fin[0];
+    }
+    if (!t.schtp) {
+        t.schtp = uniqSchtp(cps.filter(c => c.sum_fin > 0));
+    }
 
     DR = {
         regions: svod.regions,
@@ -239,8 +245,11 @@ async function loadReturn(yearOverride) {
                 if (resp.ok) {
                     const json = await resp.json();
                     if (json.ok && json.svod && json.detail) {
+                        // Временно: выводим заголовки детальной таблицы для диагностики
+                        if (json.detail.length > 0) console.log("[DETAIL headers]", json.detail[0]);
                         combineReturn(json.svod, json.detail);
                         renderReturn();
+                        if (typeof hideVzLoader === "function") hideVzLoader();
                         return;
                     }
                 }

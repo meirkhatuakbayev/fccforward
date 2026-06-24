@@ -13,6 +13,10 @@ function ensureVozvrat() {
 // ── Основной рендер ──────────────────────────────────────────────────────────
 function renderReturn() {
     if (!DR) return;
+    // Авторитетный источник СХТП — СВОД финансирования (D.total.fin[0] = 169)
+    if (typeof D !== 'undefined' && D && D.total && D.total.fin && D.total.fin[0] > 0) {
+        DR.total.schtp = D.total.fin[0];
+    }
     renderVzKpis();
     renderVzFunnel();
     renderVzDebtorsList();
@@ -46,7 +50,7 @@ function renderVzSummary() {
         if (DR.totalPenalty > 0)
             lines.push(`Начислено пени по всем договорам: <b>${fmtMlrd(DR.totalPenalty)} ₸</b>`);
         else
-            lines.push(`Исполнение по РК: <b>${pct}%</b> · Должников: <b>${DR.debtors.length}</b>`);
+            lines.push(`Исполнение по РК: <b>${pct}%</b> · Должников: <b>${uniqSchtp(DR.debtors)} СХТП</b>`);
         box.innerHTML = lines.map(l => `<div class="vz-sum-line">${l}</div>`).join("");
     }
 
@@ -105,7 +109,7 @@ function renderVzKpis() {
         {
             lab: "Остаток долга",
             big: n(t.debt), unit: "млрд ₸",
-            sub: DR.debtors.length + " СХТП-должников",
+            sub: uniqSchtp(DR.debtors) + " СХТП-должников",
             tag: t.debt > 0 ? "#9E4A40" : "#3C6B4A",
             red: t.debt > 0
         },
@@ -1086,7 +1090,7 @@ function printReturnSection() {
     cropRows += `<tr class="tot"><td>Итого</td><td>${f(ctv)}</td><td>${f(cts)}</td><td>${f(cfv)}</td><td>${f(cfs)}</td>
         <td>${ctv > 0 ? (cfv/ctv*100).toFixed(1)+"%" : "—"}</td></tr>`;
 
-    const debtorCount = DR.debtors ? DR.debtors.length : 0;
+    const debtorCount = DR.debtors ? uniqSchtp(DR.debtors) : 0;
 
     const html = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
 <title>Отчёт — Возврат зерна ФЗ</title>
