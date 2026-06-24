@@ -67,10 +67,11 @@ function parseSvod(rows) {
 }
 
 function parseDetail(rows) {
-    // Каждая профинансированная строка — отдельная запись.
-    // Ключ: БИН + договор + культура. Дубли (та же заявка и культура) — суммируются.
+    // Все строки с известным регионом и именем.
+    // Ключ: БИН + договор + культура. Дубли суммируются.
     const gmap = {};
-    const allStMap = {};  // статусы из ВСЕХ строк (для блока "Статусы заявок")
+    const stNorm = {};  // нормализованный статус → канонический вид (первое вхождение)
+    const stMap  = {};  // нормализованный → счётчик
     const setIf = (g, f, idx, r) => { const v = String(r[idx] || "").trim(); if (!g[f] && v) g[f] = v; };
     for (let i = 0; i < rows.length; i++) {
         const r      = rows[i];
@@ -79,12 +80,14 @@ function parseDetail(rows) {
         const reg    = DETAIL_TO_FULL[regRaw];
         if (!reg || !name || name.includes("Итого") || name === "Наименование поставщика") continue;
 
-        // Собираем статусы ДО фильтра (для блока "Статусы заявок")
-        const status = String(r[24] || "").trim();
-        if (status && status !== "—") allStMap[status] = (allStMap[status] || 0) + 1;
-
-        // Для детализации контрагентов — только профинансированные
-        if (!status.toLowerCase().startsWith("профин")) continue;
+        // Нормализация статуса: убираем лишние пробелы, приводим к нижнему регистру для группировки
+        const statusRaw  = String(r[24] || "").trim();
+        const statusKey  = statusRaw.toLowerCase().replace(/\s+/g, " ");
+        if (statusKey && statusKey !== "—") {
+            if (!stNorm[statusKey]) stNorm[statusKey] = statusRaw;  // первое вхождение — канонический вид
+            stMap[statusKey] = (stMap[statusKey] || 0) + 1;
+        }
+        const status = stNorm[statusKey] || statusRaw;
 
         const cult   = String(r[14] || "").trim();
         const bin    = String(r[11] || "").trim();
@@ -145,7 +148,10 @@ function parseDetail(rows) {
         dates:  {reg: g.regDate, ksSent: g.ksSent, ks: g.ksDate, pravl: g.pravlDate,
                  dogNum: g.dogNum, dogDate: g.dogDate, gar: g.garDate, fin: g.finDate}
     })).sort((a, b) => b.sum - a.sum);
-    const statuses = Object.entries(allStMap).sort((a, b) => b[1] - a[1]).map(([n, c]) => [n, c, statCls(n)]);
+    // Статусы: используем канонические формы, сортируем по кол-ву
+    const statuses = Object.entries(stMap)
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, c]) => [stNorm[k] || k, c, statCls(stNorm[k] || k)]);
     return {cps, statuses};
 }
 

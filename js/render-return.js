@@ -292,8 +292,8 @@ function renderVzDebtTable() {
         const regDebt = g.items.reduce((s,c) => s + c.debt, 0);
         rows += `<tr class="rtab-reg-hdr">
             <td class="l" colspan="3"><b>${g.reg}</b></td>
-            <td style="color:#E05A4A;font-weight:800;text-align:right">${fmtMlrd(regDebt)} ₸</td>
-            <td></td>
+            <td style="color:#E05A4A;font-weight:800;text-align:right">${fmtMlrd(regDebt)}</td>
+            ${hasPenalty ? "<td></td>" : ""}
         </tr>`;
         g.items.forEach(c => {
             const safeBin = (c.bin||"").replace(/'/g,"\\'");
@@ -302,10 +302,10 @@ function renderVzDebtTable() {
                 <td class="l" style="padding-left:18px"><b>${c.name}</b>
                     <div style="font-size:10px;font-weight:600;color:var(--muted);margin-top:1px">${c.cult||"—"} · ${c.dog_num||""}</div>
                 </td>
-                <td>${fmtMlrd(c.sum_fin)} ₸</td>
-                <td>${c.sum_zachet > 0 ? fmtMlrd(c.sum_zachet)+" ₸" : "—"}</td>
-                <td style="color:#E05A4A;font-weight:800">${fmtMlrd(c.debt)} ₸</td>
-                <td style="color:#C07030">${c.penalty > 0 ? fmtMlrd(c.penalty)+" ₸" : "—"}</td>
+                <td>${fmtMlrd(c.sum_fin)}</td>
+                <td>${c.sum_zachet > 0 ? fmtMlrd(c.sum_zachet) : ""}</td>
+                <td style="color:#E05A4A;font-weight:800">${fmtMlrd(c.debt)}</td>
+                ${hasPenalty ? `<td style="color:#C07030;font-weight:${c.penalty>0?'700':'400'}">${c.penalty > 0 ? fmtMlrd(c.penalty) : ""}</td>` : ""}
             </tr>`;
         });
     });
@@ -315,34 +315,36 @@ function renderVzDebtTable() {
     const totalFin  = DR.debtors.reduce((s,c) => s + (c.sum_fin||0), 0);
     const totalZach = DR.debtors.reduce((s,c) => s + (c.sum_zachet||0), 0);
 
+    const uniqDebtors = new Set(DR.debtors.map(c => c.bin || c.name)).size;
+    const hasPenalty  = DR.debtors.some(c => c.penalty > 0);
     box.innerHTML = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0 10px">
-        <span style="font-size:12px;font-weight:700;color:var(--muted)">${DR.debtors.length} должников</span>
+        <span style="font-size:12px;font-weight:700;color:var(--muted)">${uniqDebtors} СХТП-должников · ${DR.debtors.length} договоров</span>
         <div style="flex:1"></div>
         <button class="segb" style="font-size:11px;padding:5px 11px" onclick="exportDebtorsPdf()">📄 PDF</button>
         <button class="segb" style="font-size:11px;padding:5px 11px" onclick="exportDebtorsExcel()">📊 Excel</button>
     </div>
-    <div class="tablescroll" style="max-height:420px;overflow-x:auto"><table class="rtab" id="vzDebtTable" style="table-layout:fixed;width:100%;min-width:420px">
+    <div class="tablescroll" style="max-height:420px;overflow-x:auto"><table class="rtab" id="vzDebtTable" style="table-layout:fixed;width:100%;min-width:${hasPenalty?500:420}px">
         <colgroup>
-            <col style="width:38%">
+            <col style="width:36%">
             <col style="width:15%">
             <col style="width:15%">
-            <col style="width:16%">
-            <col style="width:16%">
+            <col style="width:17%">
+            ${hasPenalty ? '<col style="width:17%">' : ''}
         </colgroup>
         <thead><tr>
             <th class="l">Контрагент</th>
-            <th>Профинанс.</th>
-            <th>Зачтено</th>
-            <th>Остаток долга</th>
-            <th>Пеня</th>
+            <th>Профинанс., ₸</th>
+            <th>Зачтено, ₸</th>
+            <th>Остаток долга, ₸</th>
+            ${hasPenalty ? '<th>Пеня, ₸</th>' : ''}
         </tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
-            <td class="l">Итого: ${DR.debtors.length} должников</td>
-            <td>${fmtMlrd(totalFin)} ₸</td>
-            <td>${fmtMlrd(totalZach)} ₸</td>
-            <td style="color:#E05A4A;font-weight:800">${fmtMlrd(totalDebt)} ₸</td>
-            <td style="color:#C07030">${totalPen > 0 ? fmtMlrd(totalPen)+" ₸" : "—"}</td>
+            <td class="l">Итого: ${uniqDebtors} СХТП</td>
+            <td>${fmtMlrd(totalFin)}</td>
+            <td>${fmtMlrd(totalZach)}</td>
+            <td style="color:#E05A4A;font-weight:800">${fmtMlrd(totalDebt)}</td>
+            ${hasPenalty ? `<td style="color:#C07030;font-weight:700">${fmtMlrd(totalPen)}</td>` : ''}
         </tr></tfoot>
     </table></div>`;
 }
@@ -749,16 +751,30 @@ function renderVzRanking() {
 
     let html = `<div class="vz-rank-title">Рейтинг исполнения — ${regs.length} областей</div>`;
     html += `<div class="vz-rank-list">`;
+    // Заголовочная строка
+    html += `<div class="vz-rank-row vz-rank-hdr">
+        <div class="vz-rank-num">№</div>
+        <div class="vz-rank-name" style="font-size:10px;font-weight:700;color:var(--muted)">Область</div>
+        <div class="vz-rank-vol" style="font-size:10px;font-weight:700;color:var(--muted);text-align:right">Объём, т</div>
+        <div class="vz-rank-sum" style="font-size:10px;font-weight:700;color:var(--muted);text-align:right">Зачтено, ₸</div>
+        <div class="vz-rank-bar" style="height:auto;background:none"></div>
+        <div class="vz-rank-pct" style="font-size:10px;font-weight:700;color:var(--muted)">% исп.</div>
+    </div>`;
     html += regs.map((r, i) => {
         const pct = (r.pct_exec * 100).toFixed(1);
         const bar = Math.min(100, r.pct_exec * 100);
         const col = colorFor(r.pct_exec);
+        const sumLabel = r.sum_zachet >= 1e9
+            ? (r.sum_zachet / 1e9).toLocaleString("ru-RU", {maximumFractionDigits:1}) + " млрд"
+            : (r.sum_zachet / 1e6).toLocaleString("ru-RU", {maximumFractionDigits:0}) + " млн";
+        const volLabel = fmtT(r.vol_ret);
         return `<div class="vz-rank-row">
             <div class="vz-rank-num">${i+1}</div>
             <div class="vz-rank-name">${r.name}</div>
+            <div class="vz-rank-vol">${volLabel}</div>
+            <div class="vz-rank-sum">${sumLabel}</div>
             <div class="vz-rank-bar"><div style="width:${bar}%;background:${col}"></div></div>
-            <div class="vz-rank-pct">${pct}%</div>
-            ${r.debt > 0 ? `<div class="vz-rank-debt">${fmtMlrd(r.debt)} ₸</div>` : `<div class="vz-rank-debt ok">✓</div>`}
+            <div class="vz-rank-pct" style="color:${col}">${pct}%</div>
         </div>`;
     }).join("");
     html += `</div>`;
@@ -1151,10 +1167,11 @@ tr:nth-child(even):not(.tot) td{background:#FAFAF8}
 
 // ── 11. Реестр должников (PDF) ───────────────────────────────────────────────
 function printDebtors() {
-    const list = DR.cps.filter(c => c.penalty > 0)
-        .sort((a, b) => a.reg.localeCompare(b.reg, "ru") || b.debt - a.debt);
+    const list = [...DR.debtors]
+        .sort((a, b) => (a.reg||"").localeCompare(b.reg||"", "ru") || b.debt - a.debt);
 
-    if (!list.length) { alert("СХТП с начисленной пеней нет"); return; }
+    if (!list.length) { alert("Должников нет"); return; }
+    const hasPen = list.some(c => c.penalty > 0);
 
     const f  = n => Math.round(n).toLocaleString("ru-RU");
     const fm = n => Math.round(n).toLocaleString("ru-RU");
@@ -1172,7 +1189,8 @@ function printDebtors() {
     const sum6 = arr => arr.reduce((s, c) => s + c, 0);
 
     Object.entries(byReg).forEach(([reg, cps]) => {
-        rows += `<tr class="rh"><td colspan="10">${reg} область — ${cps.length} СХТП</td></tr>`;
+        const uniqReg = new Set(cps.map(c => c.bin||c.name)).size;
+        rows += `<tr class="rh"><td colspan="${hasPen?10:9}">${reg} область — ${uniqReg} СХТП · ${cps.length} договоров</td></tr>`;
 
         let tSF = 0, tVT = 0, tST = 0, tSZ = 0, tDP = 0, tDB = 0, tPN = 0;
         cps.forEach(c => {
@@ -1189,11 +1207,11 @@ function printDebtors() {
                 <td>${f(c.sum_dop_fact||0)}</td>
                 <td>${pct}</td>
                 <td class="err">${f(c.debt)}</td>
-                <td class="err">${f(c.penalty)}</td>
+                ${hasPen ? `<td class="err">${c.penalty > 0 ? f(c.penalty) : ""}</td>` : ""}
             </tr>`;
         });
         rows += `<tr class="sub">
-            <td colspan="2">Итого: ${cps.length} СХТП</td>
+            <td colspan="2">Итого: ${cps.length} договоров</td>
             <td>${fm(tSF)}</td>
             <td>${f(tVT)}</td>
             <td>${fm(tST)}</td>
@@ -1201,15 +1219,16 @@ function printDebtors() {
             <td>${fm(tDP)}</td>
             <td>${tSF > 0 ? (tSZ / tSF * 100).toFixed(1) + "%" : "—"}</td>
             <td class="err">${fm(tDB)}</td>
-            <td class="err">${fm(tPN)}</td>
+            ${hasPen ? `<td class="err">${fm(tPN)}</td>` : ""}
         </tr>`;
     });
 
     const gt = { sf:0, vt:0, st:0, sz:0, dp:0, db:0, pn:0 };
     list.forEach(c => { gt.sf+=c.sum_fin; gt.vt+=c.vol_total; gt.st+=c.sum_total;
-                        gt.sz+=c.sum_zachet; gt.dp+=(c.sum_dop_fact||0); gt.db+=c.debt; gt.pn+=c.penalty; });
+                        gt.sz+=c.sum_zachet; gt.dp+=(c.sum_dop_fact||0); gt.db+=c.debt; gt.pn+=(c.penalty||0); });
+    const uniqTotal = new Set(list.map(c => c.bin||c.name)).size;
     rows += `<tr class="tot">
-        <td colspan="2">ИТОГО ПО РК: ${list.length} СХТП</td>
+        <td colspan="2">ИТОГО ПО РК: ${uniqTotal} СХТП · ${list.length} договоров</td>
         <td>${fm(gt.sf)}</td>
         <td>${f(gt.vt)}</td>
         <td>${fm(gt.st)}</td>
@@ -1217,7 +1236,7 @@ function printDebtors() {
         <td>${fm(gt.dp)}</td>
         <td>${gt.sf > 0 ? (gt.sz / gt.sf * 100).toFixed(1) + "%" : "—"}</td>
         <td class="terr">${fm(gt.db)}</td>
-        <td class="terr">${fm(gt.pn)}</td>
+        ${hasPen ? `<td class="terr">${fm(gt.pn)}</td>` : ""}
     </tr>`;
 
     const html = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
@@ -1263,12 +1282,11 @@ tr:nth-child(even):not(.rh):not(.sub):not(.tot) td{background:#FAFAF8}
 <div class="doc-header">
   <div class="seal">ПКК</div>
   <div class="info">
-    <h1>Реестр СХТП с начисленной пеней — Возврат зерна (ФЗ 2025/2026)</h1>
+    <h1>Реестр должников — Возврат зерна (ФЗ 2025/2026)</h1>
     <div class="org">АО «НК «Продкорпорация» · Департамент закупа СХП</div>
     <div class="badges">
       <span class="badge">Форвардный закуп 2025/2026</span>
-      <span class="badge warn">Просрочка · Пеня начислена</span>
-      <span class="badge">${list.length} СХТП-должников</span>
+      <span class="badge">${new Set(list.map(c=>c.bin||c.name)).size} СХТП-должников · ${list.length} договоров</span>
       <span class="badge">${Object.keys(byReg).length} областей</span>
     </div>
   </div>
@@ -1283,9 +1301,9 @@ tr:nth-child(even):not(.rh):not(.sub):not(.tot) td{background:#FAFAF8}
   <th style="width:85px">Сумма за объём, ₸</th>
   <th style="width:85px">В т.ч. на сумму финансирования, ₸</th>
   <th style="width:75px">В т.ч. доплата, ₸</th>
-  <th style="width:58px">% исп. на сумму финансирования</th>
+  <th style="width:58px">% исп.</th>
   <th style="width:85px">Остаток долга, ₸</th>
-  <th style="width:75px">Пеня, ₸</th>
+  ${hasPen ? '<th style="width:75px">Пеня, ₸</th>' : ""}
 </tr></thead>
 <tbody>${rows}</tbody>
 </table>

@@ -40,11 +40,13 @@ function parseSvodReturn(rows) {
             });
     });
 
-    let total = { vol_contr: 0, sum_fin: 0, vol_ret: 0, sum_ret: 0,
+    let total = { schtp: 0, apps: 0, vol_contr: 0, sum_fin: 0, vol_ret: 0, sum_ret: 0,
                   sum_zachet: 0, sum_doplata: 0, pct_exec: 0, sum_ksn: 0, debt: 0 };
     if (itogoIdx >= 0) {
         const r = rows[itogoIdx];
         total = {
+            schtp:       toNum(r[2]  || 0),  // кол-во уникальных СХТП из СВОД
+            apps:        toNum(r[3]  || 0),  // кол-во заявок из СВОД
             vol_contr:   toNum(r[4]  || 0),
             sum_fin:     toNum(r[5]  || 0),
             vol_ret:     toNum(r[9]  || 0),

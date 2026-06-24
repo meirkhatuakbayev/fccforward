@@ -32,7 +32,8 @@ function openCulture(name) {
 function openStatus(name) {
     curRegion = null; listMode = {type: "status", key: name}; markStatusChip(name);
     document.querySelectorAll(".bub,.geopath").forEach(b => b.classList.remove("sel"));
-    const list = D.cps.filter(c => (c.sts && c.sts.includes(name)) || c.status === name);
+    const norm = s => (s || "").toLowerCase().replace(/\s+/g, " ");
+    const list = D.cps.filter(c => norm(c.status) === norm(name) || (c.sts && c.sts.some(s => norm(s) === norm(name))));
     const tv = list.reduce((a, c) => a + c.vol, 0), ts = list.reduce((a, c) => a + c.sum, 0), ta = list.reduce((a, c) => a + c.apps, 0);
     const p = $("#regionPanel"); p.style.display = ""; $("#rName").textContent = "Статус: " + name; $("#rPill").textContent = list.length + " контрагентов";
     const k = [["Контрагентов", list.length], ["Заявок", ta], ["Объём, тонн", fmtT(tv)], ["Сумма, ₸", fmtMlrd(ts) + " ₸"]];
@@ -42,9 +43,10 @@ function openStatus(name) {
 
 function renderRows() {
     if (!listMode) return;
+    const _norm = s => (s || "").toLowerCase().replace(/\s+/g, " ");
     let list = listMode.type === "region" ? D.cps.filter(c => c.reg === listMode.key) :
                listMode.type === "culture" ? D.cps.filter(c => (c.cults || []).map(normCult).includes(listMode.key)) :
-               D.cps.filter(c => (c.sts && c.sts.includes(listMode.key)) || c.status === listMode.key);
+               D.cps.filter(c => _norm(c.status) === _norm(listMode.key) || (c.sts && c.sts.some(s => _norm(s) === _norm(listMode.key))));
     list = list.slice().sort((a, b) => {
         let va = a[sortKey], vb = b[sortKey];
         if (sortKey === "cult") { va = a.cults.join(); vb = b.cults.join(); }

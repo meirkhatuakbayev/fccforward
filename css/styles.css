@@ -329,7 +329,7 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
     .vz-kpis6 { grid-template-columns: repeat(3, 1fr) !important; }
     /* Рейтинг: скрыть долг */
     .vz-rank-debt { display: none; }
-    .vz-rank-row { grid-template-columns: 20px 1fr 70px 36px; gap: 6px; }
+    .vz-rank-row { grid-template-columns: 18px 1fr 56px 80px 56px 36px; gap: 5px; } .vz-rank-vol,.vz-rank-sum { font-size:10px; }
     /* Таблицы: горизонтальный скролл */
     .tablescroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     #regTableWrap { overflow-x: auto; }
@@ -398,7 +398,7 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
     /* Карта */
     #vzMapSvg { min-height: 220px; }
     /* Рейтинг: убираем долг, сжимаем */
-    .vz-rank-row { grid-template-columns: 18px 1fr 56px 34px; gap: 6px; }
+    .vz-rank-row { grid-template-columns: 16px 1fr 50px 72px 50px 34px; gap: 4px; } .vz-rank-vol,.vz-rank-sum { font-size:9px; }
     .vz-rank-debt { display: none; }
     .vz-rank-name { font-size: 11.5px; }
     /* Должники */
@@ -415,7 +415,7 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
     #vzDebtArea .tablescroll { overflow-x: auto !important; }
     #vzDebtArea table { min-width: 480px; }
     /* Рейтинг: компактнее */
-    .vz-rank-row { grid-template-columns: 18px 1fr 54px 34px; }
+    .vz-rank-row { grid-template-columns: 16px 1fr 0 0 50px 32px; } .vz-rank-vol,.vz-rank-sum { display:none; }
     .vz-rank-analysis { display: none; }
     /* Цепочка */
     .vz-chain { font-size: 12px; padding: 8px 12px; gap: 7px; }
@@ -453,7 +453,7 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
     .ftrack .v { font-size: 10.5px; }
     .fstage .ft { font-size: 11px; }
     /* Рейтинг: 4 колонки без долга */
-    .vz-rank-row { grid-template-columns: 16px 1fr 52px 32px; gap: 5px; padding: 6px 10px; }
+    .vz-rank-row { grid-template-columns: 14px 1fr 0 0 48px 30px; gap: 4px; padding: 5px 8px; } .vz-rank-vol,.vz-rank-sum { display:none; }
     .vz-rank-name { font-size: 11px; }
     .vz-rank-pct { font-size: 11px; }
     /* Модалка */
@@ -576,7 +576,10 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
 .vz-rank-title { font-size: 10px; font-weight: 800; color: #F4ECD8; text-transform: uppercase; letter-spacing: .4px;
     background: var(--ink); padding: 7px 12px; border-radius: 9px 9px 0 0; margin-bottom: 0; }
 .vz-rank-list { border: 1.5px solid #DDD5C0; border-top: 0; border-radius: 0 0 9px 9px; overflow: hidden; }
-.vz-rank-row { display: grid; grid-template-columns: 22px 1fr 100px 46px 120px; gap: 8px; align-items: center;
+.vz-rank-vol { font-size: 12px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.vz-rank-sum { font-size: 12px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.vz-rank-hdr { background: #F4EED8 !important; }
+.vz-rank-row { display: grid; grid-template-columns: 22px 1fr 68px 90px 70px 46px; gap: 8px; align-items: center;
     padding: 7px 12px; border-bottom: 1px solid #E8E0CE; background: #FFFEF9; }
 .vz-rank-row:nth-child(even) { background: #FAF6EC; }
 .vz-rank-row:last-of-type { border-bottom: 0; }
