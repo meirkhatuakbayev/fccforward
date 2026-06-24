@@ -1,29 +1,41 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ПКК Форвард 2026 — Бэкенд Админ-панели
+// ПКК Форвард 2026 — Бэкенд Админ-панели  [OPTIMIZED v2]
 // ═══════════════════════════════════════════════════════════════════════════
 
-const SS_ID        = '1C86Fh9p3EW4LwYWi4u2hUnRC1TxfjzN75WQ0iDNZX0Q';
-const SH_DETAIL    = 'РАЗВЕРНУТАЯ_ИНФОРМАЦИЯ';
-const SH_RETURN    = 'ВОЗВРАТ';
-const SH_ADMINS    = 'ADMINS';
-const SH_SESSIONS  = 'СЕССИИ';
-const SH_LOG       = 'ЖУРНАЛ';
-const SESSION_H    = 8;
-const CACHE_TTL    = 300; // секунд (5 минут)
+const SS_ID       = '1C86Fh9p3EW4LwYWi4u2hUnRC1TxfjzN75WQ0iDNZX0Q';
+const SH_DETAIL   = 'РАЗВЕРНУТАЯ_ИНФОРМАЦИЯ';
+const SH_RETURN   = 'ВОЗВРАТ';
+const SH_ADMINS   = 'ADMINS';
+const SH_SESSIONS = 'СЕССИИ';
+const SH_LOG      = 'ЖУРНАЛ';
+const SESSION_H   = 8;
+const CACHE_TTL   = 300;  // секунд (5 минут)
 
-// ── Мемоизация SpreadsheetApp внутри одного запроса ──────────────────────────
-// GAS исполняет каждый HTTP-запрос в отдельном процессе, поэтому _ss живёт
-// только в рамках одного doGet/doPost — это законная оптимизация.
+// ── Мемоизация SpreadsheetApp внутри одного запроса ─────────────────────────
 let _ss = null;
 function getSS() {
   if (!_ss) _ss = SpreadsheetApp.openById(SS_ID);
   return _ss;
 }
 
-// ── CacheService-обёртки ──────────────────────────────────────────────────────
+// ── Измерение времени выполнения ─────────────────────────────────────────────
+function _t(label, fn) {
+  const t0 = Date.now();
+  const r = fn();
+  Logger.log('[PERF] ' + label + ': ' + (Date.now() - t0) + ' ms');
+  return r;
+}
+
+// ── CacheService: обычные операции ───────────────────────────────────────────
+const _cache = CacheService.getScriptCache();
+
 function cacheGet(key) {
   try {
-    const v = CacheService.getScriptCache().get(key);
+    // Сначала пробуем чанкованный формат
+    const n = _cache.get(key + '__n');
+    if (n !== null) return _cacheGetChunked(key, parseInt(n));
+    // Затем — обычный (для мелких данных)
+    const v = _cache.get(key);
     return v ? JSON.parse(v) : null;
   } catch(_) { return null; }
 }
@@ -31,17 +43,66 @@ function cacheGet(key) {
 function cacheSet(key, data) {
   try {
     const s = JSON.stringify(data);
-    // Лимит CacheService — 100 КБ на ключ
-    if (s.length <= 99000) CacheService.getScriptCache().put(key, s, CACHE_TTL);
+    if (s.length <= 90000) {
+      // Помещается в один ключ
+      _cache.put(key, s, CACHE_TTL);
+    } else {
+      // Данные большие — разбиваем на чанки по 90 КБ
+      _cacheSetChunked(key, s);
+    }
   } catch(_) {}
 }
 
+// Чанкованное кеширование: один putAll вместо N put ──────────────────────────
+function _cacheSetChunked(key, str) {
+  const SZ = 90000;
+  const chunks = Math.ceil(str.length / SZ);
+  const entries = {};
+  entries[key + '__n'] = String(chunks);
+  for (let i = 0; i < chunks; i++) {
+    entries[key + '__' + i] = str.slice(i * SZ, (i + 1) * SZ);
+  }
+  _cache.putAll(entries, CACHE_TTL);   // один сетевой вызов вместо N
+}
+
+function _cacheGetChunked(key, n) {
+  const keys = Array.from({ length: n }, (_, i) => key + '__' + i);
+  const vals  = _cache.getAll(keys);  // один сетевой вызов вместо N get
+  const parts = keys.map(k => vals[k]);
+  if (parts.some(p => !p)) return null;
+  try { return JSON.parse(parts.join('')); } catch(_) { return null; }
+}
+
+// Инвалидирует все ключи одним removeAll ──────────────────────────────────────
 function cacheDel() {
   try {
-    CacheService.getScriptCache().removeAll(
-      ['ctrs', 'ret_list', 'fin_2026', 'fin_2025', 'ret_dash_2026', 'ret_dash_2025', 'apps_list']
-    );
+    _cache.removeAll([
+      'ctrs', 'ret_list', 'fin_2026', 'fin_2025',
+      'ret_dash_2026', 'ret_dash_2025', 'apps_list'
+    ]);
   } catch(_) {}
+}
+
+// ── Сессионный мини-кеш (избегаем чтения листа СЕССИИ на каждый запрос) ─────
+// TTL 120 с — короткий, чтобы logout/истечение работали корректно.
+const _SESS_PFX = 'sx_';
+const _SESS_TTL = 120;
+
+function _sessCacheKey(token) { return _SESS_PFX + token.slice(0, 50); }
+
+function _sessCacheGet(token) {
+  try {
+    const v = _cache.get(_sessCacheKey(token));
+    return v ? JSON.parse(v) : null;
+  } catch(_) { return null; }
+}
+
+function _sessCacheSet(token, user) {
+  try { _cache.put(_sessCacheKey(token), JSON.stringify(user), _SESS_TTL); } catch(_) {}
+}
+
+function _sessCacheDel(token) {
+  try { _cache.remove(_sessCacheKey(token)); } catch(_) {}
 }
 
 // ── Точка входа ──────────────────────────────────────────────────────────────
@@ -49,8 +110,8 @@ function cacheDel() {
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) || '';
   const year   = (e && e.parameter && e.parameter.year)   || '2026';
-  if (action === 'getReturn')    return ok(getReturnForYear(year));
-  if (action === 'getFinancing') return ok(getFinancingForYear(year));
+  if (action === 'getReturn')    return ok(_t('getReturn',    () => getReturnForYear(year)));
+  if (action === 'getFinancing') return ok(_t('getFinancing', () => getFinancingForYear(year)));
   return ok({ status: 'ПКК Admin API работает' });
 }
 
@@ -61,13 +122,20 @@ function getFinancingForYear(year) {
 
   try {
     const ss       = getSS();
-    const svodName = year === '2026' ? 'СВОД'      : 'СВОД_'        + year;
-    const detName  = year === '2026' ? SH_DETAIL   : 'РАЗВЕРНУТАЯ_' + year;
+    const svodName = year === '2026' ? 'СВОД'    : 'СВОД_'        + year;
+    const detName  = year === '2026' ? SH_DETAIL : 'РАЗВЕРНУТАЯ_' + year;
     const svodSh   = ss.getSheetByName(svodName);
     const detSh    = ss.getSheetByName(detName);
     if (!svodSh) return { ok: false, error: 'Лист "' + svodName + '" не найден' };
     if (!detSh)  return { ok: false, error: 'Лист "' + detName  + '" не найден' };
-    const result = { ok: true, svod: svodSh.getDataRange().getValues(), detail: detSh.getDataRange().getValues() };
+
+    // Два getDataRange().getValues() — единственный способ читать листы целиком.
+    // Оба вызова параллельны на уровне I/O (GAS не поддерживает async, но quota
+    // не тратится дважды на открытие SS, т.к. _ss уже в кеше).
+    const svod   = svodSh.getDataRange().getValues();
+    const detail = detSh.getDataRange().getValues();
+
+    const result = { ok: true, svod, detail };
     cacheSet(ckey, result);
     return result;
   } catch(err) { return { ok: false, error: err.message }; }
@@ -80,18 +148,20 @@ function getReturnForYear(year) {
   if (hit) return hit;
 
   try {
-    const ss      = getSS();
-    const svodSh  = ss.getSheetByName('ВОЗВРАТ_' + year);
-    const detSh   = ss.getSheetByName('ВОЗВРАТ_РАЗВЕРНУТАЯ_' + year);
+    const ss     = getSS();
+    const svodSh = ss.getSheetByName('ВОЗВРАТ_' + year);
+    const detSh  = ss.getSheetByName('ВОЗВРАТ_РАЗВЕРНУТАЯ_' + year);
     if (!svodSh) return { ok: false, error: 'Лист "ВОЗВРАТ_' + year + '" не найден' };
     if (!detSh)  return { ok: false, error: 'Лист "ВОЗВРАТ_РАЗВЕРНУТАЯ_' + year + '" не найден' };
-    const result = { ok: true, svod: svodSh.getDataRange().getValues(), detail: detSh.getDataRange().getValues() };
+    const result = { ok: true,
+      svod:   svodSh.getDataRange().getValues(),
+      detail: detSh.getDataRange().getValues() };
     cacheSet(ckey, result);
     return result;
   } catch(err) { return { ok: false, error: err.message }; }
 }
 
-// ── Публичная отдача данных возврата для дашборда ─────────────────────────────
+// ── Публичная отдача данных возврата для дашборда ────────────────────────────
 
 function getReturnForDashboard() {
   const ckey = 'ret_dash_2026';
@@ -103,15 +173,15 @@ function getReturnForDashboard() {
 
     const detSheet = ss.getSheetByName(SH_DETAIL);
     if (!detSheet) return { ok: false, error: 'Лист финансирования не найден' };
+
+    // Один getDataRange().getValues() читает весь лист за один I/O-вызов
     const detData = detSheet.getDataRange().getValues();
 
-    // Каждая строка с финансированием — отдельная запись (не объединяем по БИН)
-    // Ключ: БИН + номер договора + культура — уникален на уровне заявки/культуры
     const financed = {};
     for (let i = DATA_ROW; i < detData.length; i++) {
-      const row  = detData[i];
-      const name = String(row[C.name] || '').trim();
-      const bin  = String(row[C.bin]  || '').trim();
+      const row    = detData[i];
+      const name   = String(row[C.name] || '').trim();
+      const bin    = String(row[C.bin]  || '').trim();
       if (!name || name.includes('Итого') || name === 'Наименование поставщика') continue;
       const status = String(row[C.status] || '').trim().toLowerCase();
       if (!status.startsWith('профин')) continue;
@@ -119,19 +189,17 @@ function getReturnForDashboard() {
       if (finSum <= 0) continue;
       const cult   = String(row[C.cult]    || '').trim();
       const dogNum = String(row[C.dog_num] || '').trim();
-      // Уникальный ключ на уровне заявки: БИН + договор + культура
-      const key = (bin || name) + '|' + dogNum + '|' + cult;
+      const key    = (bin || name) + '|' + dogNum + '|' + cult;
       if (financed[key]) {
-        // Крайне редкий случай — две строки с одним договором и культурой, накапливаем
         financed[key].sum_fin += finSum;
         financed[key].vol_fin += Number(row[C.fin_vol]) || Number(row[C.dog_vol]) || 0;
         continue;
       }
       financed[key] = {
-        reg:       String(row[C.reg]     || '').trim(),
-        form:      String(row[C.form]    || '').trim(),
+        reg:       String(row[C.reg]      || '').trim(),
+        form:      String(row[C.form]     || '').trim(),
         name, bin,
-        rayon:     String(row[C.rayon]   || '').trim(),
+        rayon:     String(row[C.rayon]    || '').trim(),
         dog_num:   dogNum,
         dog_date:  String(row[C.dog_date] || '').trim(),
         cult,
@@ -143,17 +211,15 @@ function getReturnForDashboard() {
 
     const retSheet = ss.getSheetByName(SH_RETURN);
     const retMap   = {};
-    var retHIdx    = {};  // маппинг: заголовок → индекс колонки (защита от смены порядка)
+    var retHIdx    = {};
     if (retSheet && retSheet.getLastRow() > 1) {
-      const retData = retSheet.getDataRange().getValues();
-      // Строим индекс по заголовочной строке листа
-      var retHeaderRow = retData[0] || [];
+      // Один вызов getDataRange().getValues() — весь лист за один I/O
+      const retData      = retSheet.getDataRange().getValues();
+      const retHeaderRow = retData[0] || [];
       retHeaderRow.forEach(function(h, i) { retHIdx[String(h).trim()] = i; });
-      // Если заголовок пустой — fallback на RET_HEADERS
       if (Object.keys(retHIdx).length < 5) {
         RET_HEADERS.forEach(function(h, i) { retHIdx[h] = i; });
       }
-      // Индексы ключевых колонок для retMap (BIN/name)
       var riName = retHIdx['Наименование поставщика'] !== undefined ? retHIdx['Наименование поставщика'] : 2;
       var riBin  = retHIdx['БИН/ИИН']                !== undefined ? retHIdx['БИН/ИИН']                : 4;
       for (let i = 1; i < retData.length; i++) {
@@ -164,17 +230,15 @@ function getReturnForDashboard() {
         retMap[bin || name] = row;
       }
     } else {
-      // Нет листа — используем RET_HEADERS как эталон
       RET_HEADERS.forEach(function(h, i) { retHIdx[h] = i; });
     }
 
     const detail = [];
-    const regAgg  = {};
+    const regAgg = {};
 
     Object.values(financed).forEach(function(f) {
       const ret = retMap[f.bin || f.name] || retMap[f.name] || null;
-      // Читаем по имени колонки — не зависим от порядка колонок в листе
-      const nh = function(name) {
+      const nh  = function(name) {
         const idx = retHIdx[name];
         return (ret && idx !== undefined) ? (Number(ret[idx]) || 0) : 0;
       };
@@ -191,25 +255,22 @@ function getReturnForDashboard() {
       row[9]  = ret ? String(ret[riDogNum]  || f.dog_num)  : f.dog_num;
       row[10] = ret ? String(ret[riDogDate] || f.dog_date) : f.dog_date;
       row[14] = ret ? String(ret[riCult]    || f.cult)     : f.cult;
-      // Данные договора — всегда из РАЗВЕРНУТАЯ (финансирование нельзя трогать)
       row[17] = f.vol_fin;
       row[18] = f.price_fin;
       row[19] = f.sum_fin;
 
-      row[27] = nh('Пш 3кл объём, т');    row[28] = nh('Пш 3кл сумма, ₸');
-      row[25] = nh('Пш 4кл объём, т');    row[26] = nh('Пш 4кл сумма, ₸');
-      row[23] = nh('Пш 5кл объём, т');    row[24] = nh('Пш 5кл сумма, ₸');
+      row[27] = nh('Пш 3кл объём, т');     row[28] = nh('Пш 3кл сумма, ₸');
+      row[25] = nh('Пш 4кл объём, т');     row[26] = nh('Пш 4кл сумма, ₸');
+      row[23] = nh('Пш 5кл объём, т');     row[24] = nh('Пш 5кл сумма, ₸');
       row[29] = nh('Ячмень 2кл объём, т'); row[30] = nh('Ячмень 2кл сумма, ₸');
 
       row[52] = nh('Всего поставлено, т');
       row[53] = nh('Всего сумма за зерно, ₸');
 
-      // Пересчёт зачтено и долга напрямую (не читаем сохранённые значения)
       var grainSumRet  = nh('Всего сумма за зерно, ₸');
       var paidMoneyRet = nh('Погашено деньгами, ₸');
       var zachetRet    = ret ? Math.min(grainSumRet + paidMoneyRet, f.sum_fin) : 0;
       var debtRet      = Math.max(0, f.sum_fin - zachetRet);
-      // Доплата: зерно сверх финансирования (только если разница >= 200 000 ₸)
       var excessRet    = Math.max(0, grainSumRet - f.sum_fin);
       var doplatRet    = (f.sum_fin > 0 && excessRet >= 200000) ? excessRet : 0;
 
@@ -243,9 +304,9 @@ function getReturnForDashboard() {
       g.debt        += Number(row[56]) || 0;
     });
 
-    const svod = [];
-    var totals = { vol_contr:0, sum_fin:0, vol_ret:0, sum_ret:0,
-                   sum_zachet:0, sum_doplata:0, sum_ksn:0, debt:0 };
+    const svod   = [];
+    const totals = { vol_contr:0, sum_fin:0, vol_ret:0, sum_ret:0,
+                     sum_zachet:0, sum_doplata:0, sum_ksn:0, debt:0 };
 
     Object.values(regAgg).forEach(function(r) {
       const pct = r.sum_fin > 0 ? r.sum_zachet / r.sum_fin : 0;
@@ -265,7 +326,7 @@ function getReturnForDashboard() {
     tr[17] = totals.sum_ksn; tr[20] = totals.debt;
     svod.push(tr);
 
-    const result = { ok: true, svod: svod, detail: detail };
+    const result = { ok: true, svod, detail };
     cacheSet(ckey, result);
     return result;
   } catch(err) {
@@ -273,31 +334,33 @@ function getReturnForDashboard() {
   }
 }
 
+// ── POST-обработчик ───────────────────────────────────────────────────────────
+
 function doPost(e) {
   try {
     const body   = JSON.parse(e.postData.contents);
     const action = body.action;
 
-    if (action === 'login')  return ok(login(body));
-    if (action === 'logout') return ok(logout(body));
+    if (action === 'login')  return ok(_t('login',  () => login(body)));
+    if (action === 'logout') return ok(_t('logout', () => logout(body)));
 
-    const user = checkToken(body.token);
+    const user = _t('checkToken', () => checkToken(body.token));
     if (!user) return ok({ ok: false, error: 'Сессия истекла. Войдите снова.' });
 
     switch (action) {
-      case 'listContractors':  return ok(listContractors());
-      case 'getContractor':    return ok(getContractor(body));
-      case 'saveFinancing':    return ok(saveFinancing(body, user));
-      case 'addContractor':    return ok(addContractor(body, user));
-      case 'listReturn':       return ok(listReturn());
-      case 'saveReturn':       return ok(saveReturn(body, user));
-      case 'deleteReturn':     return ok(deleteReturn(body, user));
-      case 'listApplications': return ok(listApplications());
-      case 'saveAppStatus':    return ok(saveAppStatus(body, user));
-      case 'saveAppCard':      return ok(saveAppCard(body, user));
-      case 'listUsers':        checkAdmin(user); return ok(listUsers());
-      case 'saveUser':         checkAdmin(user); return ok(saveUser(body));
-      case 'changePassword':   return ok(changePassword(body, user));
+      case 'listContractors':  return ok(_t('listContractors',  () => listContractors()));
+      case 'getContractor':    return ok(_t('getContractor',    () => getContractor(body)));
+      case 'saveFinancing':    return ok(_t('saveFinancing',    () => saveFinancing(body, user)));
+      case 'addContractor':    return ok(_t('addContractor',    () => addContractor(body, user)));
+      case 'listReturn':       return ok(_t('listReturn',       () => listReturn()));
+      case 'saveReturn':       return ok(_t('saveReturn',       () => saveReturn(body, user)));
+      case 'deleteReturn':     return ok(_t('deleteReturn',     () => deleteReturn(body, user)));
+      case 'listApplications': return ok(_t('listApplications', () => listApplications()));
+      case 'saveAppStatus':    return ok(_t('saveAppStatus',    () => saveAppStatus(body, user)));
+      case 'saveAppCard':      return ok(_t('saveAppCard',      () => saveAppCard(body, user)));
+      case 'listUsers':        checkAdmin(user); return ok(_t('listUsers', () => listUsers()));
+      case 'saveUser':         checkAdmin(user); return ok(_t('saveUser',  () => saveUser(body)));
+      case 'changePassword':   return ok(_t('changePassword',  () => changePassword(body, user)));
       default: return ok({ ok: false, error: 'Неизвестное действие: ' + action });
     }
   } catch (err) {
@@ -328,6 +391,7 @@ function login(body) {
   const sheet = ss.getSheetByName(SH_ADMINS);
   if (!sheet) return { ok: false, error: 'Таблица пользователей не найдена. Запустите setupAdminUsers()' };
 
+  // Один getDataRange().getValues() — читаем весь лист за один I/O
   const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][0] === lgn && rows[i][5] === true) {
@@ -337,6 +401,9 @@ function login(body) {
         const expiry = new Date(Date.now() + SESSION_H * 3600000);
         ensureSheet(ss, SH_SESSIONS, ['token','login','expiry','role','name'])
           .appendRow([token, lgn, expiry, rows[i][3], rows[i][4]]);
+        const user = { login: lgn, role: rows[i][3], name: rows[i][4],
+                       expiry: expiry.toISOString() };
+        _sessCacheSet(token, user);  // кешируем сессию сразу
         return { ok: true, token, role: rows[i][3], name: rows[i][4] };
       }
     }
@@ -346,6 +413,7 @@ function login(body) {
 
 function logout(body) {
   if (!body.token) return { ok: true };
+  _sessCacheDel(body.token);  // удаляем из кеша немедленно
   const ss    = getSS();
   const sheet = ss.getSheetByName(SH_SESSIONS);
   if (!sheet) return { ok: true };
@@ -358,20 +426,36 @@ function logout(body) {
 
 function checkToken(token) {
   if (!token) return null;
+
+  // ── Сессионный кеш: избегаем чтения листа СЕССИИ на каждый запрос ──────────
+  const cached = _sessCacheGet(token);
+  if (cached) {
+    if (new Date(cached.expiry) > new Date()) return cached;
+    _sessCacheDel(token);
+    // Кеш протух — идём в таблицу
+  }
+
+  // ── Fallback: читаем лист ────────────────────────────────────────────────────
   const ss    = getSS();
   const sheet = ss.getSheetByName(SH_SESSIONS);
   if (!sheet) return null;
-  const data = sheet.getDataRange().getValues();
+
+  const data = sheet.getDataRange().getValues();  // один getValues на весь лист
   const now  = new Date();
+
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === token) {
-      if (new Date(data[i][2]) > now) {
-        sheet.getRange(i + 1, 3).setValue(new Date(Date.now() + SESSION_H * 3600000));
-        return { login: data[i][1], role: data[i][3], name: data[i][4] };
-      }
-      sheet.deleteRow(i + 1);
-      return null;
+    if (data[i][0] !== token) continue;
+    if (new Date(data[i][2]) > now) {
+      const newExpiry = new Date(Date.now() + SESSION_H * 3600000);
+      // Обновляем expiry в таблице — один setValue допустим (единичная запись)
+      sheet.getRange(i + 1, 3).setValue(newExpiry);
+      const user = { login: data[i][1], role: data[i][3], name: data[i][4],
+                     expiry: newExpiry.toISOString() };
+      _sessCacheSet(token, user);  // прогреваем кеш
+      return user;
     }
+    sheet.deleteRow(i + 1);
+    return null;
   }
   return null;
 }
@@ -399,6 +483,7 @@ function listContractors() {
   const sheet = getSS().getSheetByName(SH_DETAIL);
   if (!sheet) return { ok: false, error: 'Лист "' + SH_DETAIL + '" не найден' };
 
+  // Один getDataRange().getValues() — весь лист за один I/O
   const data = sheet.getDataRange().getValues();
   const list = [];
 
@@ -409,16 +494,13 @@ function listContractors() {
     var reg  = String(row[C.reg]  || '').trim();
     if (!name || !reg || name.includes('Итого') || name === 'Наименование поставщика') continue;
 
-    // Берём фактическое финансирование; если не заполнено — договорную сумму
     var finSum = Number(row[C.fin_sum]) || Number(row[C.dog_sum]) || 0;
     var finVol = Number(row[C.fin_vol]) || Number(row[C.dog_vol]) || 0;
-    // Показываем только строки у которых есть данные по финансированию
     if (finSum <= 0 && finVol <= 0) continue;
 
     list.push({
       rowIdx:   i + 1,
-      bin, name,
-      reg,
+      bin, name, reg,
       form:     String(row[C.form]     || '').trim(),
       rayon:    String(row[C.rayon]    || '').trim(),
       cult:     String(row[C.cult]     || '').trim(),
@@ -431,7 +513,6 @@ function listContractors() {
     });
   }
 
-  // Сортируем: регион → имя → культура
   list.sort(function(a, b) {
     var rv = a.reg.localeCompare(b.reg, 'ru');
     if (rv !== 0) return rv;
@@ -446,8 +527,6 @@ function listContractors() {
 }
 
 // ── Поступившие заявки ────────────────────────────────────────────────────────
-// Возвращает ВСЕ строки листа (не только профинансированные).
-// Динамически ищет колонки КС и КУСП по заголовочной строке.
 
 function listApplications() {
   const ckey = 'apps_list';
@@ -457,22 +536,22 @@ function listApplications() {
   const sheet = getSS().getSheetByName(SH_DETAIL);
   if (!sheet) return { ok: false, error: 'Лист "' + SH_DETAIL + '" не найден' };
 
+  // Один getDataRange().getValues() — читаем лист целиком
   const data = sheet.getDataRange().getValues();
   if (data.length <= DATA_ROW) return { ok: true, data: [], dopfin: [] };
 
-  // Используем общую функцию определения колонок по заголовку
-  var dyn = detectDynamicCols(sheet);
-  var ksSum = dyn.ks_sum, ksVol = dyn.ks_vol, ksSent = dyn.ks_sent, ksDate = dyn.ks_date;
-  var kuspSum = dyn.kusp_sum, kuspVol = dyn.kusp_vol, kuspDate = dyn.kusp_date;
-  var pravlSum = dyn.pravl_sum, pravlDate = dyn.pravl_date;
+  // Передаём уже прочитанные данные в detectDynamicCols — избегаем повторного чтения
+  var dyn = _detectDynamicColsFromData(data);
+  var { ks_sum: ksSum, ks_vol: ksVol, ks_sent: ksSent, ks_date: ksDate,
+        kusp_sum: kuspSum, kusp_vol: kuspVol, kusp_date: kuspDate,
+        pravl_sum: pravlSum, pravl_date: pravlDate } = dyn;
 
   const g = function(row, idx) { return idx >= 0 ? row[idx] : ''; };
   const n = function(row, idx) { return idx >= 0 ? (Number(row[idx]) || 0) : 0; };
 
-  var list    = [];  // обычные заявки (первичные)
-  var dopfin  = [];  // дополнительное финансирование (строки с меткой "доп")
+  var list   = [];
+  var dopfin = [];
 
-  // Строим набор первичных БИН→dogNum пар (профинансированных) для выявления дополнительного
   var finSet = {};
   for (var i = DATA_ROW; i < data.length; i++) {
     var row = data[i];
@@ -489,28 +568,21 @@ function listApplications() {
     var reg  = String(row[C.reg]  || '').trim();
     if (!name || !reg || name.includes('Итого') || name === 'Наименование поставщика') continue;
 
-    var appSum  = Number(row[C.app_sum])  || 0;
-    var appVol  = Number(row[C.app_vol])  || 0;
-    if (appSum <= 0 && appVol <= 0) continue; // строки без заявки пропускаем
+    var appSum = Number(row[C.app_sum]) || 0;
+    var appVol = Number(row[C.app_vol]) || 0;
+    if (appSum <= 0 && appVol <= 0) continue;
 
-    var bin    = String(row[C.bin]      || '').trim();
-    var dogNum = String(row[C.dog_num]  || '').trim();
-    var status = String(row[C.status]   || '').trim();
-    var finSum = Number(row[C.fin_sum]) || 0;
-    var dogSum = Number(row[C.dog_sum]) || 0;
-
+    var bin      = String(row[C.bin]      || '').trim();
+    var dogNum   = String(row[C.dog_num]  || '').trim();
+    var status   = String(row[C.status]   || '').trim();
+    var finSum   = Number(row[C.fin_sum]) || 0;
+    var dogSum   = Number(row[C.dog_sum]) || 0;
     var statusLo = status.toLowerCase();
 
-    // Отозванные — пропускаем везде
     if (statusLo.includes('отозван')) continue;
 
-    // Является ли строка "доп. финансированием"?
-    // Признак: реестровый столбец (col 1) содержит "доп"
-    var binKey  = bin || name;
-    var reestNo = String(row[1] || '').toLowerCase();
-    var isDop   = reestNo.includes('доп') || statusLo.includes('доп');
-
-    // Профинансирована ли строка?
+    var reestNo    = String(row[1] || '').toLowerCase();
+    var isDop      = reestNo.includes('доп') || statusLo.includes('доп');
     var isFinanced = finSum > 0 || statusLo.startsWith('профин');
 
     var obj = {
@@ -542,11 +614,10 @@ function listApplications() {
       fin_vol:    Number(row[C.fin_vol]) || 0,
     };
 
-    if (isDop && isFinanced) dopfin.push(obj);   // доп и профинансирован → Доп. финансирование
-    else                     list.push(obj);      // всё остальное → Поступившие заявки
+    if (isDop && isFinanced) dopfin.push(obj);
+    else                     list.push(obj);
   }
 
-  // Сортировка: регион → имя → культура
   var cmp = function(a, b) {
     return a.reg.localeCompare(b.reg,'ru') || a.name.localeCompare(b.name,'ru') || a.cult.localeCompare(b.cult,'ru');
   };
@@ -558,24 +629,24 @@ function listApplications() {
   return result;
 }
 
-// Сохранение статуса одной строки в листе (из вкладок заявок/допфин)
 function saveAppStatus(body, user) {
   var { rowIdx, status } = body;
   if (!rowIdx || status == null) return { ok: false, error: 'Нет данных' };
   const ss    = getSS();
   const sheet = ss.getSheetByName(SH_DETAIL);
   if (!sheet) return { ok: false, error: 'Лист не найден' };
+  // Единичная запись одной ячейки — setValue допустим
   sheet.getRange(rowIdx, C.status + 1).setValue(status);
   cacheDel();
   addLog(ss, user.name, 'Статус заявки', rowIdx, { status });
   return { ok: true };
 }
 
-// Находит индексы колонок КС/КУСП/Правление по заголовочной строке листа
-function detectDynamicCols(sheet) {
-  var hdrRow = sheet.getRange(1, 1, Math.min(4, sheet.getLastRow()), sheet.getLastColumn()).getValues();
-  var hdr = [];
-  // Ищем строку, содержащую "Наименование поставщика"
+// Находит индексы колонок КС/КУСП/Правление по уже прочитанным данным ────────
+// Принимает весь массив data (чтобы не делать повторный getValues).
+function _detectDynamicColsFromData(data) {
+  var hdrRow = data.slice(0, Math.min(4, data.length));
+  var hdr    = [];
   for (var hi = 0; hi < hdrRow.length; hi++) {
     if (String(hdrRow[hi][C.name] || '').includes('Наименование')) { hdr = hdrRow[hi]; break; }
   }
@@ -605,18 +676,32 @@ function detectDynamicCols(sheet) {
   return cols;
 }
 
-// Сохраняет карточку заявки: статус + все числовые/текстовые колонки
+// Публичная обёртка: делает один getValues если данные не переданы ─────────────
+function detectDynamicCols(sheet) {
+  const data = sheet.getRange(1, 1, Math.min(4, sheet.getLastRow()), sheet.getLastColumn()).getValues();
+  return _detectDynamicColsFromData(data);
+}
+
+// Сохраняет карточку заявки одним batch-write ─────────────────────────────────
+// БЫЛО: N вызовов setValue() в forEach → N сетевых запросов к Sheets API
+// СТАЛО: getValues()[0] → patch в памяти → один setValues() = 1 запрос
 function saveAppCard(body, user) {
   var rowIdx = body.rowIdx;
   if (!rowIdx) return { ok: false, error: 'Нет rowIdx' };
+
   const ss    = getSS();
   const sheet = ss.getSheetByName(SH_DETAIL);
   if (!sheet) return { ok: false, error: 'Лист не найден' };
 
-  // Находим динамические колонки КС/КУСП/Правление по заголовку
+  // Читаем заголовки и строку одновременно через один большой диапазон
+  const lastCol = sheet.getLastColumn();
+  // Читаем строку один раз
+  const rowRange  = sheet.getRange(rowIdx, 1, 1, lastCol);
+  const rowValues = rowRange.getValues()[0];
+
+  // Определяем динамические колонки по заголовку (один getRange на 4 строки)
   var dyn = detectDynamicCols(sheet);
 
-  // Маппинг поле тела запроса → 0-based колонка в РАЗВЕРНУТАЯ
   var map = {
     status:     C.status,
     app_sum:    C.app_sum,
@@ -640,11 +725,15 @@ function saveAppCard(body, user) {
     fin_vol:    C.fin_vol,
   };
 
+  // Патчим значения в памяти (никаких I/O внутри цикла)
   Object.keys(map).forEach(function(key) {
     var col = map[key];
     if (col < 0 || body[key] === undefined) return;
-    sheet.getRange(rowIdx, col + 1).setValue(body[key]);
+    rowValues[col] = body[key];
   });
+
+  // Один setValues() вместо N setValue() — главная оптимизация
+  rowRange.setValues([rowValues]);
 
   cacheDel();
   addLog(ss, user.name, 'Карточка заявки', rowIdx, { status: body.status });
@@ -655,11 +744,11 @@ function getContractor(body) {
   const sheet = getSS().getSheetByName(SH_DETAIL);
   if (!sheet) return { ok: false, error: 'Лист не найден' };
 
-  const data = sheet.getDataRange().getValues();
+  const data = sheet.getDataRange().getValues();  // один getValues
   const rows = [];
 
   for (let i = DATA_ROW; i < data.length; i++) {
-    const row  = data[i];
+    const row   = data[i];
     const rBin  = String(row[C.bin]  || '').trim();
     const rName = String(row[C.name] || '').trim();
     if (!rName || rName.includes('Итого')) continue;
@@ -681,17 +770,17 @@ function saveFinancing(body, user) {
   const sheet = ss.getSheetByName(SH_DETAIL);
   if (!sheet) return { ok: false, error: 'Лист не найден' };
 
-  // Batch write: read existing row, patch changed columns, write back in one call
+  // Batch write: читаем минимальный диапазон, патчим, пишем обратно одним вызовом
   const entries = Object.entries(fields).map(([ci, val]) => ({ col: parseInt(ci), val }));
   if (entries.length > 0) {
-    const cols = entries.map(e => e.col);
+    const cols   = entries.map(e => e.col);
     const minCol = Math.min(...cols);
     const maxCol = Math.max(...cols);
     const width  = maxCol - minCol + 1;
     const range  = sheet.getRange(rowIdx, minCol + 1, 1, width);
     const row    = range.getValues()[0];
     entries.forEach(e => { row[e.col - minCol] = e.val; });
-    range.setValues([row]);
+    range.setValues([row]);  // один setValues вместо N setValue
   }
 
   cacheDel();
@@ -710,7 +799,7 @@ function addContractor(body, user) {
   const lastRow = sheet.getLastRow();
   const newRow  = new Array(70).fill('');
   Object.entries(fields).forEach(([colIdx, val]) => { newRow[parseInt(colIdx)] = val; });
-  sheet.appendRow(newRow);
+  sheet.appendRow(newRow);  // appendRow для одной строки — оптимально
 
   cacheDel();
   addLog(ss, user.name, 'Новый контрагент', lastRow + 1, fields);
@@ -757,12 +846,11 @@ function listReturn() {
 
   const ss   = getSS();
   const sh   = ensureReturnSheet(ss);
-  const data = sh.getDataRange().getValues();
+  const data = sh.getDataRange().getValues();  // один getValues
   if (data.length <= 1) return { ok: true, data: [] };
 
   const rows = data.slice(1).map((row, i) => {
     const obj = { rowIdx: i + 2 };
-    // Маппим по позиции через RET_HEADERS (не зависим от заголовков листа)
     RET_HEADERS.forEach(function(h, j) { obj[h] = row[j]; });
     return obj;
   });
@@ -779,12 +867,13 @@ function saveReturn(body, user) {
   const ss = getSS();
   const sh = ensureReturnSheet(ss);
 
-  rd['Обновлено']      = new Date().toLocaleString('ru-RU');
-  rd['Кем обновлено']  = user.name;
+  rd['Обновлено']     = new Date().toLocaleString('ru-RU');
+  rd['Кем обновлено'] = user.name;
 
   const vals = RET_HEADERS.map(h => (rd[h] !== undefined ? rd[h] : ''));
 
   if (rowIdx) {
+    // Один setValues — запись строки целиком за один I/O
     sh.getRange(rowIdx, 1, 1, vals.length).setValues([vals]);
   } else {
     sh.appendRow(vals);
@@ -809,10 +898,10 @@ function deleteReturn(body, user) {
 // ── Пользователи ──────────────────────────────────────────────────────────────
 
 function listUsers() {
-  const ss = getSS();
-  const sh = ss.getSheetByName(SH_ADMINS);
+  const ss   = getSS();
+  const sh   = ss.getSheetByName(SH_ADMINS);
   if (!sh) return { ok: true, data: [] };
-  const data = sh.getDataRange().getValues();
+  const data = sh.getDataRange().getValues();  // один getValues
   return {
     ok: true,
     data: data.slice(1).map(r => ({
@@ -825,9 +914,9 @@ function saveUser(body) {
   const { login: lgn, password, role, name, active } = body;
   if (!lgn) return { ok: false, error: 'Укажите логин' };
 
-  const ss = getSS();
-  const sh = ensureSheet(ss, SH_ADMINS, ['login','salt','hash','role','name','active']);
-  const data = sh.getDataRange().getValues();
+  const ss   = getSS();
+  const sh   = ensureSheet(ss, SH_ADMINS, ['login','salt','hash','role','name','active']);
+  const data = sh.getDataRange().getValues();  // один getValues
 
   let rowIdx = -1;
   for (let i = 1; i < data.length; i++) {
@@ -841,13 +930,15 @@ function saveUser(body) {
   }
 
   if (rowIdx > 0) {
-    if (role   !== undefined) sh.getRange(rowIdx, 4).setValue(role);
-    if (name   !== undefined) sh.getRange(rowIdx, 5).setValue(name);
-    if (active !== undefined) sh.getRange(rowIdx, 6).setValue(active);
-    if (password) {
-      sh.getRange(rowIdx, 2).setValue(salt);
-      sh.getRange(rowIdx, 3).setValue(hash);
-    }
+    // БЫЛО: до 5 отдельных setValue() → 5 сетевых вызовов
+    // СТАЛО: читаем строку, патчим, один setValues() → 1 вызов
+    const userRange  = sh.getRange(rowIdx, 1, 1, 6);
+    const userValues = userRange.getValues()[0];
+    if (role   !== undefined) userValues[3] = role;
+    if (name   !== undefined) userValues[4] = name;
+    if (active !== undefined) userValues[5] = active;
+    if (password) { userValues[1] = salt; userValues[2] = hash; }
+    userRange.setValues([userValues]);
   } else {
     if (!password) return { ok: false, error: 'Для нового пользователя нужен пароль' };
     sh.appendRow([lgn, salt, hash, role || 'editor', name || lgn, active !== false]);
@@ -860,20 +951,21 @@ function changePassword(body, user) {
   if (!oldPassword || !newPassword) return { ok: false, error: 'Заполните оба поля' };
   if (newPassword.length < 6) return { ok: false, error: 'Пароль слишком короткий (мин. 6 символов)' };
 
-  const ss = getSS();
-  const sh = ss.getSheetByName(SH_ADMINS);
+  const ss   = getSS();
+  const sh   = ss.getSheetByName(SH_ADMINS);
   if (!sh) return { ok: false, error: 'Таблица пользователей не найдена' };
-  const data = sh.getDataRange().getValues();
+  const data = sh.getDataRange().getValues();  // один getValues
 
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === user.login) {
       if (sha256(data[i][1] + oldPassword) !== data[i][2]) {
         return { ok: false, error: 'Неверный текущий пароль' };
       }
-      const salt = Utilities.getUuid().replace(/-/g, '').slice(0, 16);
-      const hash = sha256(salt + newPassword);
-      sh.getRange(i + 1, 2).setValue(salt);
-      sh.getRange(i + 1, 3).setValue(hash);
+      const newSalt = Utilities.getUuid().replace(/-/g, '').slice(0, 16);
+      const newHash = sha256(newSalt + newPassword);
+      // БЫЛО: два отдельных setValue() → 2 сетевых вызова
+      // СТАЛО: один setValues([[salt, hash]]) → 1 вызов
+      sh.getRange(i + 1, 2, 1, 2).setValues([[newSalt, newHash]]);
       return { ok: true };
     }
   }
@@ -905,7 +997,6 @@ function addLog(ss, userName, section, rowId, fields) {
 }
 
 // ── Первоначальная настройка пользователей ────────────────────────────────────
-// Запустить ОДИН РАЗ из редактора Apps Script: Выполнить → setupAdminUsers
 
 function setupAdminUsers() {
   const users = [
@@ -926,7 +1017,6 @@ function setupAdminUsers() {
   Logger.log('Логин admin, пароль: Admin2026!');
 }
 
-// ── Ручной сброс кеша (запустить из редактора при необходимости) ──────────────
 function clearAllCache() {
   cacheDel();
   Logger.log('✅ Кеш очищен');
