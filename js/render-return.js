@@ -291,7 +291,6 @@ function renderVzDebtTable() {
         else last.items.push(c);
     });
 
-    const uniqDebtors = uniqSchtp(DR.debtors);
     const hasPenalty  = DR.debtors.some(c => c.penalty > 0);
     const cols = hasPenalty ? 7 : 6;
 
@@ -333,11 +332,14 @@ function renderVzDebtTable() {
     const totalZach = DR.debtors.reduce((s,c) => s + (c.sum_zachet||0), 0);
 
     box.innerHTML = `
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0 10px">
-        <span style="font-size:12px;font-weight:700;color:var(--muted)">${uniqDebtors} СХТП-должников · ${DR.debtors.length} договоров</span>
-        <div style="flex:1"></div>
-        <button class="segb" style="font-size:11px;padding:5px 11px" onclick="exportDebtorsPdf()">📄 PDF</button>
-        <button class="segb" style="font-size:11px;padding:5px 11px" onclick="exportDebtorsExcel()">📊 Excel</button>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 10px">
+        <div style="font-size:13px;font-weight:800;color:var(--ink);text-align:center">
+            ${DR.total.schtp} СХТП-должников · ${DR.total.apps || DR.debtors.length} договоров
+        </div>
+        <div style="display:flex;gap:8px">
+            <button class="segb" style="font-size:11px;padding:5px 11px" onclick="exportDebtorsPdf()">📄 PDF</button>
+            <button class="segb" style="font-size:11px;padding:5px 11px" onclick="exportDebtorsExcel()">📊 Excel</button>
+        </div>
     </div>
     <div class="vzt-scroll">
     <table class="rtab vzt" id="vzDebtTable">
@@ -367,7 +369,7 @@ function renderVzDebtTable() {
         </thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
-            <td class="l">Итого: ${uniqDebtors} СХТП · ${DR.debtors.length} дог.</td>
+            <td class="l">Итого: ${DR.total.schtp} СХТП · ${DR.total.apps || DR.debtors.length} дог.</td>
             <td>${fmtMlrd(totalFin)}</td>
             <td>${fmtT(totalVol)}</td>
             <td>${fmtMlrd(totalSum)}</td>
