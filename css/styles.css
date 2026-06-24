@@ -80,6 +80,19 @@ header.top { background: var(--ink); color: #EDEADD; position: sticky; top: 0; z
 .debt-rtab td.c { text-align: center; color: var(--muted); font-size: 11px; }
 .debt-rtab td.r { text-align: right; }
 .debt-rtab tfoot td.r { text-align: right; }
+/* Возврат: унифицированные таблицы областей и должников */
+.vzt-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.vzt-scroll .rtab { min-width: 560px; table-layout: fixed; width: 100%; }
+.vzt { border-collapse: collapse; }
+.vzt-c0 { width: 30%; }
+.vzt-c1 { width: calc(70% / 6); }
+.vzt thead tr.grp th { vertical-align: middle; text-align: center; }
+.vzt thead tr.grp th.l { text-align: left; }
+.vzt thead th { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 5px 6px; vertical-align: bottom; }
+.vzt td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vzt-name { overflow: hidden; }
+.vzt-nm { font-weight: 700; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vzt-sub { font-size: 10px; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
 #regTableWrap { max-height: 520px; overflow: auto; margin: 6px 12px 14px; border: 1px solid var(--line); border-radius: 12px; }
 .ctabttl { font-size: 12px; font-weight: 800; color: var(--ink); padding: 14px 12px 8px; border-top: 8px solid #F1ECDD; }
 .card .hint { font-size: 11.5px; color: var(--muted); padding: 2px 18px 0; font-weight: 600; }

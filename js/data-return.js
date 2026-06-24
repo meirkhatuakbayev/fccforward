@@ -116,7 +116,9 @@ function parseDetailReturn(rows) {
 function combineReturn(svodRows, detailRows) {
     const svod   = parseSvodReturn(svodRows);
     const cps    = parseDetailReturn(detailRows);
-    const debtors = cps.filter(c => c.debt > 0).sort((a, b) => b.debt - a.debt);
+    // Должники — только те у кого ещё остался долг или непогашенная пеня
+    const debtors = cps.filter(c => (c.debt_left > 0) || (c.penalty > 0))
+                       .sort((a, b) => (b.debt_left||0) - (a.debt_left||0));
     const totalPenalty = cps.reduce((s, c) => s + (c.penalty || 0), 0);
 
     // Пересчёт из детализации если СВОД даёт нули (старый GAS или незадеплоенная версия)
