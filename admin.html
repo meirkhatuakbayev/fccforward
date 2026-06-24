@@ -524,7 +524,6 @@ a { color: var(--green); text-decoration: none; }
   </header>
   <nav class="anav">
     <button class="anav-btn act" data-tab="apps"      onclick="switchTab('apps')">Поступившие заявки</button>
-    <button class="anav-btn"     data-tab="dopfin"    onclick="switchTab('dopfin')">Доп. финансирование</button>
     <button class="anav-btn"     data-tab="financing" onclick="switchTab('financing')">Финансирование</button>
     <button class="anav-btn"     data-tab="return"    onclick="switchTab('return')">Возврат зерна</button>
     <button class="anav-btn"     data-tab="users"     onclick="switchTab('users')" id="tabUsers" style="display:none">Пользователи</button>
@@ -555,15 +554,6 @@ a { color: var(--green); text-decoration: none; }
         <div id="contractorList"></div>
       </div>
       <div id="pfForm" style="display:none"></div>
-    </div>
-
-    <!-- ── Доп. финансирование ── -->
-    <div id="tabDopfin" style="display:none">
-      <div class="sec-head">
-        <h2>Дополнительное финансирование</h2>
-        <button class="btn btn-ghost" onclick="refreshApps()" title="Обновить данные">↻ Обновить</button>
-      </div>
-      <div id="dopfinList"></div>
     </div>
 
     <!-- ── Поступившие заявки ── -->
@@ -740,12 +730,10 @@ function showApp() {
 function switchTab(tab) {
   document.querySelectorAll('.anav-btn').forEach(b => b.classList.toggle('act', b.dataset.tab === tab));
   q('#tabFinancing').style.display     = tab === 'financing' ? '' : 'none';
-  q('#tabDopfin').style.display        = tab === 'dopfin'    ? '' : 'none';
   q('#tabApps').style.display          = tab === 'apps'      ? '' : 'none';
   q('#tabReturn').style.display        = tab === 'return'    ? '' : 'none';
   q('#tabUsersContent').style.display  = tab === 'users'     ? '' : 'none';
   if (tab === 'return') { if (!_mergedReturn || !_mergedReturn.length) loadReturnMerged(); else renderReturnMerged(); }
-  if (tab === 'dopfin') { if (_appsLoaded) renderDopfin(); }
   if (tab === 'apps')   { if (_appsLoaded) renderApps(); }
   if (tab === 'users') loadUsers();
 }
@@ -1052,20 +1040,18 @@ let _dopQ       = '';
 let _retQ       = '';
 
 async function loadApplications() {
-  const boxA = q('#appsList'),   boxD = q('#dopfinList');
+  const boxA = q('#appsList');
   const cur = document.querySelector('.anav-btn.act')?.dataset?.tab;
-  if (cur === 'apps')   boxA.innerHTML = spinner();
-  if (cur === 'dopfin') boxD.innerHTML = spinner();
+  if (cur === 'apps') boxA.innerHTML = spinner();
   try {
     const r = await api('listApplications');
-    _allApps   = r.data   || [];
-    _allDopfin = r.dopfin || [];
+    const dopfin = (r.dopfin || []).map(a => Object.assign({}, a, { is_dop: true }));
+    _allDopfin = dopfin;
+    _allApps   = [...(r.data || []), ...dopfin];
     _appsLoaded = true;
     renderApps();
-    renderDopfin();
   } catch(e) {
     if (boxA) boxA.innerHTML = `<p style="color:var(--red);padding:20px">${e.message}</p>`;
-    if (boxD) boxD.innerHTML = `<p style="color:var(--red);padding:20px">${e.message}</p>`;
   }
 }
 
@@ -1207,7 +1193,7 @@ function renderAppsTable(list, boxId, regVar, setReg) {
           <span class="muted">${esc(a.form)}${a.rayon?' · '+esc(a.rayon)+' р-н':''}</span></td>
         <td style="color:var(--muted);font-size:12px">${esc(a.bin)||'—'}</td>
         <td style="font-size:12px">${esc(a.cult)||'—'}</td>
-        <td>${appStatusBadge(a.status)}</td>
+        <td>${appStatusBadge(a.status)}${a.is_dop ? ' <span style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:9px;font-weight:700;background:#1A4D72;color:#fff">Доп. фин.</span>' : ''}</td>
         <td style="text-align:right;font-size:12px">${a.app_sum > 0 ? fmt(a.app_sum)+' ₸' : '—'}<br><span style="color:var(--muted);font-size:10px">${a.app_vol>0?fmtNum(a.app_vol)+' т':''}</span></td>
         <td style="text-align:right;font-size:12px">${ksCellVal}</td>
         <td style="text-align:right;font-size:12px">${kuspCellVal}</td>
