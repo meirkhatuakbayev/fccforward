@@ -247,11 +247,14 @@ async function loadReturn(yearOverride) {
                 if (resp.ok) {
                     const json = await resp.json();
                     if (json.ok && json.svod && json.detail) {
-                        // Временно: выводим заголовки детальной таблицы для диагностики
-                        if (json.detail.length > 0) console.log("[DETAIL headers]", json.detail[0]);
                         combineReturn(json.svod, json.detail);
-                        renderReturn();
-                        if (typeof hideVzLoader === "function") hideVzLoader();
+                        // Рендерим только если пользователь сейчас на вкладке Возврат
+                        const onVozvrat = document.getElementById("viewVozvrat") &&
+                                          document.getElementById("viewVozvrat").style.display !== "none";
+                        if (onVozvrat) {
+                            renderReturn();
+                            if (typeof hideVzLoader === "function") hideVzLoader();
+                        }
                         return;
                     }
                 }

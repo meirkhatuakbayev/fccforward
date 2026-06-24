@@ -3,11 +3,21 @@
 let _returnLoaded = false;
 let _vzMapZoom = null, _vzMapSvgSel = null, _vzMapFit = null;
 
-// ── Ленивая загрузка ─────────────────────────────────────────────────────────
+// ── Переход на вкладку Возврат ───────────────────────────────────────────────
 function ensureVozvrat() {
-    if (_returnLoaded) { if (DR) renderReturn(); return; }
-    _returnLoaded = true;
-    loadReturn();
+    if (DR) {
+        // Данные уже готовы — рендерим мгновенно, лоадер не нужен
+        if (typeof hideVzLoader === "function") hideVzLoader();
+        renderReturn();
+        return;
+    }
+    // Данные ещё грузятся в фоне — показываем лоадер, loadReturn скроет его сам
+    if (typeof showVzLoader === "function") showVzLoader();
+    if (!_returnLoaded) {
+        // Крайний случай: фоновая загрузка не стартовала
+        _returnLoaded = true;
+        loadReturn();
+    }
 }
 
 // ── Основной рендер ──────────────────────────────────────────────────────────

@@ -88,8 +88,13 @@ document.getElementById("btnPrint").addEventListener("click", () => {
   });
 })();
 
-// Загрузка данных
-loadGeoData().then(() => { loadData(); });
+// Загрузка данных — финансирование и возврат стартуют параллельно
+loadGeoData().then(() => {
+    loadData();
+    // Возврат грузим в фоне сразу — без лоадера, чтобы при переходе данные были готовы
+    _returnLoaded = true;
+    loadReturn();
+});
 
 // Страховка: если через 15 сек лоадер всё ещё висит — скрываем принудительно
 setTimeout(hideLoader, 15000);

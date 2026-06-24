@@ -66,8 +66,9 @@ function onYearChange(yr) {
     const vkEl = document.getElementById("vzKpis");
     if (vkEl) vkEl.innerHTML = blockLoader("Загрузка возврата");
     showYearLoader("Загрузка ФЗ " + yr);
+    _returnLoaded = true;  // фоновая загрузка стартует сразу
     loadData(yr);
-    if (_fwdSub === "vozvrat") loadReturn(yr);
+    loadReturn(yr);        // параллельно с финансированием
 }
 
 function switchForwardSub(sub) {
