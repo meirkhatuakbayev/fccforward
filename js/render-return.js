@@ -287,6 +287,9 @@ function renderVzDebtTable() {
         else last.items.push(c);
     });
 
+    const uniqDebtors = uniqSchtp(DR.debtors);
+    const hasPenalty  = DR.debtors.some(c => c.penalty > 0);
+
     let rows = "";
     groups.forEach(g => {
         const regDebt = g.items.reduce((s,c) => s + c.debt, 0);
@@ -315,8 +318,6 @@ function renderVzDebtTable() {
     const totalFin  = DR.debtors.reduce((s,c) => s + (c.sum_fin||0), 0);
     const totalZach = DR.debtors.reduce((s,c) => s + (c.sum_zachet||0), 0);
 
-    const uniqDebtors = uniqSchtp(DR.debtors);
-    const hasPenalty  = DR.debtors.some(c => c.penalty > 0);
     box.innerHTML = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0 10px">
         <span style="font-size:12px;font-weight:700;color:var(--muted)">${uniqDebtors} СХТП-должников · ${DR.debtors.length} договоров</span>
         <div style="flex:1"></div>
