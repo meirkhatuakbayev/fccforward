@@ -101,8 +101,8 @@ function parseDetail(rows) {
         const appSum = toNum(r[17] || 0);
         const appVol = toNum(r[19] || 0);
 
-        // Ключ: уникален на уровне заявки + культура
-        const k = (bin || name) + "|" + (dogNum || i) + "|" + cult;
+        // Ключ: БИН + договор (без культуры — finSum это итог договора, не строки)
+        const k = (bin || name) + "|" + (dogNum || i);
 
         if (!gmap[k]) {
             gmap[k] = {
@@ -119,8 +119,9 @@ function parseDetail(rows) {
             };
         } else {
             const g = gmap[k];
-            g.sum    += finSum;
-            g.vol    += finVol;
+            // finSum/finVol — итог договора, повторяется в каждой строке → берём максимум
+            if (finSum > g.sum) g.sum = finSum;
+            if (finVol > g.vol) g.vol = finVol;
             g.appSum += appSum;
             g.appVol += appVol;
             if (cult   && !g.cults.includes(cult))     g.cults.push(cult);

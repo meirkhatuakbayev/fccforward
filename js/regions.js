@@ -36,10 +36,12 @@ function openStatus(name) {
     document.querySelectorAll(".bub,.geopath").forEach(b => b.classList.remove("sel"));
     const norm = s => (s || "").toLowerCase().replace(/\s+/g, " ");
     const list = D.cps.filter(c => norm(c.status) === norm(name) || (c.sts && c.sts.some(s => norm(s) === norm(name))));
-    const tv = list.reduce((a, c) => a + c.vol, 0), ts = list.reduce((a, c) => a + c.sum, 0), ta = list.reduce((a, c) => a + c.apps, 0);
-    // Для "Профинансировано" — авторитетные данные из СВОД (сумма по регионам)
+    const ta = list.reduce((a, c) => a + c.apps, 0);
+    // Для "Профинансировано" — авторитетные данные из СВОД (не суммируем по контрагентам)
     const schtp = isProfin(name) ? D.total.fin[0] : uniqSchtp(list);
     const dogs  = isProfin(name) ? D.total.fin[1] : list.length;
+    const tv    = isProfin(name) ? D.total.fin[3] : list.reduce((a, c) => a + c.vol, 0);
+    const ts    = isProfin(name) ? D.total.fin[2] : list.reduce((a, c) => a + c.sum, 0);
     const p = $("#regionPanel"); p.style.display = ""; $("#rName").textContent = "Статус: " + name; $("#rPill").textContent = schtp + " СХТП · " + dogs + " договоров";
     const k = [["СХТП", schtp], ["Договоров", dogs], ["Объём, тонн", fmtT(tv)], ["Сумма, ₸", fmtMlrd(ts) + " ₸"]];
     $("#rKpis").innerHTML = k.map(x => `<div><div class="l">${x[0]}</div><div class="n num">${x[1]}</div></div>`).join("");
