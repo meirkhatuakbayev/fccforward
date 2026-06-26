@@ -492,7 +492,7 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
     .loader, .banner { display: none !important; }
     .side { display: none !important; }
     #regionPanel { display: none !important; }
-    .card:has(#crops) { display: none !important; }
+    #cropsCard { display: none !important; }
     .foot, .footer-contact { display: none !important; }
 
     /* Шапка — минимальная */
@@ -519,7 +519,7 @@ tfoot td.r { text-align: right; font-variant-numeric: tabular-nums; }
 
     /* Карточка с картой — оставляем только таблицу */
     .grid { display: block !important; }
-    .grid > .card:has(#funnel) { display: none !important; }
+    #funnelCard { display: none !important; }
     .grid > .card:first-child { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
     .cardhead { display: none !important; }
     .card .hint { display: none !important; }
