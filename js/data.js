@@ -44,13 +44,15 @@ function parseSvod(rows) {
         const stages = [["Поступило заявок", 3, 4, 5, 6], ["Утверждено Координационным Советом", 11, 12, 13, 14],
             ["С учётом отказов и уменьшений", 7, 8, 9, 10], ["Заключено договоров", 15, 16, 17, 18], ["Профинансировано", 19, 20, 21, 22]];
         funnel = stages.map(([k, sc, a, s, v]) => ({k, schtp: toNum(r[sc] || 0), apps: toNum(r[a] || 0), sum: toNum(r[s] || 0), vol: toNum(r[v] || 0)}));
-        // СХТП и заявки — сумма по регионам (строки областей), а не строка "Итого по РК"
+        // Все итоги — сумма по строкам регионов, т.к. "Итого по РК" в СВОД считает некорректно
         const sumFin0 = regions.reduce((s, rg) => s + rg.fin[0], 0);
         const sumFin1 = regions.reduce((s, rg) => s + rg.fin[1], 0);
+        const sumFin2 = regions.reduce((s, rg) => s + rg.fin[2], 0);
+        const sumFin3 = regions.reduce((s, rg) => s + rg.fin[3], 0);
         total = {limit: toNum(r[2] || 0),
             rec: [toNum(r[3] || 0), toNum(r[4] || 0), toNum(r[5] || 0), toNum(r[6] || 0)],
             contr: [toNum(r[15] || 0), toNum(r[16] || 0), toNum(r[17] || 0), toNum(r[18] || 0)],
-            fin: [sumFin0 || toNum(r[19] || 0), sumFin1 || toNum(r[20] || 0), toNum(r[21] || 0), toNum(r[22] || 0)]};
+            fin: [sumFin0 || toNum(r[19] || 0), sumFin1 || toNum(r[20] || 0), sumFin2 || toNum(r[21] || 0), sumFin3 || toNum(r[22] || 0)]};
     }
     const crops = []; let started = false;
     for (let i = (itogo < 0 ? 0 : itogo + 1); i < rows.length; i++) {
