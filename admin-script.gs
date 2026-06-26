@@ -779,6 +779,25 @@ function _recalcSvodProfin(ss) {
     }
   }
 
+  // Таблица синонимов: полные прилагательные формы → сокращения из РАЗВЕРНУТАЯ
+  var REG_ALIASES = {
+    'акмолинская': 'акмола', 'акмолинской': 'акмола',
+    'абайская': 'абай', 'абайской': 'абай',
+    'алматинская': 'алматы', 'алматинской': 'алматы',
+    'актюбинская': 'актобе', 'актюбинской': 'актобе',
+    'восточно-казахстанская': 'вко', 'восточно-казахстанской': 'вко',
+    'западно-казахстанская': 'зко', 'западно-казахстанской': 'зко',
+    'карагандинская': 'карагандинской', 'карагандинской': 'карагандинской',
+    'костанайская': 'костанай', 'костанайской': 'костанай',
+    'павлодарская': 'павлодар', 'павлодарской': 'павлодар',
+    'северо-казахстанская': 'ско', 'северо-казахстанской': 'ско',
+  };
+
+  function normKey(s) {
+    var k = s.toLowerCase().replace(/область/gi, '').trim();
+    return REG_ALIASES[k] || k;
+  }
+
   // Шаг 2: собираем данные из РАЗВЕРНУТАЯ по регионам
   var detData = detSh.getDataRange().getValues();
   var regMap  = {};
@@ -791,13 +810,22 @@ function _recalcSvodProfin(ss) {
     if (finSum <= 0) continue;
     var reg = String(row[C.reg] || '').trim();
     if (!reg) continue;
-    var normReg = reg.toLowerCase().replace(/область/g, '').trim();
-    if (!regMap[normReg]) regMap[normReg] = { label: reg, bins: {}, apps: 0, sum: 0, vol: 0 };
-    var bin = String(row[C.bin] || '').trim() || name;
+    var normReg = normKey(reg);
+    if (!regMap[normReg]) regMap[normReg] = { label: reg, bins: {}, apps: 0, sum: 0, vol: 0, _cs: {}, _cv: {} };
+    var bin    = String(row[C.bin]    || '').trim() || name;
+    var dogNum = String(row[C.dog_num] || '').trim();
+    // Ключ договора: finSum/finVol — итог договора, повторяется в каждой строке культуры
+    var ck = dogNum ? (bin + '|' + dogNum) : (bin + '|' + i);
     regMap[normReg].bins[bin] = 1;
-    regMap[normReg].apps += 1;
-    regMap[normReg].sum  += finSum;
-    regMap[normReg].vol  += Number(row[C.fin_vol]) || Number(row[C.dog_vol]) || 0;
+    regMap[normReg].apps += 1;  // одна заявка = одна строка
+    // Сумму и объём берём один раз на договор (max), чтобы не задваивать по культурам
+    var finVol  = Number(row[C.fin_vol]) || Number(row[C.dog_vol]) || 0;
+    var prevSum = regMap[normReg]._cs[ck] || 0;
+    var prevVol = regMap[normReg]._cv[ck] || 0;
+    regMap[normReg].sum += Math.max(0, finSum - prevSum);
+    regMap[normReg].vol += Math.max(0, finVol - prevVol);
+    if (finSum > prevSum) regMap[normReg]._cs[ck] = finSum;
+    if (finVol > prevVol) regMap[normReg]._cv[ck] = finVol;
   }
 
   // Шаг 3: обходим СВОД и обновляем найденные регионы
@@ -810,7 +838,7 @@ function _recalcSvodProfin(ss) {
     if (nm.toLowerCase().includes('итого по рк') || nm.toLowerCase().includes('итого по ркm')) {
       itogoRow = j + 1; continue;
     }
-    var normNm = nm.toLowerCase().replace(/область/g, '').trim();
+    var normNm = normKey(nm);
     var rd = regMap[normNm];
     if (!rd) { if (nm.length > 2) unmatched.push(nm); continue; }
     var schtp = Object.keys(rd.bins).length;
