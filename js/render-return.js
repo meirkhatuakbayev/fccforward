@@ -800,9 +800,6 @@ function renderVzRanking() {
     const box = document.getElementById("vzRanking");
     if (!box) return;
     const regs = DR.regions.filter(r => r.sum_fin > 0).sort((a, b) => b.pct_exec - a.pct_exec);
-    const best  = regs.filter(r => r.pct_exec >= 1.0);
-    const worst = [...regs].sort((a, b) => b.debt - a.debt).filter(r => r.debt > 0).slice(0, 3);
-
     let html = `<div class="vz-rank-title">Рейтинг исполнения — ${regs.length} областей</div>`;
     html += `<div class="vz-rank-list">`;
     // Заголовочная строка
@@ -833,12 +830,6 @@ function renderVzRanking() {
     }).join("");
     html += `</div>`;
 
-    html += `<div class="vz-rank-analysis">`;
-    if (best.length) html += `<div class="vz-ana-item ok2">Полностью исполнили: ${best.map(r=>r.name).join(", ")}.</div>`;
-    if (worst.length) html += `<div class="vz-ana-item bad">Наибольший долг: ${worst.map(r=>`${r.name} (${fmtMlrd(r.debt)} ₸)`).join("; ")}.</div>`;
-    const tempo = regs.filter(r => r.pct_exec > 0 && r.pct_exec < 1.0);
-    if (tempo.length) html += `<div class="vz-ana-item warn">В процессе исполнения: ${tempo.map(r=>r.name).join(", ")} — до срока 02.11.2026.</div>`;
-    html += `</div>`;
 
     box.innerHTML = html;
 }
